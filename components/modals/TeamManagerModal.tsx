@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Team, Player } from '../../types';
 import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 interface TeamManagerModalProps {
   isOpen: boolean;
@@ -25,36 +26,19 @@ interface PlayerItemProps {
   locationId: string; // ID of the container (TeamID or 'A'/'B')
   onToggleFixed?: (playerId: string, teamId?: 'A' | 'B') => void;
   onRemove: (id: string) => void;
-  onDragStart?: () => void;
-  onDragEnd?: () => void;
+  onPointerDown?: (e: React.PointerEvent, player: Player, fromId: string) => void;
+  isBeingDragged?: boolean;
 }
 
-const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFixed, onRemove, onDragStart, onDragEnd }) => {
-  const [isDraggingThis, setIsDraggingThis] = useState(false);
-
-  const handleDragStart = (e: React.DragEvent) => {
-      setIsDraggingThis(true);
-      e.dataTransfer.setData('playerId', player.id);
-      e.dataTransfer.setData('fromLocation', locationId);
-      e.dataTransfer.effectAllowed = 'move';
-      
-      if (onDragStart) onDragStart();
-  };
-
-  const handleDragEnd = () => {
-      setIsDraggingThis(false);
-      if (onDragEnd) onDragEnd();
-  };
-
+const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFixed, onRemove, onPointerDown, isBeingDragged }) => {
   return (
     <div 
-        draggable={!player.isFixed}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
+        onPointerDown={(e) => onPointerDown && !player.isFixed && onPointerDown(e, player, locationId)}
         className={`
-            group flex items-center justify-between p-2.5 rounded-xl mb-2 border transition-all cursor-grab active:cursor-grabbing
-            ${isDraggingThis 
-                ? 'opacity-50 grayscale scale-105 border-indigo-400 border-dashed bg-black/40 ring-2 ring-indigo-500/20' 
+            group flex items-center justify-between p-2.5 rounded-xl mb-2 border transition-all 
+            ${player.isFixed ? 'cursor-default' : 'cursor-grab active:cursor-grabbing touch-none'}
+            ${isBeingDragged 
+                ? 'opacity-30 grayscale border-dashed border-indigo-400/50 bg-black/20' 
                 : player.isFixed 
                     ? 'bg-indigo-500/10 border-indigo-500/30' 
                     : 'bg-white/5 hover:bg-white/10 border-white/5 hover:border-white/20'
@@ -62,13 +46,14 @@ const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFix
         `}
     >
         {/* Left: Info */}
-        <div className="flex items-center gap-3 overflow-hidden">
+        <div className="flex items-center gap-3 overflow-hidden pointer-events-none">
             <GripVertical size={14} className="text-slate-600 flex-shrink-0" />
             
             {onToggleFixed && (
                 <button 
+                    onPointerDown={(e) => e.stopPropagation()} // Allow click without drag start
                     onClick={() => onToggleFixed(player.id, (locationId === 'A' || locationId === 'B') ? locationId : undefined)}
-                    className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${player.isFixed ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/40' : 'bg-white/5 text-slate-500 hover:text-white'}`}
+                    className={`p-1.5 rounded-lg transition-all flex-shrink-0 pointer-events-auto ${player.isFixed ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/40' : 'bg-white/5 text-slate-500 hover:text-white'}`}
                     title={player.isFixed ? "Player Fixed" : "Fix Player"}
                 >
                     <Pin size={14} fill={player.isFixed ? "currentColor" : "none"} />
@@ -86,7 +71,11 @@ const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFix
         
         {/* Right: Actions */}
         <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={() => onRemove(player.id)} className="text-slate-600 hover:text-rose-500 p-1.5 rounded hover:bg-rose-500/10 transition-colors">
+            <button 
+                onPointerDown={(e) => e.stopPropagation()} // Allow click without drag start
+                onClick={() => onRemove(player.id)} 
+                className="text-slate-600 hover:text-rose-500 p-1.5 rounded hover:bg-rose-500/10 transition-colors pointer-events-auto"
+            >
                 <Trash2 size={14} />
             </button>
         </div>
@@ -99,40 +88,16 @@ const DroppableTeam: React.FC<{
     targetId: string; 
     isFull?: boolean;
     isGlobalDragging?: boolean;
-    onDropPlayer: (playerId: string, fromId: string, toId: string) => void;
     children: React.ReactNode;
     className?: string;
-}> = ({ targetId, isFull, isGlobalDragging, onDropPlayer, children, className }) => {
-    const [isOver, setIsOver] = useState(false);
-
-    const handleDragOver = (e: React.DragEvent) => {
-        if(isFull) return;
-        e.preventDefault();
-        setIsOver(true);
-    };
-
-    const handleDragLeave = () => setIsOver(false);
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsOver(false);
-        if(isFull) return;
-
-        const playerId = e.dataTransfer.getData('playerId');
-        const fromId = e.dataTransfer.getData('fromLocation');
-        
-        if(playerId && fromId && fromId !== targetId) {
-            onDropPlayer(playerId, fromId, targetId);
-        }
-    };
-
+}> = ({ targetId, isFull, isGlobalDragging, children, className }) => {
+    
     // Enhanced Style logic for better visibility:
     let dynamicStyles = '';
     
-    if (isOver && !isFull) {
-        // Active Hover Target
-        dynamicStyles = 'bg-indigo-500/30 ring-4 ring-indigo-500/50 border-indigo-400 scale-[1.01] shadow-[0_0_35px_rgba(99,102,241,0.4)] z-10';
-    } else if (isGlobalDragging && !isFull) {
+    // Note: We don't use onDragOver/Drop here anymore because we use geometric detection on PointerUp
+    
+    if (isGlobalDragging && !isFull) {
         // Valid Drop Candidate (Hint) - Stronger visual with thicker border
         dynamicStyles = 'bg-indigo-500/10 border-4 border-dashed border-indigo-500/80 ring-4 ring-indigo-500/20 animate-pulse shadow-[inset_0_0_20px_rgba(99,102,241,0.2)]';
     } else if (isGlobalDragging && isFull) {
@@ -142,9 +107,7 @@ const DroppableTeam: React.FC<{
 
     return (
         <div 
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+            data-drop-target-id={targetId} // Critical for elementFromPoint detection
             className={`transition-all duration-200 ease-out ${dynamicStyles} ${className}`}
         >
             {children}
@@ -252,22 +215,67 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
 }) => {
   const [rawNames, setRawNames] = useState('');
   const [view, setView] = useState<'input' | 'roster'>('roster');
-  const [isDragging, setIsDragging] = useState(false);
+  
+  // Custom Drag State
+  const [dragState, setDragState] = useState<{
+      isDragging: boolean;
+      player: Player | null;
+      fromId: string | null;
+      x: number;
+      y: number;
+  }>({ isDragging: false, player: null, fromId: null, x: 0, y: 0 });
 
-  // Global safety net for drag end: 
+  // Pointer Event Handlers for Drag & Drop
+  const handlePointerDown = (e: React.PointerEvent, player: Player, fromId: string) => {
+      e.preventDefault(); // Prevent scrolling/selection
+      setDragState({
+          isDragging: true,
+          player,
+          fromId,
+          x: e.clientX,
+          y: e.clientY
+      });
+  };
+
   useEffect(() => {
-    const handleWindowDragEnd = () => {
-        setIsDragging(false);
+    const handlePointerMove = (e: PointerEvent) => {
+        if (!dragState.isDragging) return;
+        setDragState(prev => ({ ...prev, x: e.clientX, y: e.clientY }));
     };
 
-    if (isDragging) {
-        window.addEventListener('dragend', handleWindowDragEnd);
+    const handlePointerUp = (e: PointerEvent) => {
+        if (!dragState.isDragging) return;
+        
+        // Geometric detection of drop target
+        const elements = document.elementsFromPoint(e.clientX, e.clientY);
+        const targetElement = elements.find(el => el.hasAttribute('data-drop-target-id'));
+        
+        if (targetElement) {
+            const toId = targetElement.getAttribute('data-drop-target-id');
+            if (toId && dragState.player && dragState.fromId && toId !== dragState.fromId) {
+                // Determine if target is full is handled by onMove logic in hook, 
+                // but we can check here visually if we passed isFull props correctly.
+                // For now, rely on hook validation.
+                onMove(dragState.player.id, dragState.fromId, toId);
+            }
+        }
+
+        setDragState({ isDragging: false, player: null, fromId: null, x: 0, y: 0 });
+    };
+
+    if (dragState.isDragging) {
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+        window.addEventListener('pointercancel', handlePointerUp);
     }
 
     return () => {
-        window.removeEventListener('dragend', handleWindowDragEnd);
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
+        window.removeEventListener('pointercancel', handlePointerUp);
     };
-  }, [isDragging]);
+  }, [dragState.isDragging, dragState.player, dragState.fromId, onMove]);
+
 
   const handleGenerate = () => {
     const names = rawNames.split('\n').map(n => n.trim()).filter(n => n);
@@ -278,15 +286,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
     }
   };
 
-  const handleGlobalDragEnd = () => {
-      setIsDragging(false);
-  };
-
-  const handleMoveWrapper = (playerId: string, fromId: string, toId: string) => {
-      setIsDragging(false);
-      onMove(playerId, fromId, toId);
-  };
-
   const counts = {
       A: courtA.players.length,
       B: courtB.players.length
@@ -295,8 +294,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
   const commonPlayerProps = {
       onToggleFixed,
       onRemove,
-      onDragStart: () => setIsDragging(true),
-      onDragEnd: () => setIsDragging(false)
+      onPointerDown: handlePointerDown
   };
 
   return (
@@ -325,18 +323,14 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
             </Button>
         </div>
       ) : (
-        <div 
-            className="relative h-full flex flex-col"
-            onDragEnd={handleGlobalDragEnd} // Global handler for React synthetic events
-        >
+        <div className="relative h-full flex flex-col">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-4 flex-1">
                 {/* Court A */}
                 <div className="flex flex-col h-full">
                     <DroppableTeam 
                         targetId="A" 
                         isFull={counts.A >= 6} 
-                        isGlobalDragging={isDragging}
-                        onDropPlayer={handleMoveWrapper}
+                        isGlobalDragging={dragState.isDragging}
                         className="bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10 flex-1 flex flex-col min-h-[400px]"
                     >
                         <h3 className="font-bold text-indigo-400 mb-4 text-xs uppercase tracking-widest flex items-center justify-between">
@@ -348,7 +342,15 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
                         </h3>
                         <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
                             {courtA.players.length === 0 && <span className="text-xs text-slate-600 italic px-2">Drag players here</span>}
-                            {courtA.players.map(p => <PlayerItem key={p.id} player={p} locationId="A" {...commonPlayerProps} />)}
+                            {courtA.players.map(p => (
+                                <PlayerItem 
+                                    key={p.id} 
+                                    player={p} 
+                                    locationId="A" 
+                                    {...commonPlayerProps} 
+                                    isBeingDragged={dragState.isDragging && dragState.player?.id === p.id}
+                                />
+                            ))}
                         </div>
                         <AddPlayerInput onAdd={n => onAddPlayer(n, 'A')} disabled={counts.A >= 6} />
                     </DroppableTeam>
@@ -370,8 +372,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
                                 <DroppableTeam 
                                     key={team.id}
                                     targetId={team.id}
-                                    onDropPlayer={handleMoveWrapper}
-                                    isGlobalDragging={isDragging}
+                                    isGlobalDragging={dragState.isDragging}
                                     isFull={team.players.length >= 6}
                                     className={`
                                         bg-black/20 rounded-xl p-3 border 
@@ -391,7 +392,13 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
                                     
                                     <div className="space-y-1">
                                         {team.players.map(p => (
-                                            <PlayerItem key={p.id} player={p} locationId={team.id} {...commonPlayerProps} />
+                                            <PlayerItem 
+                                                key={p.id} 
+                                                player={p} 
+                                                locationId={team.id} 
+                                                {...commonPlayerProps} 
+                                                isBeingDragged={dragState.isDragging && dragState.player?.id === p.id}
+                                            />
                                         ))}
                                     </div>
                                 </DroppableTeam>
@@ -408,8 +415,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
                     <DroppableTeam 
                         targetId="B" 
                         isFull={counts.B >= 6} 
-                        isGlobalDragging={isDragging}
-                        onDropPlayer={handleMoveWrapper}
+                        isGlobalDragging={dragState.isDragging}
                         className="bg-rose-500/5 p-4 rounded-2xl border border-rose-500/10 flex-1 flex flex-col min-h-[400px]"
                     >
                         <h3 className="font-bold text-rose-400 mb-4 text-xs uppercase tracking-widest flex items-center justify-between">
@@ -421,12 +427,38 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
                         </h3>
                         <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
                             {courtB.players.length === 0 && <span className="text-xs text-slate-600 italic px-2">Drag players here</span>}
-                            {courtB.players.map(p => <PlayerItem key={p.id} player={p} locationId="B" {...commonPlayerProps} />)}
+                            {courtB.players.map(p => (
+                                <PlayerItem 
+                                    key={p.id} 
+                                    player={p} 
+                                    locationId="B" 
+                                    {...commonPlayerProps} 
+                                    isBeingDragged={dragState.isDragging && dragState.player?.id === p.id}
+                                />
+                            ))}
                         </div>
                         <AddPlayerInput onAdd={n => onAddPlayer(n, 'B')} disabled={counts.B >= 6} />
                     </DroppableTeam>
                 </div>
             </div>
+
+            {/* Ghost Drag Element (Portal) */}
+            {dragState.isDragging && dragState.player && createPortal(
+                <div 
+                    className="fixed pointer-events-none z-[100] flex items-center justify-between p-2.5 rounded-xl border border-indigo-500 bg-indigo-900/90 text-white shadow-2xl w-64 backdrop-blur-md"
+                    style={{ 
+                        left: dragState.x, 
+                        top: dragState.y,
+                        transform: 'translate(-50%, -50%) rotate(3deg)' 
+                    }}
+                >
+                    <div className="flex items-center gap-3">
+                         <GripVertical size={14} className="text-indigo-300" />
+                         <span className="font-medium text-sm">{dragState.player.name}</span>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
       )}
 

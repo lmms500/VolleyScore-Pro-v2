@@ -243,7 +243,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
         
         {/* INSTALL APP SECTION - Shows if NOT standalone (installed) */}
-        {!isStandalone && (
+        {isStandalone === false && (
              <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-between gap-4">
                  <div className="flex-1">
                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">

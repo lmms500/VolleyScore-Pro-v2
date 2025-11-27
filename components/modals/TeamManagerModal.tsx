@@ -133,8 +133,8 @@ const DroppableTeam: React.FC<{
         // Active Hover Target
         dynamicStyles = 'bg-indigo-500/30 ring-4 ring-indigo-500/50 border-indigo-400 scale-[1.01] shadow-[0_0_35px_rgba(99,102,241,0.4)] z-10';
     } else if (isGlobalDragging && !isFull) {
-        // Valid Drop Candidate (Hint) - Stronger visual
-        dynamicStyles = 'bg-indigo-500/10 border-2 border-dashed border-indigo-500/80 ring-4 ring-indigo-500/20 animate-pulse shadow-[inset_0_0_20px_rgba(99,102,241,0.2)]';
+        // Valid Drop Candidate (Hint) - Stronger visual with thicker border
+        dynamicStyles = 'bg-indigo-500/10 border-4 border-dashed border-indigo-500/80 ring-4 ring-indigo-500/20 animate-pulse shadow-[inset_0_0_20px_rgba(99,102,241,0.2)]';
     } else if (isGlobalDragging && isFull) {
         // Invalid Target (Full)
         dynamicStyles = 'opacity-40 grayscale scale-[0.98] transition-opacity border-rose-500/20';

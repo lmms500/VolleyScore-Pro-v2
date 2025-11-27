@@ -112,20 +112,20 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
 
         {/* 2. BADGES (Order 2) - Rendered inline to push content */}
         {(isMatchPoint || isSetPoint || isDeuce || inSuddenDeath) ? (
-            <div className="flex-none py-2 order-2 w-full flex justify-center z-10 min-h-[2.5rem]">
+            <div className="flex-none py-2 order-2 w-full flex justify-center z-10 min-h-[3rem]">
                  <div className={`
-                    px-6 py-2 rounded-full backdrop-blur-xl border border-white/20 shadow-2xl
+                    px-8 py-2.5 rounded-full backdrop-blur-xl border border-white/20 shadow-2xl
                     animate-pulse font-black uppercase tracking-[0.2em] text-center whitespace-nowrap
-                    text-xs md:text-sm shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center gap-2
+                    text-sm md:text-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center gap-2 transform transition-all
                     ${inSuddenDeath
-                        ? 'bg-red-500 text-white shadow-red-500/50 scale-110 border-red-400'
+                        ? 'bg-red-600 text-white shadow-red-500/50 scale-110 border-red-400'
                         : isMatchPoint 
                             ? 'bg-amber-500 text-black shadow-amber-500/50 scale-110' 
                             : isSetPoint 
                                 ? `${theme.bg} text-white ${theme.shadow} scale-110`
                                 : 'bg-slate-200 text-slate-900'} 
                 `}>
-                    {inSuddenDeath && <Zap size={16} fill="currentColor" />}
+                    {inSuddenDeath && <Zap size={18} fill="currentColor" />}
                     {inSuddenDeath ? 'Sudden Death' : isMatchPoint ? 'Match Point' : isSetPoint ? 'Set Point' : 'Deuce'}
                 </div>
             </div>

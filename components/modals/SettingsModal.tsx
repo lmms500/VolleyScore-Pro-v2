@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameConfig } from '../../types';
-import { Check, Trophy, Sun, Zap, Download, Share, Smartphone } from 'lucide-react';
+import { Check, Trophy, Sun, Zap, Download, Share, Smartphone, Menu } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -14,9 +14,13 @@ interface SettingsModalProps {
   onInstall?: () => void;
   canInstall?: boolean;
   isIOS?: boolean;
+  isStandalone?: boolean;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, config, teamAName, teamBName, onSave, onInstall, canInstall, isIOS }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ 
+    isOpen, onClose, config, teamAName, teamBName, onSave, 
+    onInstall, canInstall, isIOS, isStandalone 
+}) => {
   const [localConfig, setLocalConfig] = useState<GameConfig>(config);
   const [names, setNames] = useState({ nameA: teamAName, nameB: teamBName });
 
@@ -238,19 +242,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
           </div>
         </div>
         
-        {/* INSTALL APP SECTION - Only show if installable or iOS */}
-        {(canInstall || isIOS) && (
+        {/* INSTALL APP SECTION - Shows if NOT standalone (installed) */}
+        {!isStandalone && (
              <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-between gap-4">
                  <div className="flex-1">
                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                        <Smartphone size={12} /> App Install
+                        <Smartphone size={12} /> Install App
                      </span>
-                     <p className="text-xs text-slate-400">Install to your home screen for full performance.</p>
+                     <p className="text-xs text-slate-400">Add to home screen for full experience.</p>
                  </div>
                  
                  {canInstall ? (
                     <Button onClick={onInstall} size="sm" className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/40">
-                        <Download size={14} /> Install App
+                        <Download size={14} /> Install Now
                     </Button>
                  ) : isIOS ? (
                     <div className="flex flex-col items-end text-right">
@@ -259,7 +263,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
                         </span>
                         <span className="text-[10px] font-bold text-slate-300">"Add to Home Screen"</span>
                     </div>
-                 ) : null}
+                 ) : (
+                    /* Fallback for Android/Chrome when event hasn't fired yet */
+                    <div className="flex flex-col items-end text-right">
+                         <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                            Tap <Menu size={10} /> then
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-300">"Install App"</span>
+                    </div>
+                 )}
              </div>
         )}
 

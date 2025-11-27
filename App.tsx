@@ -262,6 +262,7 @@ function App() {
         onInstall={pwa.promptInstall}
         canInstall={pwa.isInstallable}
         isIOS={pwa.isIOS}
+        isStandalone={pwa.isStandalone}
       />
 
       <TeamManagerModal 

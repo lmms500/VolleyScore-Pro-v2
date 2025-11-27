@@ -254,7 +254,7 @@ const DroppableTeam: React.FC<{
     );
 };
 
-// Sub-component for inline editing of team names (código omitido, inalterado)
+// Sub-component for inline editing of team names
 const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; className?: string }> = ({ name, onSave, className }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [val, setVal] = useState(name);
@@ -291,7 +291,7 @@ const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; cla
   );
 };
 
-// Sub-component for Adding Player (código omitido, inalterado)
+// Sub-component for Adding Player
 const AddPlayerInput: React.FC<{ onAdd: (name: string) => void; placeholder?: string; disabled?: boolean }> = ({ onAdd, placeholder, disabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [name, setName] = useState('');

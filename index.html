@@ -6,14 +6,13 @@
     <meta name="theme-color" content="#020617" />
     <meta name="description" content="Advanced Volleyball Scoreboard & Team Management PWA with rotation logic, sudden death rules, and neo-glass UI.">
     
-    <!-- iOS / Apple Specific Meta Tags (Critical for iOS PWA) -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="VolleyScore" />
     
-    <!-- Standard Favicons (PNG/ICO) - Absolute Paths -->
-    <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     
     <title>VolleyScore Pro 2</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -56,7 +55,7 @@
         scrollbar-width: none;
       }
     </style>
-<script type="importmap">
+  <script type="importmap">
 {
   "imports": {
     "react": "https://aistudiocdn.com/react@^19.2.0",
@@ -65,8 +64,7 @@
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
     "vite": "https://aistudiocdn.com/vite@^7.2.4",
     "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
-    "vite-plugin-pwa": "https://aistudiocdn.com/vite-plugin-pwa@^1.1.0",
-    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0"
+    "vite-plugin-pwa": "https://aistudiocdn.com/vite-plugin-pwa@^1.1.0"
   }
 }
 </script>
@@ -74,6 +72,7 @@
   <body class="bg-[#020617] text-slate-100 antialiased h-screen overflow-hidden selection:bg-indigo-500 selection:text-white">
     <div class="bg-noise"></div>
     <div id="root" class="h-full w-full flex flex-col relative z-10"></div>
+    
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

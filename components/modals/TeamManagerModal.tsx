@@ -3,7 +3,6 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Team, Player } from '../../types';
 import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban } from 'lucide-react';
-import { createPortal } from 'react-dom';
 
 interface TeamManagerModalProps {
   isOpen: boolean;
@@ -26,34 +25,125 @@ interface PlayerItemProps {
   locationId: string; // ID of the container (TeamID or 'A'/'B')
   onToggleFixed?: (playerId: string, teamId?: 'A' | 'B') => void;
   onRemove: (id: string) => void;
-  onPointerDown?: (e: React.PointerEvent, player: Player, fromId: string) => void;
-  isBeingDragged?: boolean;
+  onDragStart: (e: React.DragEvent | React.TouchEvent, playerId: string, fromId: string) => void; // Unified event
+  onDragEnd?: () => void;
+  isDraggingGlobal: boolean;
 }
 
-const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFixed, onRemove, onPointerDown, isBeingDragged }) => {
+// --- Auto-Scroll Helpers (Clean Code) ---
+const SCROLL_ZONE_PX = 40; // Area near edge to trigger scroll
+const SCROLL_SPEED = 8;    // Scroll speed
+let scrollAssistInterval: number | null = null;
+let lastScrollElement: HTMLElement | null = null;
+
+/**
+ * Inicia o assistente de scroll automático quando o item arrastado se aproxima da borda.
+ */
+const startScrollAssist = (element: HTMLElement, direction: 'up' | 'down') => {
+    // Se já estivermos rolando este elemento na mesma direção, ou se for outro elemento, pare e recomece
+    if (scrollAssistInterval && lastScrollElement === element) return;
+    stopScrollAssist();
+    lastScrollElement = element;
+
+    scrollAssistInterval = (setInterval(() => {
+        if (!lastScrollElement) {
+            stopScrollAssist();
+            return;
+        }
+        if (direction === 'up') {
+            lastScrollElement.scrollTop -= SCROLL_SPEED;
+        } else {
+            lastScrollElement.scrollTop += SCROLL_SPEED;
+        }
+    }, 20) as unknown as number); // Smooth scroll check every 20ms
+};
+
+/**
+ * Para o assistente de scroll.
+ */
+const stopScrollAssist = () => {
+    if (scrollAssistInterval) {
+        clearInterval(scrollAssistInterval);
+        scrollAssistInterval = null;
+        lastScrollElement = null;
+    }
+};
+
+const PlayerItem: React.FC<PlayerItemProps> = ({ 
+    player, 
+    locationId, 
+    onToggleFixed, 
+    onRemove, 
+    onDragStart, 
+    onDragEnd,
+    isDraggingGlobal
+}) => {
+  const [isDraggingThis, setIsDraggingThis] = useState(false);
+  const itemRef = useRef<HTMLDivElement>(null);
+  
+  // Handlers for Mouse/Native Drag
+  const handleDragStart = (e: React.DragEvent) => {
+      if(player.isFixed) return;
+      setIsDraggingThis(true);
+      onDragStart(e, player.id, locationId);
+  };
+
+  const handleDragEnd = () => {
+      setIsDraggingThis(false);
+      if (onDragEnd) onDragEnd();
+  };
+
+  // --- Touch Event Emulation (Critical for mobile fix) ---
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (player.isFixed) return;
+    
+    // Inicia a lógica de drag para touch
+    setIsDraggingThis(true);
+    // Usa a função de dragStart original, passando o evento touch
+    onDragStart(e, player.id, locationId);
+  };
+  
+  const handleTouchEnd = () => {
+      setIsDraggingThis(false);
+      // TouchEnd será tratado globalmente para o drop
+      if (onDragEnd) onDragEnd();
+  };
+  // -----------------------------------------------------
+
   return (
     <div 
-        onPointerDown={(e) => onPointerDown && !player.isFixed && onPointerDown(e, player, locationId)}
+        ref={itemRef}
+        // Native Drag for mouse/desktop
+        draggable={!player.isFixed}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        // Touch Handlers for Mobile (Necessário para que o touch inicie a drag logic)
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        // Previne o scroll nativo na direção vertical durante o arrasto
+        style={{ touchAction: player.isFixed ? 'auto' : 'none' }}
+        
         className={`
-            group flex items-center justify-between p-2.5 rounded-xl mb-2 border transition-all 
-            ${player.isFixed ? 'cursor-default' : 'cursor-grab active:cursor-grabbing touch-none'}
-            ${isBeingDragged 
-                ? 'opacity-30 grayscale border-dashed border-indigo-400/50 bg-black/20' 
+            group flex items-center justify-between p-2.5 rounded-xl mb-2 border transition-all cursor-grab active:cursor-grabbing
+            ${isDraggingThis || isDraggingGlobal && itemRef.current?.dataset.dragged === player.id 
+                ? 'opacity-50 grayscale scale-105 border-indigo-400 border-dashed bg-black/40 ring-2 ring-indigo-500/20' 
                 : player.isFixed 
                     ? 'bg-indigo-500/10 border-indigo-500/30' 
                     : 'bg-white/5 hover:bg-white/10 border-white/5 hover:border-white/20'
             }
         `}
+        data-player-id={player.id} // Usado para detecção de drop
+        data-from-location={locationId} // Usado para detecção de drop
+        data-dragged={isDraggingThis ? player.id : ''} // Helper para styling
     >
         {/* Left: Info */}
-        <div className="flex items-center gap-3 overflow-hidden pointer-events-none">
+        <div className="flex items-center gap-3 overflow-hidden">
             <GripVertical size={14} className="text-slate-600 flex-shrink-0" />
             
             {onToggleFixed && (
                 <button 
-                    onPointerDown={(e) => e.stopPropagation()} // Allow click without drag start
                     onClick={() => onToggleFixed(player.id, (locationId === 'A' || locationId === 'B') ? locationId : undefined)}
-                    className={`p-1.5 rounded-lg transition-all flex-shrink-0 pointer-events-auto ${player.isFixed ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/40' : 'bg-white/5 text-slate-500 hover:text-white'}`}
+                    className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${player.isFixed ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/40' : 'bg-white/5 text-slate-500 hover:text-white'}`}
                     title={player.isFixed ? "Player Fixed" : "Fix Player"}
                 >
                     <Pin size={14} fill={player.isFixed ? "currentColor" : "none"} />
@@ -71,11 +161,7 @@ const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFix
         
         {/* Right: Actions */}
         <div className="flex items-center gap-2 flex-shrink-0">
-            <button 
-                onPointerDown={(e) => e.stopPropagation()} // Allow click without drag start
-                onClick={() => onRemove(player.id)} 
-                className="text-slate-600 hover:text-rose-500 p-1.5 rounded hover:bg-rose-500/10 transition-colors pointer-events-auto"
-            >
+            <button onClick={() => onRemove(player.id)} className="text-slate-600 hover:text-rose-500 p-1.5 rounded hover:bg-rose-500/10 transition-colors">
                 <Trash2 size={14} />
             </button>
         </div>
@@ -88,16 +174,60 @@ const DroppableTeam: React.FC<{
     targetId: string; 
     isFull?: boolean;
     isGlobalDragging?: boolean;
+    onDropPlayer: (playerId: string, fromId: string, toId: string) => void;
     children: React.ReactNode;
     className?: string;
-}> = ({ targetId, isFull, isGlobalDragging, children, className }) => {
-    
+    scrollRef: React.RefObject<HTMLDivElement>; // Ref para auto-scroll
+    onPlayerTouchMove: (e: React.TouchEvent, ref: React.RefObject<HTMLDivElement>) => void; // Touch Move
+    onPlayerTouchEnd: (e: React.TouchEvent, toId: string) => void; // Touch Drop
+}> = ({ targetId, isFull, isGlobalDragging, onDropPlayer, children, className, scrollRef, onPlayerTouchMove, onPlayerTouchEnd }) => {
+    const [isOver, setIsOver] = useState(false);
+
+    // --- Native Drag Handlers ---
+    const handleDragOver = (e: React.DragEvent) => {
+        if(isFull) return;
+        e.preventDefault();
+        setIsOver(true);
+    };
+
+    const handleDragLeave = () => setIsOver(false);
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsOver(false);
+        if(isFull) return;
+
+        const playerId = e.dataTransfer.getData('playerId');
+        const fromId = e.dataTransfer.getData('fromLocation');
+        
+        if(playerId && fromId && fromId !== targetId) {
+            onDropPlayer(playerId, fromId, targetId);
+        }
+    };
+    // ----------------------------
+
+    // --- Touch Handlers (Usando Refs para Auto-Scroll e Drop) ---
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isGlobalDragging) return;
+        
+        // Passa o evento e o scrollRef para o handler global no Modal
+        onPlayerTouchMove(e, scrollRef);
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (!isGlobalDragging) return;
+        
+        // Chama o handler global
+        onPlayerTouchEnd(e, targetId);
+    };
+
     // Enhanced Style logic for better visibility:
     let dynamicStyles = '';
     
-    // Note: We don't use onDragOver/Drop here anymore because we use geometric detection on PointerUp
-    
-    if (isGlobalDragging && !isFull) {
+    if (isOver && !isFull) {
+        // Active Hover Target
+        dynamicStyles = 'bg-indigo-500/30 ring-4 ring-indigo-500/50 border-indigo-400 scale-[1.01] shadow-[0_0_35px_rgba(99,102,241,0.4)] z-10';
+    } else if (isGlobalDragging && !isFull) {
         // Valid Drop Candidate (Hint) - Stronger visual with thicker border
         dynamicStyles = 'bg-indigo-500/10 border-4 border-dashed border-indigo-500/80 ring-4 ring-indigo-500/20 animate-pulse shadow-[inset_0_0_20px_rgba(99,102,241,0.2)]';
     } else if (isGlobalDragging && isFull) {
@@ -107,7 +237,16 @@ const DroppableTeam: React.FC<{
 
     return (
         <div 
-            data-drop-target-id={targetId} // Critical for elementFromPoint detection
+            // Native Drag
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            
+            // Touch Drag (Delegado, mas o TouchMove é crucial para o Scroll Assist)
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            
+            data-droppable-id={targetId} // Adicionado para detecção de drop por touch
             className={`transition-all duration-200 ease-out ${dynamicStyles} ${className}`}
         >
             {children}
@@ -115,7 +254,7 @@ const DroppableTeam: React.FC<{
     );
 };
 
-// Sub-component for inline editing of team names
+// Sub-component for inline editing of team names (código omitido, inalterado)
 const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; className?: string }> = ({ name, onSave, className }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [val, setVal] = useState(name);
@@ -152,7 +291,7 @@ const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; cla
   );
 };
 
-// Sub-component for Adding Player
+// Sub-component for Adding Player (código omitido, inalterado)
 const AddPlayerInput: React.FC<{ onAdd: (name: string) => void; placeholder?: string; disabled?: boolean }> = ({ onAdd, placeholder, disabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [name, setName] = useState('');
@@ -215,67 +354,38 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
 }) => {
   const [rawNames, setRawNames] = useState('');
   const [view, setView] = useState<'input' | 'roster'>('roster');
-  
-  // Custom Drag State
-  const [dragState, setDragState] = useState<{
-      isDragging: boolean;
-      player: Player | null;
-      fromId: string | null;
-      x: number;
-      y: number;
-  }>({ isDragging: false, player: null, fromId: null, x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null);
+  const [draggedFromId, setDraggedFromId] = useState<string | null>(null);
 
-  // Pointer Event Handlers for Drag & Drop
-  const handlePointerDown = (e: React.PointerEvent, player: Player, fromId: string) => {
-      e.preventDefault(); // Prevent scrolling/selection
-      setDragState({
-          isDragging: true,
-          player,
-          fromId,
-          x: e.clientX,
-          y: e.clientY
-      });
-  };
+  // Refs para as áreas de scroll dos containers
+  const courtARef = useRef<HTMLDivElement>(null);
+  const courtBRef = useRef<HTMLDivElement>(null);
+  const queueRef = useRef<HTMLDivElement>(null); // Ref para a área scrollable principal da Queue
 
+  // Global safety net for drag end: 
   useEffect(() => {
-    const handlePointerMove = (e: PointerEvent) => {
-        if (!dragState.isDragging) return;
-        setDragState(prev => ({ ...prev, x: e.clientX, y: e.clientY }));
+    const handleWindowDragEnd = () => {
+        stopScrollAssist(); // Stop scroll assist on native drag end
+        setIsDragging(false);
+        setDraggedPlayerId(null);
+        setDraggedFromId(null);
     };
 
-    const handlePointerUp = (e: PointerEvent) => {
-        if (!dragState.isDragging) return;
-        
-        // Geometric detection of drop target
-        const elements = document.elementsFromPoint(e.clientX, e.clientY);
-        const targetElement = elements.find(el => el.hasAttribute('data-drop-target-id'));
-        
-        if (targetElement) {
-            const toId = targetElement.getAttribute('data-drop-target-id');
-            if (toId && dragState.player && dragState.fromId && toId !== dragState.fromId) {
-                // Determine if target is full is handled by onMove logic in hook, 
-                // but we can check here visually if we passed isFull props correctly.
-                // For now, rely on hook validation.
-                onMove(dragState.player.id, dragState.fromId, toId);
-            }
-        }
-
-        setDragState({ isDragging: false, player: null, fromId: null, x: 0, y: 0 });
-    };
-
-    if (dragState.isDragging) {
-        window.addEventListener('pointermove', handlePointerMove);
-        window.addEventListener('pointerup', handlePointerUp);
-        window.addEventListener('pointercancel', handlePointerUp);
+    if (isDragging) {
+        // Use window listeners for mouse drag end
+        window.addEventListener('dragend', handleWindowDragEnd);
+        // Add global touch move to prevent default scroll behavior on the entire screen while dragging
+        document.body.style.overflow = 'hidden'; // Temporarily disable body scroll
+    } else {
+         document.body.style.overflow = ''; // Restore body scroll
     }
 
     return () => {
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', handlePointerUp);
-        window.removeEventListener('pointercancel', handlePointerUp);
+        window.removeEventListener('dragend', handleWindowDragEnd);
+        document.body.style.overflow = '';
     };
-  }, [dragState.isDragging, dragState.player, dragState.fromId, onMove]);
-
+  }, [isDragging]);
 
   const handleGenerate = () => {
     const names = rawNames.split('\n').map(n => n.trim()).filter(n => n);
@@ -286,6 +396,79 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
     }
   };
 
+  const handleDragStartWrapper = (e: React.DragEvent | React.TouchEvent, playerId: string, fromId: string) => {
+      // For Native Drag
+      if ((e as React.DragEvent).dataTransfer) {
+          (e as React.DragEvent).dataTransfer.setData('playerId', playerId);
+          (e as React.DragEvent).dataTransfer.setData('fromLocation', fromId);
+          (e as React.DragEvent).dataTransfer.effectAllowed = 'move';
+      }
+      // For Touch Emulation
+      setDraggedPlayerId(playerId);
+      setDraggedFromId(fromId);
+      setIsDragging(true);
+  };
+  
+  const handleGlobalDragEnd = () => {
+      // Global handler for React synthetic events and final touch end
+      stopScrollAssist();
+      setIsDragging(false);
+      setDraggedPlayerId(null);
+      setDraggedFromId(null);
+  };
+
+  const handleMoveWrapper = (playerId: string, fromId: string, toId: string) => {
+      setIsDragging(false);
+      setDraggedPlayerId(null);
+      setDraggedFromId(null);
+      onMove(playerId, fromId, toId);
+  };
+  
+  // --- TOUCH HANDLERS FOR SCROLL ASSIST AND DROP ---
+  const handlePlayerTouchMove = (e: React.TouchEvent, ref: React.RefObject<HTMLDivElement>) => {
+      if (!isDragging || !ref.current) return;
+
+      const touch = e.touches[0];
+      const { clientY } = touch;
+      const element = ref.current;
+      const rect = element.getBoundingClientRect();
+
+      // Check if near top edge of scrollable area
+      if (clientY < rect.top + SCROLL_ZONE_PX && element.scrollTop > 0) {
+          startScrollAssist(element, 'up');
+      } 
+      // Check if near bottom edge of scrollable area
+      else if (clientY > rect.bottom - SCROLL_ZONE_PX && element.scrollHeight > element.clientHeight + element.scrollTop) {
+          startScrollAssist(element, 'down');
+      } 
+      // Stop scrolling if touch is in the middle
+      else {
+          stopScrollAssist();
+      }
+  };
+
+  const handlePlayerTouchEnd = (e: React.TouchEvent, toId: string) => {
+      stopScrollAssist();
+      if (!draggedPlayerId || !draggedFromId || draggedFromId === toId) {
+          handleGlobalDragEnd();
+          return;
+      }
+
+      // Find the element currently under the touch point
+      const touch = e.changedTouches[0];
+      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+      
+      const closestDroppable = targetElement?.closest('[data-droppable-id]');
+      
+      // Se o drop ocorreu em um container válido E não estiver cheio:
+      if (closestDroppable && closestDroppable.getAttribute('data-droppable-id') === toId) {
+          handleMoveWrapper(draggedPlayerId, draggedFromId, toId);
+      }
+      
+      handleGlobalDragEnd();
+  };
+  // --------------------------------------------------
+
   const counts = {
       A: courtA.players.length,
       B: courtB.players.length
@@ -294,7 +477,9 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
   const commonPlayerProps = {
       onToggleFixed,
       onRemove,
-      onPointerDown: handlePointerDown
+      onDragStart: handleDragStartWrapper,
+      onDragEnd: handleGlobalDragEnd,
+      isDraggingGlobal: isDragging,
   };
 
   return (
@@ -323,14 +508,26 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
             </Button>
         </div>
       ) : (
-        <div className="relative h-full flex flex-col">
+        <div 
+            className="relative h-full flex flex-col"
+            onDragEnd={handleGlobalDragEnd} 
+            onTouchMove={(e) => { 
+                 // Prevents scroll on the Modal itself when dragging (only allows it in the scrollable areas)
+                 if (isDragging) e.preventDefault(); 
+            }}
+            onTouchEnd={handleGlobalDragEnd} // Global handler for missed drops
+        >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-4 flex-1">
                 {/* Court A */}
                 <div className="flex flex-col h-full">
                     <DroppableTeam 
                         targetId="A" 
                         isFull={counts.A >= 6} 
-                        isGlobalDragging={dragState.isDragging}
+                        isGlobalDragging={isDragging}
+                        onDropPlayer={handleMoveWrapper}
+                        scrollRef={courtARef} 
+                        onPlayerTouchMove={handlePlayerTouchMove} 
+                        onPlayerTouchEnd={handlePlayerTouchEnd} 
                         className="bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10 flex-1 flex flex-col min-h-[400px]"
                     >
                         <h3 className="font-bold text-indigo-400 mb-4 text-xs uppercase tracking-widest flex items-center justify-between">
@@ -340,17 +537,9 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
                             </span>
                             <span className={`${counts.A >= 6 ? 'text-rose-400' : 'text-indigo-400/50'}`}>{counts.A}/6</span>
                         </h3>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+                        <div ref={courtARef} className="flex-1 overflow-y-auto custom-scrollbar pr-1">
                             {courtA.players.length === 0 && <span className="text-xs text-slate-600 italic px-2">Drag players here</span>}
-                            {courtA.players.map(p => (
-                                <PlayerItem 
-                                    key={p.id} 
-                                    player={p} 
-                                    locationId="A" 
-                                    {...commonPlayerProps} 
-                                    isBeingDragged={dragState.isDragging && dragState.player?.id === p.id}
-                                />
-                            ))}
+                            {courtA.players.map(p => <PlayerItem key={p.id} player={p} locationId="A" {...commonPlayerProps} />)}
                         </div>
                         <AddPlayerInput onAdd={n => onAddPlayer(n, 'A')} disabled={counts.A >= 6} />
                     </DroppableTeam>
@@ -365,15 +554,19 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
                             Waiting Queue
                         </h3>
                         
-                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-4">
+                        <div ref={queueRef} className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-4">
                             {queue.length === 0 && <span className="text-xs text-slate-600 italic px-2">Queue empty</span>}
 
                             {queue.map((team, idx) => (
                                 <DroppableTeam 
                                     key={team.id}
                                     targetId={team.id}
-                                    isGlobalDragging={dragState.isDragging}
+                                    onDropPlayer={handleMoveWrapper}
+                                    isGlobalDragging={isDragging}
                                     isFull={team.players.length >= 6}
+                                    scrollRef={queueRef} // Pass queue ref here too
+                                    onPlayerTouchMove={handlePlayerTouchMove} 
+                                    onPlayerTouchEnd={handlePlayerTouchEnd} 
                                     className={`
                                         bg-black/20 rounded-xl p-3 border 
                                         ${team.players.length >= 6 ? 'border-rose-500/20' : 'border-white/5'}
@@ -392,13 +585,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
                                     
                                     <div className="space-y-1">
                                         {team.players.map(p => (
-                                            <PlayerItem 
-                                                key={p.id} 
-                                                player={p} 
-                                                locationId={team.id} 
-                                                {...commonPlayerProps} 
-                                                isBeingDragged={dragState.isDragging && dragState.player?.id === p.id}
-                                            />
+                                            <PlayerItem key={p.id} player={p} locationId={team.id} {...commonPlayerProps} />
                                         ))}
                                     </div>
                                 </DroppableTeam>
@@ -415,7 +602,11 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
                     <DroppableTeam 
                         targetId="B" 
                         isFull={counts.B >= 6} 
-                        isGlobalDragging={dragState.isDragging}
+                        isGlobalDragging={isDragging}
+                        onDropPlayer={handleMoveWrapper}
+                        scrollRef={courtBRef} 
+                        onPlayerTouchMove={handlePlayerTouchMove} 
+                        onPlayerTouchEnd={handlePlayerTouchEnd} 
                         className="bg-rose-500/5 p-4 rounded-2xl border border-rose-500/10 flex-1 flex flex-col min-h-[400px]"
                     >
                         <h3 className="font-bold text-rose-400 mb-4 text-xs uppercase tracking-widest flex items-center justify-between">
@@ -425,40 +616,14 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
                             </span>
                             <span className={`${counts.B >= 6 ? 'text-rose-400' : 'text-rose-400/50'}`}>{counts.B}/6</span>
                         </h3>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+                        <div ref={courtBRef} className="flex-1 overflow-y-auto custom-scrollbar pr-1">
                             {courtB.players.length === 0 && <span className="text-xs text-slate-600 italic px-2">Drag players here</span>}
-                            {courtB.players.map(p => (
-                                <PlayerItem 
-                                    key={p.id} 
-                                    player={p} 
-                                    locationId="B" 
-                                    {...commonPlayerProps} 
-                                    isBeingDragged={dragState.isDragging && dragState.player?.id === p.id}
-                                />
-                            ))}
+                            {courtB.players.map(p => <PlayerItem key={p.id} player={p} locationId="B" {...commonPlayerProps} />)}
                         </div>
                         <AddPlayerInput onAdd={n => onAddPlayer(n, 'B')} disabled={counts.B >= 6} />
                     </DroppableTeam>
                 </div>
             </div>
-
-            {/* Ghost Drag Element (Portal) */}
-            {dragState.isDragging && dragState.player && createPortal(
-                <div 
-                    className="fixed pointer-events-none z-[100] flex items-center justify-between p-2.5 rounded-xl border border-indigo-500 bg-indigo-900/90 text-white shadow-2xl w-64 backdrop-blur-md"
-                    style={{ 
-                        left: dragState.x, 
-                        top: dragState.y,
-                        transform: 'translate(-50%, -50%) rotate(3deg)' 
-                    }}
-                >
-                    <div className="flex items-center gap-3">
-                         <GripVertical size={14} className="text-indigo-300" />
-                         <span className="font-medium text-sm">{dragState.player.name}</span>
-                    </div>
-                </div>,
-                document.body
-            )}
         </div>
       )}
 

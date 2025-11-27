@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
+import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
 import { ScoreCardNormal } from './components/ScoreCardNormal';
 import { ScoreCardFullscreen } from './components/ScoreCardFullscreen';
 import { HistoryBar } from './components/HistoryBar';
@@ -15,6 +16,9 @@ import { TeamId } from './types';
 function App() {
   const game = useVolleyGame();
   const { state, isLoaded } = game;
+  
+  // PWA Hook
+  const pwa = usePWAInstallPrompt();
   
   const [showSettings, setShowSettings] = useState(false);
   const [showManager, setShowManager] = useState(false);
@@ -255,6 +259,9 @@ function App() {
         teamAName={state.teamAName}
         teamBName={state.teamBName}
         onSave={game.applySettings}
+        onInstall={pwa.promptInstall}
+        canInstall={pwa.isInstallable}
+        isIOS={pwa.isIOS}
       />
 
       <TeamManagerModal 

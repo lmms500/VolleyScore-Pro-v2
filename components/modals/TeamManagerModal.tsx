@@ -40,7 +40,7 @@ const startScrollAssist = (element: HTMLElement, direction: 'up' | 'down') => {
   stopScrollAssist();
   lastScrollElement = element;
 
-  scrollAssistInterval = setInterval(() => {
+  scrollAssistInterval = window.setInterval(() => {
     if (!lastScrollElement) return stopScrollAssist();
     lastScrollElement.scrollTop += direction === 'up' ? -SCROLL_SPEED : SCROLL_SPEED;
   }, 20);
@@ -48,7 +48,7 @@ const startScrollAssist = (element: HTMLElement, direction: 'up' | 'down') => {
 
 const stopScrollAssist = () => {
   if (scrollAssistInterval) {
-    clearInterval(scrollAssistInterval);
+    window.clearInterval(scrollAssistInterval);
     scrollAssistInterval = null;
     lastScrollElement = null;
   }
@@ -204,17 +204,13 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
   const courtBRef = useRef<HTMLDivElement>(null);
   const queueRef = useRef<HTMLDivElement>(null);
 
-  const getScrollRef = (id: string) => {
-      if(id === 'A') return courtARef;
-      if(id === 'B') return courtBRef;
-      return queueRef;
-  };
-
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, playerId: string, fromId: string) => {
     const target = e.currentTarget;
     longPressTimeout.current = window.setTimeout(() => {
         setIsDragging(true);
-        setDraggedItem({ id: playerId, fromId, element: target.cloneNode(true) as HTMLElement });
+        const clonedNode = target.cloneNode(true) as HTMLElement;
+        clonedNode.style.width = `${target.offsetWidth}px`; // Fix width on clone
+        setDraggedItem({ id: playerId, fromId, element: clonedNode });
         setGhostPosition({ x: e.clientX, y: e.clientY });
         target.setPointerCapture(e.pointerId); // Capture pointer for this element
     }, 200); // 200ms for long press
@@ -223,8 +219,11 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     // If not a long press, clear the timeout
     if (longPressTimeout.current) {
-        clearTimeout(longPressTimeout.current);
-        longPressTimeout.current = null;
+        // Simple move detection to cancel long press if user is just scrolling
+        if(Math.abs(e.movementY) > 5) {
+            window.clearTimeout(longPressTimeout.current);
+            longPressTimeout.current = null;
+        }
     }
 
     if (isDragging && draggedItem) {
@@ -253,14 +252,25 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (longPressTimeout.current) {
-        clearTimeout(longPressTimeout.current);
+        window.clearTimeout(longPressTimeout.current);
         longPressTimeout.current = null;
     }
     stopScrollAssist();
 
     if (isDragging && draggedItem) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
+        if(document.body.style.cursor) document.body.style.cursor = '';
+        
+        try {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+        } catch(err) {
+            // This can fail if the element was removed from DOM, which is fine.
+        }
 
+        // Hide ghost immediately to check element underneath
+        if (draggedItem.element) {
+            draggedItem.element.style.display = 'none';
+        }
+        
         const dropTarget = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-drop-target-id]');
         const toId = dropTarget?.getAttribute('data-drop-target-id');
 
@@ -292,10 +302,9 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
        {/* Ghost Element for Dragging */}
         {isDragging && draggedItem && (
             <div 
-                className="fixed top-0 left-0 pointer-events-none z-[100] -translate-x-1/2 -translate-y-1/2 opacity-80"
+                className="fixed top-0 left-0 pointer-events-none z-[100] -translate-x-1/2 -translate-y-[calc(50%_+_8px)] opacity-80 rotate-[-3deg] shadow-2xl shadow-black/50"
                 style={{
-                    transform: `translate(${ghostPosition.x}px, ${ghostPosition.y}px) scale(1.05)`,
-                    width: `${draggedItem.element.offsetWidth}px`
+                    transform: `translate(${ghostPosition.x}px, ${ghostPosition.y}px) scale(1.05) rotate(-3deg)`,
                 }}
                 dangerouslySetInnerHTML={{ __html: draggedItem.element.innerHTML }}
             />
@@ -322,17 +331,19 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
             onPointerCancel={handlePointerUp as any}
         >
           {/* Court A */}
-          <DroppableTeam id="A" isHighlighted={isDragging} isFull={counts.A >= 6} className="bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10 flex-1 flex flex-col">
-            <h3 className="font-bold text-indigo-400 mb-4 text-xs uppercase tracking-widest flex items-center justify-between">
-              <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_currentColor]"></div><EditableTitle name={courtA.name} onSave={n => onUpdateTeamName('A', n)} /></span>
-              <span className={`${counts.A >= 6 ? 'text-rose-400' : 'text-indigo-400/50'}`}>{counts.A}/6</span>
-            </h3>
-            <div ref={courtARef} className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-              {courtA.players.length === 0 && <span className="text-xs text-slate-600 italic px-2">Drag here</span>}
-              {courtA.players.map(p => <PlayerItem key={p.id} player={p} locationId="A" onToggleFixed={onToggleFixed} onRemove={onRemove} onPointerDown={handlePointerDown}/>)}
-            </div>
-            <AddPlayerInput onAdd={n => onAddPlayer(n, 'A')} disabled={counts.A >= 6} />
-          </DroppableTeam>
+          <div className="flex flex-col h-full">
+            <DroppableTeam id="A" isHighlighted={isDragging} isFull={counts.A >= 6} className="bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10 flex-1 flex flex-col">
+              <h3 className="font-bold text-indigo-400 mb-4 text-xs uppercase tracking-widest flex items-center justify-between">
+                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_currentColor]"></div><EditableTitle name={courtA.name} onSave={n => onUpdateTeamName('A', n)} /></span>
+                <span className={`${counts.A >= 6 ? 'text-rose-400' : 'text-indigo-400/50'}`}>{counts.A}/6</span>
+              </h3>
+              <div ref={courtARef} className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+                {courtA.players.length === 0 && <span className="text-xs text-slate-600 italic px-2">Drag here</span>}
+                {courtA.players.map(p => <PlayerItem key={p.id} player={p} locationId="A" onToggleFixed={onToggleFixed} onRemove={onRemove} onPointerDown={handlePointerDown}/>)}
+              </div>
+              <AddPlayerInput onAdd={n => onAddPlayer(n, 'A')} disabled={counts.A >= 6} />
+            </DroppableTeam>
+          </div>
 
           {/* Queue */}
           <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/5 flex-1 flex flex-col overflow-hidden">
@@ -355,21 +366,23 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
           </div>
           
           {/* Court B */}
-          <DroppableTeam id="B" isHighlighted={isDragging} isFull={counts.B >= 6} className="bg-rose-500/5 p-4 rounded-2xl border border-rose-500/10 flex-1 flex flex-col">
-            <h3 className="font-bold text-rose-400 mb-4 text-xs uppercase tracking-widest flex items-center justify-between">
-              <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_10px_currentColor]"></div><EditableTitle name={courtB.name} onSave={n => onUpdateTeamName('B', n)} /></span>
-              <span className={`${counts.B >= 6 ? 'text-rose-400' : 'text-rose-400/50'}`}>{counts.B}/6</span>
-            </h3>
-            <div ref={courtBRef} className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-              {courtB.players.length === 0 && <span className="text-xs text-slate-600 italic px-2">Drag here</span>}
-              {courtB.players.map(p => <PlayerItem key={p.id} player={p} locationId="B" onToggleFixed={onToggleFixed} onRemove={onRemove} onPointerDown={handlePointerDown}/>)}
-            </div>
-            <AddPlayerInput onAdd={n => onAddPlayer(n, 'B')} disabled={counts.B >= 6} />
-          </DroppableTeam>
+          <div className="flex flex-col h-full">
+            <DroppableTeam id="B" isHighlighted={isDragging} isFull={counts.B >= 6} className="bg-rose-500/5 p-4 rounded-2xl border border-rose-500/10 flex-1 flex flex-col">
+              <h3 className="font-bold text-rose-400 mb-4 text-xs uppercase tracking-widest flex items-center justify-between">
+                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_10px_currentColor]"></div><EditableTitle name={courtB.name} onSave={n => onUpdateTeamName('B', n)} /></span>
+                <span className={`${counts.B >= 6 ? 'text-rose-400' : 'text-rose-400/50'}`}>{counts.B}/6</span>
+              </h3>
+              <div ref={courtBRef} className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+                {courtB.players.length === 0 && <span className="text-xs text-slate-600 italic px-2">Drag here</span>}
+                {courtB.players.map(p => <PlayerItem key={p.id} player={p} locationId="B" onToggleFixed={onToggleFixed} onRemove={onRemove} onPointerDown={handlePointerDown}/>)}
+              </div>
+              <AddPlayerInput onAdd={n => onAddPlayer(n, 'B')} disabled={counts.B >= 6} />
+            </DroppableTeam>
+          </div>
         </div>
       )}
        {canUndoRemove && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] bg-slate-800 text-white px-5 py-3 rounded-full shadow-2xl border border-white/10 flex items-center gap-4 animate-in slide-in-from-bottom-5">
+            <div className="fixed bottom-6 left-12 md:left-1/2 md:-translate-x-1/2 z-[70] bg-slate-800 text-white px-5 py-3 rounded-full shadow-2xl border border-white/10 flex items-center gap-4 animate-in slide-in-from-bottom-5">
                 <span className="text-xs font-medium text-slate-300">Player removed</span>
                 <div className="h-4 w-px bg-white/20"></div>
                 <button onClick={onUndoRemove} className="flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-wider"><Undo2 size={16} /> UNDO</button>

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 
 interface UseScoreGesturesProps {
   onAdd: () => void;
@@ -28,7 +28,7 @@ export const useScoreGestures = ({
     
     // Capture the pointer to this element, ensuring subsequent events are directed here
     try {
-        e.currentTarget.setPointerCapture(e.pointerId);
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     } catch (error) {
         console.warn("Failed to capture pointer:", error);
     }
@@ -43,7 +43,7 @@ export const useScoreGestures = ({
     if (startY.current === null) return;
     
     try {
-        e.currentTarget.releasePointerCapture(e.pointerId);
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     } catch (error) {
         console.warn("Failed to release pointer:", error);
     }
@@ -73,7 +73,7 @@ export const useScoreGestures = ({
     if (startY.current === null) return;
     
     try {
-        e.currentTarget.releasePointerCapture(e.pointerId);
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     } catch (error) {
         console.warn("Failed to release pointer on cancel:", error);
     }

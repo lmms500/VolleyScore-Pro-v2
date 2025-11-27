@@ -206,24 +206,25 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, playerId: string, fromId: string) => {
     const target = e.currentTarget;
+    target.style.userSelect = 'none'; // Prevent text selection on long press
+
     longPressTimeout.current = window.setTimeout(() => {
         setIsDragging(true);
         const clonedNode = target.cloneNode(true) as HTMLElement;
         clonedNode.style.width = `${target.offsetWidth}px`; // Fix width on clone
         setDraggedItem({ id: playerId, fromId, element: clonedNode });
         setGhostPosition({ x: e.clientX, y: e.clientY });
-        target.setPointerCapture(e.pointerId); // Capture pointer for this element
+        try {
+          target.setPointerCapture(e.pointerId);
+        } catch(err) {}
     }, 200); // 200ms for long press
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     // If not a long press, clear the timeout
-    if (longPressTimeout.current) {
-        // Simple move detection to cancel long press if user is just scrolling
-        if(Math.abs(e.movementY) > 5) {
-            window.clearTimeout(longPressTimeout.current);
-            longPressTimeout.current = null;
-        }
+    if (longPressTimeout.current && (Math.abs(e.movementX) > 5 || Math.abs(e.movementY) > 5)) {
+      window.clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = null;
     }
 
     if (isDragging && draggedItem) {
@@ -258,13 +259,9 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
     stopScrollAssist();
 
     if (isDragging && draggedItem) {
-        if(document.body.style.cursor) document.body.style.cursor = '';
-        
         try {
             e.currentTarget.releasePointerCapture(e.pointerId);
-        } catch(err) {
-            // This can fail if the element was removed from DOM, which is fine.
-        }
+        } catch(err) {}
 
         // Hide ghost immediately to check element underneath
         if (draggedItem.element) {
@@ -279,6 +276,8 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
         }
     }
     
+    // Reset state
+    e.currentTarget.style.userSelect = '';
     setIsDragging(false);
     setDraggedItem(null);
   };
@@ -302,9 +301,10 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
        {/* Ghost Element for Dragging */}
         {isDragging && draggedItem && (
             <div 
-                className="fixed top-0 left-0 pointer-events-none z-[100] -translate-x-1/2 -translate-y-[calc(50%_+_8px)] opacity-80 rotate-[-3deg] shadow-2xl shadow-black/50"
+                className="fixed top-0 left-0 pointer-events-none z-[100] opacity-80 rotate-[-3deg] shadow-2xl shadow-black/50"
                 style={{
-                    transform: `translate(${ghostPosition.x}px, ${ghostPosition.y}px) scale(1.05) rotate(-3deg)`,
+                    transform: `translate(${ghostPosition.x - (draggedItem.element.offsetWidth / 2)}px, ${ghostPosition.y - (draggedItem.element.offsetHeight / 2)}px)`,
+                    width: `${draggedItem.element.offsetWidth}px`,
                 }}
                 dangerouslySetInnerHTML={{ __html: draggedItem.element.innerHTML }}
             />

@@ -7,12 +7,12 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'], // Usar o SVG que criamos
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png'], // Incluir assets estáticos vitais
       devOptions: {
         enabled: true
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,json}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,json}'],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
@@ -58,9 +58,19 @@ export default defineConfig({
         categories: ['sports', 'utilities'],
         icons: [
           {
-            src: 'icon.svg',
-            sizes: '192x192 512x512', // SVG escala para qualquer tamanho
-            type: 'image/svg+xml',
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
             purpose: 'any maskable'
           }
         ]

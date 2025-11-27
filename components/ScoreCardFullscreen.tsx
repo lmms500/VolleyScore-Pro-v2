@@ -97,27 +97,27 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
             </h2>
         </div>
 
-        {/* 2. BADGES SPACER & DISPLAY */}
+        {/* 2. BADGES SPACER & DISPLAY - MASSIVE VISIBILITY */}
         {(isMatchPoint || isSetPoint || isDeuce || inSuddenDeath) ? (
-            <div className="flex items-center justify-center transition-all duration-300 flex-none min-h-[5rem] py-2">
+            <div className="flex items-center justify-center transition-all duration-300 flex-none min-h-[6rem] py-4">
                 <div className={`
-                    px-8 py-2 rounded-full backdrop-blur-xl border border-white/20 shadow-2xl
+                    px-10 py-3 rounded-full backdrop-blur-xl border border-white/20 shadow-2xl
                     animate-pulse font-black uppercase tracking-[0.2em] text-center whitespace-nowrap
-                    text-xl md:text-3xl shadow-[0_0_50px_rgba(0,0,0,0.9)] transform flex items-center gap-3
+                    text-2xl md:text-5xl shadow-[0_0_60px_rgba(0,0,0,0.9)] transform flex items-center gap-4
                     ${inSuddenDeath
-                        ? 'bg-red-500 text-white shadow-red-500/50 scale-125 ring-4 ring-red-500/20'
+                        ? 'bg-red-600 text-white shadow-red-500/60 scale-125 ring-8 ring-red-500/20'
                         : isMatchPoint 
-                            ? 'bg-amber-500 text-black shadow-amber-500/50 scale-125 ring-4 ring-amber-500/20' 
+                            ? 'bg-amber-500 text-black shadow-amber-500/60 scale-125 ring-8 ring-amber-500/20' 
                             : isSetPoint 
-                                ? `${theme.bg} text-white scale-125`
+                                ? `${theme.bg} text-white scale-125 ring-8 ring-white/10`
                                 : 'bg-slate-200 text-slate-900 scale-110'} 
                 `}>
-                    {inSuddenDeath && <Zap size={28} fill="currentColor" />}
+                    {inSuddenDeath && <Zap size={48} fill="currentColor" />}
                     {inSuddenDeath ? 'Sudden Death' : isMatchPoint ? 'Match Point' : isSetPoint ? 'Set Point' : 'Deuce'}
                 </div>
             </div>
         ) : (
-            <div className="min-h-[5rem]"></div>
+            <div className="min-h-[6rem]"></div>
         )}
 
         {/* 3. HERO SCORE */}

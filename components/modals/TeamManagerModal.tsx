@@ -54,7 +54,7 @@ const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFix
         className={`
             group flex items-center justify-between p-2.5 rounded-xl mb-2 border transition-all cursor-grab active:cursor-grabbing
             ${isDraggingThis 
-                ? 'opacity-40 grayscale scale-95 border-indigo-400 border-dashed bg-black/20' 
+                ? 'opacity-50 grayscale scale-105 border-indigo-400 border-dashed bg-black/40 ring-2 ring-indigo-500/20' 
                 : player.isFixed 
                     ? 'bg-indigo-500/10 border-indigo-500/30' 
                     : 'bg-white/5 hover:bg-white/10 border-white/5 hover:border-white/20'
@@ -75,10 +75,12 @@ const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFix
                 </button>
             )}
             <div className="flex flex-col min-w-0">
-                <span className="font-medium text-sm text-slate-200 truncate">{player.name}</span>
-                <span className="text-[10px] font-mono text-slate-600 truncate opacity-60">
-                    #{player.id.slice(0, 4)}
-                </span>
+                <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm text-slate-200 truncate">{player.name}</span>
+                    <span className="text-[9px] font-mono text-slate-500/50 bg-white/5 px-1 rounded border border-white/5">
+                        #{player.id.slice(0, 4)}
+                    </span>
+                </div>
             </div>
         </div>
         
@@ -132,7 +134,7 @@ const DroppableTeam: React.FC<{
         dynamicStyles = 'bg-indigo-500/30 ring-4 ring-indigo-500/50 border-indigo-400 scale-[1.01] shadow-[0_0_35px_rgba(99,102,241,0.4)] z-10';
     } else if (isGlobalDragging && !isFull) {
         // Valid Drop Candidate (Hint) - Stronger visual
-        dynamicStyles = 'bg-indigo-500/10 border-2 border-dashed border-indigo-500/60 ring-4 ring-indigo-500/10 animate-pulse shadow-[inset_0_0_20px_rgba(99,102,241,0.2)]';
+        dynamicStyles = 'bg-indigo-500/10 border-2 border-dashed border-indigo-500/80 ring-4 ring-indigo-500/20 animate-pulse shadow-[inset_0_0_20px_rgba(99,102,241,0.2)]';
     } else if (isGlobalDragging && isFull) {
         // Invalid Target (Full)
         dynamicStyles = 'opacity-40 grayscale scale-[0.98] transition-opacity border-rose-500/20';

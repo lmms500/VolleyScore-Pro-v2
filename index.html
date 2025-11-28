@@ -7,6 +7,8 @@
     <title>VolleyScore Pro</title>
     
     <link rel="stylesheet" href="/tailwind-output.css">
+
+    <script src="https://cdn.tailwindcss.com"></script>
     
   <script type="importmap">
 {
@@ -25,6 +27,30 @@
   }
 }
 </script>
+<script>
+      // Hydrate theme ASAP to prevent flash of wrong theme.
+      (function() {
+        try {
+          var theme = localStorage.getItem('volleyscore-theme');
+          var isDark;
+          if (theme === 'light') {
+            isDark = false;
+          } else if (theme === 'dark') {
+            isDark = true;
+          } else { // 'system' or null/undefined defaults to system preference
+            isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          }
+          
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {
+          console.warn('Failed to hydrate theme:', e);
+        }
+      })();
+    </script>
 </head>
   <body>
     <div id="root"></div>

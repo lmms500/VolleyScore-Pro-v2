@@ -14,11 +14,11 @@ export interface Player {
   id: string;
   name: string;
   isFixed: boolean;
-  fixedSide?: TeamId | null; // If fixed, which side?
+  fixedSide?: string | null; // Changed to string to allow Queue Team IDs
 }
 
 export interface Team {
-  id: string; // Changed from TeamId to string to allow UUIDs for queue teams
+  id: string; 
   name: string;
   players: Player[];
 }
@@ -33,9 +33,9 @@ export interface SetHistory {
 export interface RotationReport {
   outgoingTeam: Team;
   incomingTeam: Team;
-  retainedPlayers: Player[]; // Fixed players who stayed
-  stolenPlayers: Player[]; // Players taken from queue/loser to fill spots
-  queueAfterRotation: Team[]; // Queue is now a list of Teams
+  retainedPlayers: Player[]; 
+  stolenPlayers: Player[]; 
+  queueAfterRotation: Team[]; 
 }
 
 export interface ActionLog {
@@ -57,7 +57,7 @@ export interface GameState {
   
   // History & Logic
   history: SetHistory[];
-  actionLog: ActionLog[]; // Stack of actions for accurate Undo
+  actionLog: ActionLog[]; 
   isMatchOver: boolean;
   matchWinner: TeamId | null;
   
@@ -78,6 +78,6 @@ export interface GameState {
   // Roster Management
   teamARoster: Team;
   teamBRoster: Team;
-  queue: Team[]; // Changed from Player[] to Team[]
+  queue: Team[]; 
   rotationReport: RotationReport | null;
 }

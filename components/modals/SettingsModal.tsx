@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameConfig } from '../../types';
-import { Check, Trophy, Sun, Zap, Download, Share, Smartphone, Menu, Moon, SunDim, Languages } from 'lucide-react';
+import { Check, Trophy, Sun, Zap, Download, Share, Smartphone, Menu, Moon, Languages } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -77,13 +77,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex items-center justify-between">
                   <span className="text-slate-700 dark:text-slate-300 text-sm">{t('settings.appearance.theme')}</span>
                   <div className="flex bg-black/5 dark:bg-white/5 rounded-lg p-1 gap-1">
-                      {(['light', 'dark', 'system'] as const).map(th => (
+                      {(['light', 'dark'] as const).map(th => (
                           <button key={th} onClick={() => setTheme(th)}
                               className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${theme === th ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}
                           >
                               {th === 'light' && <Sun size={12} />}
                               {th === 'dark' && <Moon size={12} />}
-                              {th === 'system' && <SunDim size={12} />}
                               {t(`settings.appearance.themes.${th}`)}
                           </button>
                       ))}

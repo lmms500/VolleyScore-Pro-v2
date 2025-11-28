@@ -32,19 +32,11 @@
       (function() {
         try {
           var theme = localStorage.getItem('volleyscore-theme');
-          var isDark;
+          // Default to dark theme unless it's explicitly set to 'light'
           if (theme === 'light') {
-            isDark = false;
-          } else if (theme === 'dark') {
-            isDark = true;
-          } else { // 'system' or null/undefined defaults to system preference
-            isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          }
-          
-          if (isDark) {
-            document.documentElement.classList.add('dark');
-          } else {
             document.documentElement.classList.remove('dark');
+          } else {
+            document.documentElement.classList.add('dark');
           }
         } catch (e) {
           console.warn('Failed to hydrate theme:', e);

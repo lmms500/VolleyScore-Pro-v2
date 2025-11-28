@@ -37,8 +37,7 @@
       "language": "Idioma",
       "themes": {
         "light": "Claro",
-        "dark": "Oscuro",
-        "system": "Sistema"
+        "dark": "Oscuro"
       }
     },
     "teamNames": {

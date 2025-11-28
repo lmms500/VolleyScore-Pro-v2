@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef } from 'react';
 
 interface UseScoreGesturesProps {
   onAdd: () => void;
@@ -17,68 +17,57 @@ export const useScoreGestures = ({
 }: UseScoreGesturesProps) => {
   
   const startY = useRef<number | null>(null);
-  const SWIPE_THRESHOLD = 30; // Increased threshold for clearer distinction
-  const TAP_THRESHOLD = 15;   // Increased threshold for tap/deadzone
+  const SWIPE_THRESHOLD = 25; // Pixels to count as swipe
+  const TAP_THRESHOLD = 10;   // Deadzone for tap
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (isLocked) return; 
     
-    // Prevent default touch actions like text selection or scrolling
+    // Crucial: Prevent default actions (scroll/select) AND capture pointer
     e.preventDefault();
-    
-    // Capture the pointer to this element, ensuring subsequent events are directed here
     try {
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     } catch (error) {
-        console.warn("Failed to capture pointer:", error);
+        console.debug("Pointer capture failed", error);
     }
 
     if (onInteractionStart) onInteractionStart();
-    
     startY.current = e.clientY;
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    if (onInteractionEnd) onInteractionEnd();
     if (startY.current === null) return;
     
+    // Release capture
     try {
-        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch (error) {
-        console.warn("Failed to release pointer:", error);
-    }
+        if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
+            (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+        }
+    } catch (error) {}
 
-
-    const endY = e.clientY;
-    const distance = startY.current - endY; // Positive = Swipe Up
+    const distance = startY.current - e.clientY; // Positive = Up
     const absDist = Math.abs(distance);
 
     if (absDist > SWIPE_THRESHOLD) {
-      if (distance > 0) {
-        onAdd(); // Swipe Up
-      } else {
-        onSubtract(); // Swipe Down
-      }
+      // SWIPE
+      if (distance > 0) onAdd(); // Up
+      else onSubtract(); // Down
     } else if (absDist < TAP_THRESHOLD) {
-      // It's a tap, not a failed swipe
+      // TAP
       onAdd();
     }
-    // Any movement between TAP_THRESHOLD and SWIPE_THRESHOLD is ignored (dead zone)
-    
+    // Else: Dead zone (small drag but not enough to swipe, too much to tap)
+
+    if (onInteractionEnd) onInteractionEnd();
     startY.current = null;
   };
 
   const handlePointerCancel = (e: React.PointerEvent) => {
     if (onInteractionEnd) onInteractionEnd();
-    if (startY.current === null) return;
-    
+    startY.current = null;
     try {
         (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch (error) {
-        console.warn("Failed to release pointer on cancel:", error);
-    }
-
-    startY.current = null;
+    } catch (error) {}
   };
 
   return {

@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Team, Player } from '../../types';
-import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban } from 'lucide-react';
+import { Pin, Trash2, Shuffle, ArrowRight, ArrowLeftRight, Edit2, Plus, Undo2, Ban, Users, User } from 'lucide-react';
 
-// --- Type Definitions ---
 interface TeamManagerModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -26,51 +25,23 @@ interface PlayerItemProps {
   locationId: string;
   onToggleFixed?: (playerId: string, teamId?: 'A' | 'B') => void;
   onRemove: (id: string) => void;
-  onPointerDown: (e: React.PointerEvent<HTMLDivElement>, playerId: string, fromId: string) => void;
+  onOpenMoveMenu: (player: Player, fromId: string) => void;
 }
 
-// --- Auto-Scroll Helpers ---
-const SCROLL_ZONE_PX = 50;
-const SCROLL_SPEED = 10;
-let scrollAssistInterval: number | null = null;
-let lastScrollElement: HTMLElement | null = null;
-
-const startScrollAssist = (element: HTMLElement, direction: 'up' | 'down') => {
-  if (scrollAssistInterval && lastScrollElement === element) return;
-  stopScrollAssist();
-  lastScrollElement = element;
-
-  scrollAssistInterval = window.setInterval(() => {
-    if (!lastScrollElement) return stopScrollAssist();
-    lastScrollElement.scrollTop += direction === 'up' ? -SCROLL_SPEED : SCROLL_SPEED;
-  }, 20);
-};
-
-const stopScrollAssist = () => {
-  if (scrollAssistInterval) {
-    window.clearInterval(scrollAssistInterval);
-    scrollAssistInterval = null;
-    lastScrollElement = null;
-  }
-};
-
-// --- Sub-components ---
-const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFixed, onRemove, onPointerDown }) => {
+const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFixed, onRemove, onOpenMoveMenu }) => {
   return (
-    <div
-      onPointerDown={(e) => !player.isFixed && onPointerDown(e, player.id, locationId)}
-      style={{ touchAction: player.isFixed ? 'auto' : 'none' }}
-      className={`
-        group flex items-center justify-between p-2.5 rounded-xl mb-2 border transition-all 
+    <div className={`
+        flex items-center justify-between p-2.5 rounded-xl mb-2 border transition-all
         ${player.isFixed 
-          ? 'bg-indigo-500/10 border-indigo-500/30 cursor-not-allowed' 
-          : 'bg-white/5 hover:bg-white/10 border-white/5 hover:border-white/20 cursor-grab active:cursor-grabbing'
-        }
+          ? 'bg-indigo-500/10 border-indigo-500/30' 
+          : 'bg-white/5 border-white/5'}
       `}
-      data-player-id={player.id}
     >
       <div className="flex items-center gap-3 overflow-hidden">
-        <GripVertical size={14} className="text-slate-600 flex-shrink-0" />
+        <div className="p-1.5 bg-white/5 rounded-lg text-slate-500">
+            <User size={14} />
+        </div>
+        
         {onToggleFixed && (
           <button 
             onClick={() => onToggleFixed(player.id, (locationId === 'A' || locationId === 'B') ? locationId : undefined)}
@@ -80,6 +51,7 @@ const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFix
             <Pin size={14} fill={player.isFixed ? "currentColor" : "none"} />
           </button>
         )}
+        
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm text-slate-200 truncate">{player.name}</span>
@@ -89,7 +61,16 @@ const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFix
           </div>
         </div>
       </div>
+
       <div className="flex items-center gap-2 flex-shrink-0">
+        {!player.isFixed && (
+            <button 
+                onClick={() => onOpenMoveMenu(player, locationId)}
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-colors text-[10px] font-bold uppercase tracking-wider"
+            >
+                Move <ArrowLeftRight size={12} />
+            </button>
+        )}
         <button onClick={() => onRemove(player.id)} className="text-slate-600 hover:text-rose-500 p-1.5 rounded hover:bg-rose-500/10 transition-colors">
           <Trash2 size={14} />
         </button>
@@ -98,56 +79,41 @@ const PlayerItem: React.FC<PlayerItemProps> = ({ player, locationId, onToggleFix
   );
 };
 
-const DroppableTeam: React.FC<{
-  isHighlighted: boolean;
-  isFull: boolean;
+const TeamContainer: React.FC<{
+  title: React.ReactNode;
+  count: number;
+  max?: number;
   children: React.ReactNode;
   className?: string;
-  id: string;
-}> = ({ isHighlighted, isFull, children, className, id }) => {
-    
-  let dynamicStyles = '';
-  if (isHighlighted && !isFull) {
-      dynamicStyles = 'bg-indigo-500/10 border-4 border-dashed border-indigo-500/80 ring-4 ring-indigo-500/20 animate-pulse shadow-[inset_0_0_20px_rgba(99,102,241,0.2)]';
-  } else if (isHighlighted && isFull) {
-      dynamicStyles = 'opacity-40 grayscale scale-[0.98] transition-opacity border-rose-500/20';
-  }
-
-  return (
-    <div data-drop-target-id={id} className={`transition-all duration-200 ease-out ${dynamicStyles} ${className}`}>
-      {children}
+  action?: React.ReactNode;
+}> = ({ title, count, max = 6, children, className, action }) => (
+    <div className={`flex flex-col h-full rounded-2xl border flex-1 min-h-[350px] overflow-hidden ${className}`}>
+        <div className="p-3 border-b border-white/5 flex items-center justify-between bg-black/20">
+            <div className="flex items-center gap-2">{title}</div>
+            <span className={`text-[10px] font-bold ${count >= max ? 'text-rose-400' : 'text-slate-500'}`}>
+                {count}/{max}
+            </span>
+        </div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+            {children}
+        </div>
+        {action && <div className="p-2 border-t border-white/5 bg-black/10">{action}</div>}
     </div>
-  );
-};
+);
 
 const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; className?: string }> = ({ name, onSave, className }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [val, setVal] = useState(name);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setVal(name); }, [name]);
-  useEffect(() => { if(isEditing) inputRef.current?.focus(); }, [isEditing]);
-
-  const save = () => {
-    setIsEditing(false);
-    if(val.trim() && val !== name) onSave(val.trim());
-    else setVal(name);
-  };
+  const save = () => { setIsEditing(false); if(val.trim() && val !== name) onSave(val.trim()); else setVal(name); };
 
   if(isEditing) {
-    return (
-        <input 
-            ref={inputRef} type="text"
-            className="bg-black/50 text-white border-b border-white/50 outline-none w-full max-w-[150px] px-1 py-0.5 text-xs font-bold uppercase tracking-widest"
-            value={val} onChange={e => setVal(e.target.value)} onBlur={save}
-            onKeyDown={e => { if(e.key === 'Enter') save(); if(e.key === 'Escape') { setIsEditing(false); setVal(name); } }}
-        />
-    );
+    return <input autoFocus className="bg-black/50 text-white border-b border-white/50 outline-none w-[120px] px-1 text-xs font-bold uppercase" value={val} onChange={e => setVal(e.target.value)} onBlur={save} onKeyDown={e => e.key === 'Enter' && save()} />;
   }
   return (
       <div className={`flex items-center gap-2 group cursor-pointer ${className}`} onClick={() => setIsEditing(true)}>
           <span>{name}</span>
-          <Edit2 size={10} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400" />
+          <Edit2 size={10} className="opacity-0 group-hover:opacity-100 text-slate-400" />
       </div>
   );
 };
@@ -155,167 +121,132 @@ const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; cla
 const AddPlayerInput: React.FC<{ onAdd: (name: string) => void; disabled?: boolean }> = ({ onAdd, disabled }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [name, setName] = useState('');
-    const inputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => { if(isOpen) inputRef.current?.focus(); }, [isOpen]);
-
-    const submit = () => {
-        if(name.trim()) { onAdd(name.trim()); setName(''); }
-        setIsOpen(false);
-    };
+    const submit = () => { if(name.trim()) { onAdd(name.trim()); setName(''); } setIsOpen(false); };
 
     if (isOpen && !disabled) {
         return (
-            <div className="flex items-center gap-2 mt-2 px-2 animate-in fade-in slide-in-from-top-1">
-                <input ref={inputRef}
-                    className="flex-1 bg-black/40 border border-white/20 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-indigo-500"
-                    placeholder="New player name..." value={name} onChange={e => setName(e.target.value)}
-                    onKeyDown={e => { if(e.key === 'Enter') submit(); if(e.key === 'Escape') setIsOpen(false); }}
-                    onBlur={() => setTimeout(submit, 100)}
-                />
-                <button onClick={submit} className="p-1 bg-indigo-500 rounded hover:bg-indigo-400"><Plus size={14} /></button>
+            <div className="flex gap-2 animate-in fade-in slide-in-from-bottom-1">
+                <input autoFocus className="flex-1 bg-black/40 border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-indigo-500" placeholder="Name..." value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} onBlur={() => setTimeout(submit, 100)} />
+                <button onClick={submit} className="p-1.5 bg-indigo-600 rounded-lg"><Plus size={14} /></button>
             </div>
         );
     }
     return (
-        <button onClick={() => !disabled && setIsOpen(true)} disabled={disabled}
-            className={`mt-2 w-full py-1.5 flex items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-transparent transition-all ${disabled ? 'text-slate-600 cursor-not-allowed opacity-50' : 'text-slate-500 hover:text-white hover:bg-white/5 hover:border-white/5'}`} >
-            {disabled ? (<><Ban size={12} /> Roster Full</>) : (<><Plus size={12} /> Add Player</>)}
+        <button onClick={() => !disabled && setIsOpen(true)} disabled={disabled} className={`w-full py-2 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-dashed border-white/10 transition-all ${disabled ? 'text-slate-600 opacity-50' : 'text-slate-400 hover:text-white hover:bg-white/5 hover:border-white/20'}`}>
+            {disabled ? <><Ban size={12}/> Full</> : <><Plus size={12}/> Add Player</>}
         </button>
     );
 };
 
-
-// --- Main Modal Component ---
 export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({ 
   isOpen, onClose, courtA, courtB, queue, onGenerate, onToggleFixed, onRemove, onMove, onUpdateTeamName, onAddPlayer, onUndoRemove, canUndoRemove
 }) => {
   const [rawNames, setRawNames] = useState('');
   const [view, setView] = useState<'input' | 'roster'>('roster');
   
-  // Drag State
-  const [isDragging, setIsDragging] = useState(false);
-  const [draggedItem, setDraggedItem] = useState<{ id: string, fromId: string, element: HTMLElement } | null>(null);
-  const [ghostPosition, setGhostPosition] = useState({ x: 0, y: 0 });
-  const longPressTimeout = useRef<number | null>(null);
-  
-  // Scroll Refs
-  const courtARef = useRef<HTMLDivElement>(null);
-  const courtBRef = useRef<HTMLDivElement>(null);
-  const queueRef = useRef<HTMLDivElement>(null);
+  // State for Move Menu
+  const [movingPlayer, setMovingPlayer] = useState<{player: Player, fromId: string} | null>(null);
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, playerId: string, fromId: string) => {
-    const target = e.currentTarget;
-    target.style.userSelect = 'none'; // Prevent text selection on long press
-
-    longPressTimeout.current = window.setTimeout(() => {
-        setIsDragging(true);
-        const clonedNode = target.cloneNode(true) as HTMLElement;
-        clonedNode.style.width = `${target.offsetWidth}px`; // Fix width on clone
-        setDraggedItem({ id: playerId, fromId, element: clonedNode });
-        setGhostPosition({ x: e.clientX, y: e.clientY });
-        try {
-          target.setPointerCapture(e.pointerId);
-        } catch(err) {}
-    }, 200); // 200ms for long press
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    // If not a long press, clear the timeout
-    if (longPressTimeout.current && (Math.abs(e.movementX) > 5 || Math.abs(e.movementY) > 5)) {
-      window.clearTimeout(longPressTimeout.current);
-      longPressTimeout.current = null;
-    }
-
-    if (isDragging && draggedItem) {
-        setGhostPosition({ x: e.clientX, y: e.clientY });
-
-        // Auto-Scroll Logic
-        const refs = [courtARef, courtBRef, queueRef];
-        let scrolled = false;
-        for (const ref of refs) {
-            if (ref.current) {
-                const rect = ref.current.getBoundingClientRect();
-                if (e.clientY < rect.top + SCROLL_ZONE_PX) {
-                    startScrollAssist(ref.current, 'up');
-                    scrolled = true;
-                } else if (e.clientY > rect.bottom - SCROLL_ZONE_PX) {
-                    startScrollAssist(ref.current, 'down');
-                    scrolled = true;
-                }
-            }
-        }
-        if (!scrolled) {
-            stopScrollAssist();
-        }
-    }
-  };
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (longPressTimeout.current) {
-        window.clearTimeout(longPressTimeout.current);
-        longPressTimeout.current = null;
-    }
-    stopScrollAssist();
-
-    if (isDragging && draggedItem) {
-        try {
-            e.currentTarget.releasePointerCapture(e.pointerId);
-        } catch(err) {}
-
-        // Hide ghost immediately to check element underneath
-        if (draggedItem.element) {
-            draggedItem.element.style.display = 'none';
-        }
-        
-        const dropTarget = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-drop-target-id]');
-        const toId = dropTarget?.getAttribute('data-drop-target-id');
-
-        if (toId && toId !== draggedItem.fromId) {
-            onMove(draggedItem.id, draggedItem.fromId, toId);
-        }
-    }
-    
-    // Reset state
-    e.currentTarget.style.userSelect = '';
-    setIsDragging(false);
-    setDraggedItem(null);
-  };
-  
   const handleGenerate = () => {
     const names = rawNames.split('\n').map(n => n.trim()).filter(n => n);
-    if (names.length > 0) {
-      onGenerate(names);
-      setRawNames('');
-      setView('roster');
-    }
+    if (names.length > 0) { onGenerate(names); setRawNames(''); setView('roster'); }
   };
 
-  const counts = {
-      A: courtA.players.length,
-      B: courtB.players.length
+  const handleMoveSelection = (toId: string) => {
+      if (movingPlayer) {
+          onMove(movingPlayer.player.id, movingPlayer.fromId, toId);
+          setMovingPlayer(null);
+      }
+  };
+
+  const isFull = (teamId: string) => {
+      if (teamId === 'A') return courtA.players.length >= 6;
+      if (teamId === 'B') return courtB.players.length >= 6;
+      const qTeam = queue.find(t => t.id === teamId);
+      return qTeam ? qTeam.players.length >= 6 : false;
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Squad Management" maxWidth="max-w-5xl">
-       {/* Ghost Element for Dragging */}
-        {isDragging && draggedItem && (
-            <div 
-                className="fixed top-0 left-0 pointer-events-none z-[100] opacity-80 rotate-[-3deg] shadow-2xl shadow-black/50"
-                style={{
-                    transform: `translate(${ghostPosition.x - (draggedItem.element.offsetWidth / 2)}px, ${ghostPosition.y - (draggedItem.element.offsetHeight / 2)}px)`,
-                    width: `${draggedItem.element.offsetWidth}px`,
-                }}
-                dangerouslySetInnerHTML={{ __html: draggedItem.element.innerHTML }}
-            />
-        )}
+    <Modal isOpen={isOpen} onClose={onClose} title="Squad Management" maxWidth="max-w-6xl">
+      
+      {/* MOVE MENU OVERLAY */}
+      {movingPlayer && (
+          <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+              <div className="bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                  <div className="p-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
+                      <div>
+                          <span className="text-[10px] uppercase tracking-widest text-indigo-400 font-bold block mb-1">Moving Player</span>
+                          <h3 className="text-lg font-bold text-white leading-none">{movingPlayer.player.name}</h3>
+                      </div>
+                      <button onClick={() => setMovingPlayer(null)} className="text-xs text-slate-400 hover:text-white uppercase font-bold tracking-wider">Cancel</button>
+                  </div>
+                  <div className="p-4 grid grid-cols-1 gap-2 max-h-[60vh] overflow-y-auto">
+                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1 ml-1">Select Destination</p>
+                      
+                      {/* Court A Option */}
+                      {movingPlayer.fromId !== 'A' && (
+                          <button 
+                            onClick={() => handleMoveSelection('A')}
+                            disabled={isFull('A')}
+                            className="flex items-center justify-between p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 text-left disabled:opacity-40 disabled:cursor-not-allowed group"
+                          >
+                              <span className="font-bold text-indigo-300 text-sm">{courtA.name}</span>
+                              {isFull('A') ? <span className="text-[10px] text-rose-400 font-bold uppercase">Full</span> : <ArrowRight size={16} className="text-indigo-500 group-hover:translate-x-1 transition-transform"/>}
+                          </button>
+                      )}
+
+                      {/* Court B Option */}
+                      {movingPlayer.fromId !== 'B' && (
+                          <button 
+                            onClick={() => handleMoveSelection('B')}
+                            disabled={isFull('B')}
+                            className="flex items-center justify-between p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-left disabled:opacity-40 disabled:cursor-not-allowed group"
+                          >
+                              <span className="font-bold text-rose-300 text-sm">{courtB.name}</span>
+                              {isFull('B') ? <span className="text-[10px] text-rose-400 font-bold uppercase">Full</span> : <ArrowRight size={16} className="text-rose-500 group-hover:translate-x-1 transition-transform"/>}
+                          </button>
+                      )}
+
+                      <div className="h-px bg-white/10 my-1"></div>
+
+                      {/* Queue Options */}
+                      {queue.map((team, idx) => (
+                          movingPlayer.fromId !== team.id && (
+                            <button 
+                                key={team.id}
+                                onClick={() => handleMoveSelection(team.id)}
+                                disabled={team.players.length >= 6}
+                                className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 text-left disabled:opacity-40 disabled:cursor-not-allowed group"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-mono text-slate-500 bg-black/30 px-1.5 py-0.5 rounded">Q{idx+1}</span>
+                                    <span className="font-bold text-slate-300 text-sm">{team.name}</span>
+                                </div>
+                                {team.players.length >= 6 ? <span className="text-[10px] text-rose-400 font-bold uppercase">Full</span> : <ArrowRight size={16} className="text-slate-500 group-hover:translate-x-1 transition-transform"/>}
+                            </button>
+                          )
+                      ))}
+                      
+                      {/* New Queue Team Option */}
+                      <button 
+                        onClick={() => handleMoveSelection('Queue')} // 'Queue' triggers adding to end/new team
+                        className="flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-white/10 hover:bg-white/5 text-slate-400 hover:text-white transition-all mt-2"
+                      >
+                          <Plus size={14} /> <span className="text-xs font-bold uppercase tracking-wider">New Queue Team</span>
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       <div className="flex p-1 bg-white/5 rounded-xl mb-6 border border-white/5">
         <button onClick={() => setView('roster')} className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${view === 'roster' ? 'bg-white/10 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>Current Roster</button>
         <button onClick={() => setView('input')} className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${view === 'input' ? 'bg-white/10 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>Batch Input</button>
       </div>
 
       {view === 'input' ? (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
             <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
                 <p className="text-xs text-indigo-200 flex items-center gap-2"><ArrowRight size={14} />Paste names below (one per line).</p>
             </div>
@@ -324,70 +255,72 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
             <Button onClick={handleGenerate} className="w-full" size="lg"><Shuffle size={18} /> Generate Teams</Button>
         </div>
       ) : (
-        <div 
-            className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-4 flex-1 h-full min-h-[60vh]"
-            onPointerMove={handlePointerMove as any}
-            onPointerUp={handlePointerUp as any}
-            onPointerCancel={handlePointerUp as any}
-        >
-          {/* Court A */}
-          <div className="flex flex-col h-full">
-            <DroppableTeam id="A" isHighlighted={isDragging} isFull={counts.A >= 6} className="bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10 flex-1 flex flex-col">
-              <h3 className="font-bold text-indigo-400 mb-4 text-xs uppercase tracking-widest flex items-center justify-between">
-                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_currentColor]"></div><EditableTitle name={courtA.name} onSave={n => onUpdateTeamName('A', n)} /></span>
-                <span className={`${counts.A >= 6 ? 'text-rose-400' : 'text-indigo-400/50'}`}>{counts.A}/6</span>
-              </h3>
-              <div ref={courtARef} className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-                {courtA.players.length === 0 && <span className="text-xs text-slate-600 italic px-2">Drag here</span>}
-                {courtA.players.map(p => <PlayerItem key={p.id} player={p} locationId="A" onToggleFixed={onToggleFixed} onRemove={onRemove} onPointerDown={handlePointerDown}/>)}
-              </div>
-              <AddPlayerInput onAdd={n => onAddPlayer(n, 'A')} disabled={counts.A >= 6} />
-            </DroppableTeam>
-          </div>
+        <div className="flex flex-col h-full min-h-[60vh] gap-4">
+            
+            {/* Main Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
+                
+                {/* Team A */}
+                <TeamContainer 
+                    count={courtA.players.length}
+                    className="bg-indigo-500/5 border-indigo-500/10"
+                    title={<><div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_currentColor]"/> <EditableTitle name={courtA.name} onSave={n => onUpdateTeamName('A', n)} className="text-indigo-400 font-bold uppercase text-xs tracking-widest"/></>}
+                    action={<AddPlayerInput onAdd={n => onAddPlayer(n, 'A')} disabled={courtA.players.length >= 6} />}
+                >
+                    {courtA.players.length === 0 && <div className="text-center text-xs text-slate-600 italic py-4">No players</div>}
+                    {courtA.players.map(p => (
+                        <PlayerItem key={p.id} player={p} locationId="A" onToggleFixed={onToggleFixed} onRemove={onRemove} onOpenMoveMenu={setMovingPlayer} />
+                    ))}
+                </TeamContainer>
 
-          {/* Queue */}
-          <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/5 flex-1 flex flex-col overflow-hidden">
-            <h3 className="font-bold text-slate-400 mb-4 text-xs uppercase tracking-widest flex items-center gap-2 sticky top-0 bg-transparent z-10"><div className="w-2 h-2 rounded-full bg-slate-600"></div>Waiting Queue</h3>
-            <div ref={queueRef} className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-4">
-              {queue.length === 0 && <span className="text-xs text-slate-600 italic px-2">Queue empty</span>}
-              {queue.map(team => (
-                <DroppableTeam key={team.id} id={team.id} isHighlighted={isDragging} isFull={team.players.length >= 6} className={`bg-black/20 rounded-xl p-3 border ${team.players.length >= 6 ? 'border-rose-500/20' : 'border-white/5'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <EditableTitle name={team.name} onSave={(newName) => onUpdateTeamName(team.id, newName)} className="text-[10px] font-bold text-slate-500 uppercase tracking-widest" />
-                    <span className={`text-[10px] font-bold ${team.players.length >= 6 ? 'text-rose-400' : 'text-slate-600'}`}>{team.players.length}/6</span>
-                  </div>
-                  <div>
-                    {team.players.map(p => <PlayerItem key={p.id} player={p} locationId={team.id} onToggleFixed={onToggleFixed} onRemove={onRemove} onPointerDown={handlePointerDown}/>)}
-                  </div>
-                </DroppableTeam>
-              ))}
+                {/* Team B */}
+                <TeamContainer 
+                    count={courtB.players.length}
+                    className="bg-rose-500/5 border-rose-500/10 lg:order-last"
+                    title={<><div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_currentColor]"/> <EditableTitle name={courtB.name} onSave={n => onUpdateTeamName('B', n)} className="text-rose-400 font-bold uppercase text-xs tracking-widest"/></>}
+                    action={<AddPlayerInput onAdd={n => onAddPlayer(n, 'B')} disabled={courtB.players.length >= 6} />}
+                >
+                    {courtB.players.length === 0 && <div className="text-center text-xs text-slate-600 italic py-4">No players</div>}
+                    {courtB.players.map(p => (
+                        <PlayerItem key={p.id} player={p} locationId="B" onToggleFixed={onToggleFixed} onRemove={onRemove} onOpenMoveMenu={setMovingPlayer} />
+                    ))}
+                </TeamContainer>
+
+                {/* Queue Section (Scrollable List of Teams) */}
+                <div className="flex flex-col gap-3 rounded-2xl border border-white/5 bg-white/[0.02] p-2 min-h-[350px]">
+                    <div className="flex items-center justify-between px-2 pb-2 border-b border-white/5">
+                        <h3 className="font-bold text-slate-500 text-xs uppercase tracking-widest flex items-center gap-2"><Users size={14}/> Queue</h3>
+                        <AddPlayerInput onAdd={n => onAddPlayer(n, 'Queue')} />
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 px-1">
+                        {queue.length === 0 && <div className="text-center text-xs text-slate-600 italic py-10">Queue is empty</div>}
+                        {queue.map((team, idx) => (
+                            <TeamContainer
+                                key={team.id}
+                                count={team.players.length}
+                                className="bg-black/20 border-white/5 min-h-0"
+                                title={<><span className="font-mono text-[10px] text-slate-600">Q{idx+1}</span> <EditableTitle name={team.name} onSave={n => onUpdateTeamName(team.id, n)} className="text-slate-400 font-bold uppercase text-[10px] tracking-wider"/></>}
+                            >
+                                {team.players.map(p => (
+                                    <PlayerItem key={p.id} player={p} locationId={team.id} onToggleFixed={onToggleFixed} onRemove={onRemove} onOpenMoveMenu={setMovingPlayer} />
+                                ))}
+                            </TeamContainer>
+                        ))}
+                    </div>
+                </div>
+
             </div>
-            <div className="pt-2 border-t border-white/5"><AddPlayerInput onAdd={n => onAddPlayer(n, 'Queue')} /></div>
-          </div>
-          
-          {/* Court B */}
-          <div className="flex flex-col h-full">
-            <DroppableTeam id="B" isHighlighted={isDragging} isFull={counts.B >= 6} className="bg-rose-500/5 p-4 rounded-2xl border border-rose-500/10 flex-1 flex flex-col">
-              <h3 className="font-bold text-rose-400 mb-4 text-xs uppercase tracking-widest flex items-center justify-between">
-                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_10px_currentColor]"></div><EditableTitle name={courtB.name} onSave={n => onUpdateTeamName('B', n)} /></span>
-                <span className={`${counts.B >= 6 ? 'text-rose-400' : 'text-rose-400/50'}`}>{counts.B}/6</span>
-              </h3>
-              <div ref={courtBRef} className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-                {courtB.players.length === 0 && <span className="text-xs text-slate-600 italic px-2">Drag here</span>}
-                {courtB.players.map(p => <PlayerItem key={p.id} player={p} locationId="B" onToggleFixed={onToggleFixed} onRemove={onRemove} onPointerDown={handlePointerDown}/>)}
-              </div>
-              <AddPlayerInput onAdd={n => onAddPlayer(n, 'B')} disabled={counts.B >= 6} />
-            </DroppableTeam>
-          </div>
         </div>
       )}
-       {canUndoRemove && (
-            <div className="fixed bottom-6 left-12 md:left-1/2 md:-translate-x-1/2 z-[70] bg-slate-800 text-white px-5 py-3 rounded-full shadow-2xl border border-white/10 flex items-center gap-4 animate-in slide-in-from-bottom-5">
-                <span className="text-xs font-medium text-slate-300">Player removed</span>
-                <div className="h-4 w-px bg-white/20"></div>
-                <button onClick={onUndoRemove} className="flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-wider"><Undo2 size={16} /> UNDO</button>
-            </div>
-        )}
+
+      {canUndoRemove && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] bg-slate-800 text-white px-5 py-3 rounded-full shadow-2xl border border-white/10 flex items-center gap-4 animate-in slide-in-from-bottom-5">
+            <span className="text-xs font-medium text-slate-300">Player removed</span>
+            <div className="h-4 w-px bg-white/20"></div>
+            <button onClick={onUndoRemove} className="flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-wider"><Undo2 size={16} /> UNDO</button>
+        </div>
+      )}
     </Modal>
   );
 };

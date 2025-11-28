@@ -106,9 +106,9 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     });
   }, []);
 
-  const togglePlayerFixed = useCallback((playerId: string, teamId?: TeamId) => {
+  const togglePlayerFixed = useCallback((playerId: string, teamId?: string) => {
     setQueueState(prev => {
-      const toggle = (p: Player, currentSide: TeamId | null) => {
+      const toggle = (p: Player, currentSide: string | null) => {
           const newIsFixed = !p.isFixed;
           return { 
               ...p, 
@@ -133,7 +133,8 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
           ...team,
           players: team.players.map(p => {
               if (p.id === playerId) {
-                  return toggle(p, null);
+                  // Now allows fixing to queue team by passing team.id
+                  return toggle(p, team.id);
               }
               return p;
           })
@@ -172,6 +173,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
         // PRIORITY 1: Steal from Donor
         if (tempQueue.length > 0) {
             const donorTeam = tempQueue[0];
+            // Respect isFixed: Fixed players in Queue cannot be stolen
             const donorCandidates = donorTeam.players.filter(p => !p.isFixed);
             const toSteal = donorCandidates.slice(0, stillNeeded);
             
@@ -423,18 +425,26 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
         if (player?.isFixed) return prev; 
         newState.courtB.players = newState.courtB.players.filter(p => p.id !== playerId);
       } else {
-        // If from Queue, we need to know WHICH queue team to be efficient, 
-        // but finding by ID is safe
         player = removeFromQueue(playerId, fromId);
       }
 
       if (!player) return prev;
 
-      // 3. Reset Fixed Side Logic
-      if (toId === 'A') {
-          if (player.isFixed) player.fixedSide = 'A';
-      } else if (toId === 'B') {
-          if (player.isFixed) player.fixedSide = 'B';
+      // 3. Update Fixed Side Logic
+      // If player was fixed, they should now be fixed to the NEW location,
+      // because isFixed implies "I want to stay HERE".
+      if (player.isFixed) {
+          if (toId === 'Queue') {
+              // If moving to generic queue, we don't know the ID yet, so we'll check later
+              // or it will be set when they land in a specific team.
+              // For safety, generic moves unfix if we don't know where they land.
+              // But 'toId' is usually specific if coming from drag-drop.
+              player.fixedSide = null; 
+              // Actually, drag and drop usually provides a specific team ID for 'toId'.
+              // If 'Queue' is passed (from generic add?), it's rare for a move.
+          } else {
+              player.fixedSide = toId;
+          }
       } else {
           player.fixedSide = null;
       }
@@ -451,15 +461,21 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
         newState.queue = newState.queue.map(t => t.id === targetTeam!.id ? targetTeam! : t);
       } else {
         // Generic 'Queue' (Add to End or Balance)
+        // If we land here, fixedSide might be lost or we need to capture ID.
         if (newState.queue.length > 0) {
             const lastTeam = newState.queue[newState.queue.length - 1];
             if (lastTeam.players.length < PLAYERS_PER_TEAM) {
                 lastTeam.players.push(player);
+                if (player.isFixed) player.fixedSide = lastTeam.id; // Correctly fix to this team
             } else {
-                newState.queue.push(createTeam(`Queue Team ${newState.queue.length + 1}`, [player]));
+                const newTeam = createTeam(`Queue Team ${newState.queue.length + 1}`, [player]);
+                newState.queue.push(newTeam);
+                if (player.isFixed) player.fixedSide = newTeam.id; // Correctly fix to this team
             }
         } else {
-             newState.queue.push(createTeam(`Queue Team 1`, [player]));
+             const newTeam = createTeam(`Queue Team 1`, [player]);
+             newState.queue.push(newTeam);
+             if (player.isFixed) player.fixedSide = newTeam.id;
         }
       }
 

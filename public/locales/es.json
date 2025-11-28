@@ -1,0 +1,135 @@
+{
+  "app": {
+    "loading": "Cargando..."
+  },
+  "languages": {
+    "en": "English",
+    "pt": "Português (Brasil)",
+    "es": "Español"
+  },
+  "controls": {
+    "undo": "Deshacer",
+    "swap": "Cambiar Lados",
+    "teams": "Equipos",
+    "settings": "Ajustes",
+    "fullscreen": "Pantalla Completa",
+    "reset": "Reiniciar Partido"
+  },
+  "history": {
+    "gameStart": "Inicio del Partido",
+    "setLabel": "S{setNumber}"
+  },
+  "game": {
+    "serving": "Sirviendo",
+    "matchPoint": "Punto de Partido",
+    "setPoint": "Punto de Set",
+    "deuce": "Iguales",
+    "suddenDeath": "Muerte Súbita",
+    "tieBreak": "Tie Break",
+    "timeout": "TIEMPO FUERA",
+    "useTimeout": "Usar Tiempo Fuera"
+  },
+  "settings": {
+    "title": "Configuración",
+    "appearance": {
+      "title": "Apariencia",
+      "theme": "Tema",
+      "language": "Idioma",
+      "themes": {
+        "light": "Claro",
+        "dark": "Oscuro",
+        "system": "Sistema"
+      }
+    },
+    "teamNames": {
+      "title": "Nombres de Equipos",
+      "home": "Local (A)",
+      "guest": "Visitante (B)",
+      "placeholderA": "Equipo A",
+      "placeholderB": "Equipo B"
+    },
+    "rules": {
+      "title": "Reglas del Partido",
+      "setsToPlay": "Sets a Jugar",
+      "pointsPerSet": "Puntos por Set",
+      "tieBreak": "Tie Break (Set Final)",
+      "tieBreakTo15": "a 15 pts",
+      "tieBreakTo25": "a 25 pts",
+      "deuceLogic": "Lógica de Iguales",
+      "deuceStandard": "Ventaja de 2",
+      "deuceSuddenDeath": "Muerte Súbita (3pts)"
+    },
+    "applyChanges": "Aplicar Cambios"
+  },
+  "presets": {
+    "fivb": {
+      "label": "Indoor (FIVB)",
+      "sub": "5 Sets • 25 Pts"
+    },
+    "beach": {
+      "label": "Vóley Playa",
+      "sub": "3 Sets • 21 Pts"
+    },
+    "custom": {
+      "label": "Partido Personalizado",
+      "sub": "1 Set • 15 Pts • Muerte Súbita"
+    }
+  },
+  "install": {
+    "title": "Instalar App",
+    "description": "Añadir a la pantalla de inicio para una experiencia completa.",
+    "installNow": "Instalar Ahora",
+    "ios": {
+      "tap": "Toca",
+      "then": "y luego",
+      "addToHome": "Añadir a pantalla de inicio"
+    },
+    "android": {
+      "tap": "Toca",
+      "then": "y luego",
+      "installApp": "Instalar aplicación"
+    }
+  },
+  "confirm": {
+    "cancel": "Cancelar",
+    "reset": {
+      "title": "¿Reiniciar Partido?",
+      "message": "¿Estás seguro de que quieres reiniciar el partido? Se perderán todas las puntuaciones y el historial.",
+      "confirmButton": "Sí, Reiniciar"
+    }
+  },
+  "matchOver": {
+    "title": "Resultado del Partido",
+    "wins": "Gana el Partido",
+    "nextGameButton": "Iniciar Siguiente Partido",
+    "rotationReport": {
+      "title": "Reporte de Rotación",
+      "entering": "Entra {teamName}",
+      "leaving": "Sale",
+      "newSize": "Nuevo Tamaño de Plantilla",
+      "players": "{count} Jugadores",
+      "coreSquad": "Equipo Principal (Cola)",
+      "none": "Ninguno",
+      "reinforcements": "Refuerzos",
+      "source": "Robados / Reciclados"
+    }
+  },
+  "teamManager": {
+    "title": "Gestión de Equipos",
+    "currentRoster": "Plantilla Actual",
+    "batchInput": "Entrada por Lotes",
+    "batchInputPrompt": "Pega los nombres abajo (uno por línea).",
+    "batchInputPlaceholder": "Juan Pérez\nMaría García\n...",
+    "generateTeams": "Generar Equipos",
+    "queue": "Cola de Espera",
+    "queueEmpty": "Cola vacía",
+    "dragPlayersHere": "Arrastra jugadores aquí",
+    "addPlayer": "Añadir Jugador",
+    "addPlayerPlaceholder": "Nombre del nuevo jugador...",
+    "rosterFull": "Plantilla Llena",
+    "lockPlayer": "Fijar Jugador",
+    "unlockPlayer": "Desfijar Jugador",
+    "playerRemoved": "Jugador eliminado",
+    "undo": "DESHACER"
+  }
+}

@@ -11,7 +11,6 @@
     <meta name="apple-mobile-web-app-title" content="VolleyScore" />
     
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     
     <title>VolleyScore Pro 2</title>
@@ -21,10 +20,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
       /* PWA & Mobile Optimizations */
+      html.dark {
+        color-scheme: dark;
+      }
       body {
         overscroll-behavior-y: none;
         -webkit-tap-highlight-color: transparent;
-        background-color: #020617; /* Deepest Slate/Black */
         font-family: 'Inter', sans-serif;
         /* Safe Area Support for iPhone X+ */
         padding-top: env(safe-area-inset-top);
@@ -73,7 +74,7 @@
 }
 </script>
 </head>
-  <body class="bg-[#020617] text-slate-100 antialiased h-screen overflow-hidden selection:bg-indigo-500 selection:text-white">
+  <body class="bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 antialiased h-screen overflow-hidden selection:bg-indigo-500 selection:text-white">
     <div class="bg-noise"></div>
     <div id="root" class="h-full w-full flex flex-col relative z-10"></div>
     

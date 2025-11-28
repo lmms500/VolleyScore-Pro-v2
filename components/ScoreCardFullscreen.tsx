@@ -1,7 +1,8 @@
-import React, { forwardRef, RefObject } from 'react';
+import React, { forwardRef, Ref } from 'react';
 import { Team, TeamId } from '../types';
 import { Volleyball, Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface ScoreCardFullscreenProps {
   teamId: TeamId;
@@ -22,15 +23,17 @@ interface ScoreCardFullscreenProps {
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
   reverseLayout?: boolean;
-  nameRef: RefObject<HTMLHeadingElement>;
+  scoreRef?: Ref<HTMLSpanElement>;
+  bottomAnchorRef?: Ref<HTMLHeadingElement>;
 }
 
 export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscreenProps>(({
   teamId, team, score, isServing, onAdd, onSubtract, onToggleServe, timeouts, onTimeout, 
   isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, colorTheme, 
-  isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout, nameRef
+  isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
+  scoreRef, bottomAnchorRef
 }, ref) => {
-  
+  const { t } = useTranslation();
   const gestureHandlers = useScoreGestures({
     onAdd, onSubtract, isLocked, onInteractionStart, onInteractionEnd
   });
@@ -52,8 +55,13 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
     ? (teamId === 'A' ? 'order-last' : 'order-first') 
     : (teamId === 'A' ? 'order-first' : 'order-last');
 
+  const alignmentClass = teamId === 'A'
+    ? (reverseLayout ? 'justify-end' : 'justify-start')
+    : (reverseLayout ? 'justify-start' : 'justify-end');
+
   return (
     <div 
+        ref={ref}
         className={`
             flex flex-col flex-1 relative h-full transition-all duration-500 select-none overflow-hidden 
             ${orderClass}
@@ -72,7 +80,7 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
         `} 
       />
 
-      <div className="flex flex-col h-full w-full relative z-10 p-2 md:p-8 landscape:px-20 pb-4 justify-center">
+      <div className="flex flex-col h-full w-full relative z-10 p-2 md:p-8 landscape:px-20 pb-4 justify-between items-center">
         
         <div className="flex flex-col items-center justify-center w-full flex-none">
             <div className={`
@@ -80,11 +88,11 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
                 ${isServing ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}
             `}>
                 <Volleyball size={16} className={`${theme.text} animate-bounce`} />
-                <span className={`text-[10px] font-black uppercase tracking-widest ${theme.text}`}>Serving</span>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${theme.text}`}>{t('game.serving')}</span>
             </div>
 
             <h2 
-                ref={nameRef}
+                ref={bottomAnchorRef}
                 className="font-black uppercase tracking-tighter text-center cursor-pointer hover:text-white transition-all z-10 leading-none text-3xl md:text-5xl landscape:text-4xl text-white drop-shadow-[0_5px_5px_rgba(0,0,0,1)] px-2 w-full truncate"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
@@ -93,7 +101,7 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
             </h2>
         </div>
 
-        {(isMatchPoint || isSetPoint || isDeuce || inSuddenDeath) ? (
+        {(isMatchPoint || isSetPoint || inSuddenDeath) ? (
             <div className="flex items-center justify-center transition-all duration-300 flex-none min-h-[6rem] sm:min-h-[8rem] py-4">
                 <div 
                     className={`
@@ -108,10 +116,9 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
                                     ? `${theme.bg} text-white ring-8 ring-white/10`
                                     : 'bg-slate-200 text-slate-900'} 
                     `}
-                    style={{ transform: 'scale(var(--badge-scale, 1))' }}
                 >
                     {inSuddenDeath && <Zap className="w-8 h-8 sm:w-12 sm:h-12 md:w-16 md:h-16" fill="currentColor" />}
-                    {inSuddenDeath ? 'Sudden Death' : isMatchPoint ? 'Match Point' : isSetPoint ? 'Set Point' : 'Deuce'}
+                    {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
                 </div>
             </div>
         ) : (
@@ -119,17 +126,16 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
         )}
 
         <div 
-            ref={ref}
             className={`
-                flex items-center justify-center w-full flex-1 min-h-0
+                flex items-center w-full flex-1 min-h-0
                 font-black leading-none tracking-[-0.08em] text-white
                 drop-shadow-2xl transition-transform duration-100 active:scale-95
-                outline-none select-none
+                outline-none select-none text-[35vh]
                 ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
+                ${alignmentClass} landscape:px-[5vw]
             `}
-            style={{ fontSize: 'var(--score-font, 35dvh)' }}
         >
-            {score}
+            <span ref={scoreRef}>{score}</span>
         </div>
       </div>
     </div>

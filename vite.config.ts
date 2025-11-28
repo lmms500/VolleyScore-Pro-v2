@@ -8,7 +8,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       // INCLUI TODOS OS ASSETS DEDICADOS (PNG, ICO, SVG)
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'icon.svg'], 
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'], 
       devOptions: {
         enabled: true
       },
@@ -55,7 +55,7 @@ export default defineConfig({
         theme_color: '#020617',
         background_color: '#020617',
         display: 'standalone',
-        orientation: 'any',
+        orientation: 'landscape',
         start_url: '/',
         categories: ['sports', 'utilities'],
         icons: [

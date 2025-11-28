@@ -1,0 +1,135 @@
+{
+  "app": {
+    "loading": "Carregando..."
+  },
+  "languages": {
+    "en": "English",
+    "pt": "Português (Brasil)",
+    "es": "Español"
+  },
+  "controls": {
+    "undo": "Desfazer",
+    "swap": "Trocar Lados",
+    "teams": "Equipes",
+    "settings": "Configurações",
+    "fullscreen": "Tela Cheia",
+    "reset": "Zerar Partida"
+  },
+  "history": {
+    "gameStart": "Início do Jogo",
+    "setLabel": "S{setNumber}"
+  },
+  "game": {
+    "serving": "Servindo",
+    "matchPoint": "Match Point",
+    "setPoint": "Set Point",
+    "deuce": "Deuce",
+    "suddenDeath": "Morte Súbita",
+    "tieBreak": "Tie Break",
+    "timeout": "TEMPO",
+    "useTimeout": "Pedir Tempo"
+  },
+  "settings": {
+    "title": "Configuração",
+    "appearance": {
+      "title": "Aparência",
+      "theme": "Tema",
+      "language": "Idioma",
+      "themes": {
+        "light": "Claro",
+        "dark": "Escuro",
+        "system": "Sistema"
+      }
+    },
+    "teamNames": {
+      "title": "Nomes das Equipes",
+      "home": "Casa (A)",
+      "guest": "Visitante (B)",
+      "placeholderA": "Equipe A",
+      "placeholderB": "Equipe B"
+    },
+    "rules": {
+      "title": "Regras da Partida",
+      "setsToPlay": "Sets a Disputar",
+      "pointsPerSet": "Pontos por Set",
+      "tieBreak": "Tie Break (Set Final)",
+      "tieBreakTo15": "até 15 pts",
+      "tieBreakTo25": "até 25 pts",
+      "deuceLogic": "Lógica do Deuce",
+      "deuceStandard": "Vantagem de 2",
+      "deuceSuddenDeath": "Morte Súbita (3pts)"
+    },
+    "applyChanges": "Aplicar Alterações"
+  },
+  "presets": {
+    "fivb": {
+      "label": "Indoor (FIVB)",
+      "sub": "5 Sets • 25 Pts"
+    },
+    "beach": {
+      "label": "Vôlei de Praia",
+      "sub": "3 Sets • 21 Pts"
+    },
+    "custom": {
+      "label": "Vôlei de Segunda",
+      "sub": "1 Set • 15 Pts • Morte Súbita"
+    }
+  },
+  "install": {
+    "title": "Instalar App",
+    "description": "Adicione à tela inicial para uma experiência completa.",
+    "installNow": "Instalar Agora",
+    "ios": {
+      "tap": "Toque em",
+      "then": "e depois",
+      "addToHome": "Adicionar à Tela de Início"
+    },
+    "android": {
+      "tap": "Toque em",
+      "then": "e depois",
+      "installApp": "Instalar aplicativo"
+    }
+  },
+  "confirm": {
+    "cancel": "Cancelar",
+    "reset": {
+      "title": "Zerar Partida?",
+      "message": "Tem certeza de que deseja zerar a partida? Todos os pontos e o histórico serão perdidos.",
+      "confirmButton": "Sim, Zerar"
+    }
+  },
+  "matchOver": {
+    "title": "Resultado da Partida",
+    "wins": "Venceu a Partida",
+    "nextGameButton": "Iniciar Próximo Jogo",
+    "rotationReport": {
+      "title": "Relatório de Rotação",
+      "entering": "Entrando: {teamName}",
+      "leaving": "Saindo",
+      "newSize": "Novo Elenco",
+      "players": "{count} Jogadores",
+      "coreSquad": "Time Principal (Fila)",
+      "none": "Nenhum",
+      "reinforcements": "Reforços",
+      "source": "Roubados / Reciclados"
+    }
+  },
+  "teamManager": {
+    "title": "Gerenciador de Equipes",
+    "currentRoster": "Elenco Atual",
+    "batchInput": "Adicionar em Lote",
+    "batchInputPrompt": "Cole os nomes abaixo (um por linha).",
+    "batchInputPlaceholder": "João da Silva\nMaria Souza\n...",
+    "generateTeams": "Gerar Equipes",
+    "queue": "Fila de Espera",
+    "queueEmpty": "Fila vazia",
+    "dragPlayersHere": "Arraste jogadores aqui",
+    "addPlayer": "Adicionar Jogador",
+    "addPlayerPlaceholder": "Nome do novo jogador...",
+    "rosterFull": "Elenco Cheio",
+    "lockPlayer": "Fixar Jogador",
+    "unlockPlayer": "Liberar Jogador",
+    "playerRemoved": "Jogador removido",
+    "undo": "DESFAZER"
+  }
+}

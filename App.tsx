@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, Ref } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
-import { useAdaptiveLayout } from './hooks/useAdaptiveLayout';
 import { ScoreCardNormal } from './components/ScoreCardNormal';
 import { ScoreCardFullscreen } from './components/ScoreCardFullscreen';
 import { HistoryBar } from './components/HistoryBar';
 import { Controls } from './components/Controls';
-import { FullscreenHUD } from './components/FullscreenHUD';
 import { SettingsModal } from './components/modals/SettingsModal';
 import { TeamManagerModal } from './components/modals/TeamManagerModal';
 import { MatchOverModal } from './components/modals/MatchOverModal';
@@ -14,9 +12,14 @@ import { ConfirmationModal } from './components/modals/ConfirmationModal';
 import { Minimize2 } from 'lucide-react';
 import { TeamId } from './types';
 
+import { useHudMeasure } from './hooks/useHudMeasure';
+import { MeasuredFullscreenHUD } from './components/MeasuredFullscreenHUD';
+import { useTranslation } from './contexts/LanguageContext';
+
 function App() {
   const game = useVolleyGame();
   const { state, isLoaded } = game;
+  const { t } = useTranslation();
   
   const pwa = usePWAInstallPrompt();
   
@@ -26,47 +29,91 @@ function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [interactingTeam, setInteractingTeam] = useState<TeamId | null>(null);
 
-  // Adaptive Layout Refs & Hook
-  const leftScoreRef = useRef<HTMLDivElement>(null);
-  const rightScoreRef = useRef<HTMLDivElement>(null);
-  const leftNameRef = useRef<HTMLHeadingElement>(null);
-  const rightNameRef = useRef<HTMLHeadingElement>(null);
+  const [leftScoreNode, setLeftScoreNode] = useState<HTMLSpanElement | null>(null);
+  const [rightScoreNode, setRightScoreNode] = useState<HTMLSpanElement | null>(null);
+  const [bottomAnchorNode, setBottomAnchorNode] = useState<HTMLHeadingElement | null>(null);
 
-  const { styles: adaptiveStyles } = useAdaptiveLayout({
-    leftScoreRef,
-    rightScoreRef,
-    leftNameRef,
-    rightNameRef,
-    scoreA: state.scoreA,
-    scoreB: state.scoreB,
-    isFullscreen,
+  const hudPlacement = useHudMeasure({
+    leftScoreEl: leftScoreNode,
+    rightScoreEl: rightScoreNode,
+    bottomAnchorEl: bottomAnchorNode,
+    enabled: isFullscreen,
   });
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-        setIsFullscreen(true);
-    } else {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
+  const enterFullscreenMode = async () => {
+    const element = document.documentElement;
+    if (element.requestFullscreen && !document.fullscreenElement) {
+      try {
+        await element.requestFullscreen();
+        // Attempt to lock orientation, but don't throw an error if it fails.
+        // This can fail in sandboxed environments, which is an expected behavior.
+        if (screen.orientation && typeof (screen.orientation as any).lock === 'function') {
+          const lockPromise = (screen.orientation as any).lock('landscape');
+          if (lockPromise && typeof lockPromise.catch === 'function') {
+            lockPromise.catch(() => {
+              // Silently ignore orientation lock errors.
+            });
+          }
         }
-        setIsFullscreen(false);
+      } catch (error) {
+        // We still want to log if fullscreen itself fails.
+        console.error("Error entering fullscreen:", error);
+      }
     }
   };
 
+  const exitFullscreenMode = async () => {
+    if (document.exitFullscreen && document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+        // screen.orientation.unlock() is handled by the fullscreenchange event listener
+      } catch (error) {
+        console.error("Error exiting fullscreen:", error);
+      }
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      enterFullscreenMode();
+    } else {
+      exitFullscreenMode();
+    }
+  };
+  
   useEffect(() => {
-      const handleChange = () => setIsFullscreen(!!document.fullscreenElement);
-      document.addEventListener('fullscreenchange', handleChange);
-      return () => document.removeEventListener('fullscreenchange', handleChange);
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!document.fullscreenElement;
+      setIsFullscreen(isCurrentlyFullscreen);
+
+      if (!isCurrentlyFullscreen) {
+        if (screen.orientation && typeof (screen.orientation as any).unlock === 'function') {
+          // Attempt to unlock orientation, silently failing if not permitted.
+          const unlockPromise = (screen.orientation as any).unlock();
+          if (unlockPromise && typeof unlockPromise.catch === 'function') {
+            unlockPromise.catch(() => {
+              // Silently ignore unlock errors.
+            });
+          }
+        }
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">Loading...</div>;
+
+  if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
   const isSwapped = state.swappedSides;
+  
+  const refA: Ref<HTMLSpanElement> = isSwapped ? setRightScoreNode : setLeftScoreNode;
+  const refB: Ref<HTMLSpanElement> = isSwapped ? setLeftScoreNode : setRightScoreNode;
+  const bottomAnchorForB: Ref<HTMLHeadingElement> | undefined = isSwapped ? undefined : setBottomAnchorNode;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-[#020617] text-slate-100 overflow-hidden relative" style={adaptiveStyles}>
-      
+    <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative">
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <div className={`
             absolute -top-[20%] -left-[20%] w-[80vw] h-[80vw] blur-[120px] rounded-full mix-blend-screen opacity-60 animate-pulse duration-[4000ms] transition-colors duration-1000
@@ -91,9 +138,10 @@ function App() {
           setsB={state.setsB}
         />
       </div>
-
+      
       {isFullscreen && (
-          <FullscreenHUD 
+          <MeasuredFullscreenHUD
+            placement={hudPlacement}
             setsA={state.setsA}
             setsB={state.setsB}
             time={state.matchDurationSeconds}
@@ -121,9 +169,8 @@ function App() {
          
          {isFullscreen ? (
             <ScoreCardFullscreen 
+                scoreRef={refA}
                 teamId="A"
-                ref={isSwapped ? rightScoreRef : leftScoreRef}
-                nameRef={isSwapped ? rightNameRef : leftNameRef}
                 team={state.teamARoster}
                 score={state.scoreA}
                 isServing={state.servingTeam === 'A'}
@@ -167,18 +214,11 @@ function App() {
             />
          )}
 
-         <div className={`
-            flex-shrink-0 transition-all duration-500
-            ${isFullscreen 
-                ? 'h-0 w-0'
-                : 'w-px h-2 landscape:h-px landscape:w-4 md:w-8'}
-         `}></div>
-
          {isFullscreen ? (
             <ScoreCardFullscreen
+                scoreRef={refB}
+                bottomAnchorRef={bottomAnchorForB}
                 teamId="B"
-                ref={isSwapped ? leftScoreRef : rightScoreRef}
-                nameRef={isSwapped ? leftNameRef : rightNameRef}
                 team={state.teamBRoster}
                 score={state.scoreB}
                 isServing={state.servingTeam === 'B'}
@@ -230,7 +270,6 @@ function App() {
                  <Minimize2 size={24} />
              </button>
          )}
-
       </main>
 
       <div 

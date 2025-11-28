@@ -1,0 +1,135 @@
+{
+  "app": {
+    "loading": "Loading..."
+  },
+  "languages": {
+    "en": "English",
+    "pt": "Português (Brasil)",
+    "es": "Español"
+  },
+  "controls": {
+    "undo": "Undo",
+    "swap": "Swap Sides",
+    "teams": "Teams",
+    "settings": "Settings",
+    "fullscreen": "Fullscreen",
+    "reset": "Reset Match"
+  },
+  "history": {
+    "gameStart": "Game Start",
+    "setLabel": "S{setNumber}"
+  },
+  "game": {
+    "serving": "Serving",
+    "matchPoint": "Match Point",
+    "setPoint": "Set Point",
+    "deuce": "Deuce",
+    "suddenDeath": "Sudden Death",
+    "tieBreak": "Tie Break",
+    "timeout": "TIMEOUT",
+    "useTimeout": "Use Timeout"
+  },
+  "settings": {
+    "title": "Configuration",
+    "appearance": {
+      "title": "Appearance",
+      "theme": "Theme",
+      "language": "Language",
+      "themes": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      }
+    },
+    "teamNames": {
+      "title": "Team Names",
+      "home": "Home (A)",
+      "guest": "Guest (B)",
+      "placeholderA": "Team A",
+      "placeholderB": "Team B"
+    },
+    "rules": {
+      "title": "Match Rules",
+      "setsToPlay": "Sets to Play",
+      "pointsPerSet": "Points per Set",
+      "tieBreak": "Tie Break (Final Set)",
+      "tieBreakTo15": "to 15 pts",
+      "tieBreakTo25": "to 25 pts",
+      "deuceLogic": "Deuce Logic",
+      "deuceStandard": "Advantage of 2",
+      "deuceSuddenDeath": "Sudden Death (3pts)"
+    },
+    "applyChanges": "Apply Changes"
+  },
+  "presets": {
+    "fivb": {
+      "label": "Indoor (FIVB)",
+      "sub": "5 Sets • 25 Pts"
+    },
+    "beach": {
+      "label": "Beach Volley",
+      "sub": "3 Sets • 21 Pts"
+    },
+    "custom": {
+      "label": "Custom Match",
+      "sub": "1 Set • 15 Pts • Sudden Death"
+    }
+  },
+  "install": {
+    "title": "Install App",
+    "description": "Add to home screen for full experience.",
+    "installNow": "Install Now",
+    "ios": {
+      "tap": "Tap",
+      "then": "then",
+      "addToHome": "Add to Home Screen"
+    },
+    "android": {
+      "tap": "Tap",
+      "then": "then",
+      "installApp": "Install App"
+    }
+  },
+  "confirm": {
+    "cancel": "Cancel",
+    "reset": {
+      "title": "Reset Match?",
+      "message": "Are you sure you want to reset the match? All scores and history will be lost.",
+      "confirmButton": "Yes, Reset"
+    }
+  },
+  "matchOver": {
+    "title": "Match Result",
+    "wins": "Wins the Match",
+    "nextGameButton": "Start Next Game",
+    "rotationReport": {
+      "title": "Rotation Report",
+      "entering": "{teamName} Entering",
+      "leaving": "Leaving",
+      "newSize": "New Roster Size",
+      "players": "{count} Players",
+      "coreSquad": "Core Squad (Queue)",
+      "none": "None",
+      "reinforcements": "Reinforcements",
+      "source": "Stolen / Recycled"
+    }
+  },
+  "teamManager": {
+    "title": "Squad Management",
+    "currentRoster": "Current Roster",
+    "batchInput": "Batch Input",
+    "batchInputPrompt": "Paste names below (one per line).",
+    "batchInputPlaceholder": "John Doe\nJane Smith\n...",
+    "generateTeams": "Generate Teams",
+    "queue": "Waiting Queue",
+    "queueEmpty": "Queue empty",
+    "dragPlayersHere": "Drag players here",
+    "addPlayer": "Add Player",
+    "addPlayerPlaceholder": "New player name...",
+    "rosterFull": "Roster Full",
+    "lockPlayer": "Lock Player",
+    "unlockPlayer": "Unlock Player",
+    "playerRemoved": "Player removed",
+    "undo": "UNDO"
+  }
+}

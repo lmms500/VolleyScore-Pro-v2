@@ -34,13 +34,13 @@ interface UseHudMeasureProps {
 }
 
 // --- Design Constants ---
-const MIN_HUD_WIDTH = 220;
+const HUD_SAFETY_MARGIN_PX = 16;
 const PREFERRED_HUD_WIDTH = 420;
+const MIN_HUD_WIDTH = 180;
 const MAX_HUD_WIDTH = 650;
 const MIN_HUD_HEIGHT = 160; 
 const MAX_HUD_HEIGHT = 480; 
-const COMPACT_THRESHOLD_LANDSCAPE = 300;
-const GAP_PADDING = 10;
+const COMPACT_THRESHOLD_LANDSCAPE = 320;
 
 const INITIAL_PLACEMENT: HudPlacement = {
   mode: 'portrait', left: -9999, top: -9999, width: 0, height: 0, compact: false, internalScale: 1
@@ -77,8 +77,8 @@ export function useHudMeasure({
         if (availableHeight < MIN_HUD_HEIGHT / 2) {
              newPlacement = { ...INITIAL_PLACEMENT, mode: 'fallback' };
         } else {
-             const width = Math.min(window.innerWidth - GAP_PADDING * 2, MAX_HUD_WIDTH);
-             const height = Math.max(MIN_HUD_HEIGHT, Math.min(availableHeight - GAP_PADDING, MAX_HUD_HEIGHT));
+             const width = Math.min(window.innerWidth - HUD_SAFETY_MARGIN_PX * 2, MAX_HUD_WIDTH);
+             const height = Math.max(MIN_HUD_HEIGHT, Math.min(availableHeight - HUD_SAFETY_MARGIN_PX, MAX_HUD_HEIGHT));
              
              newPlacement = {
                  mode: 'portrait',
@@ -95,46 +95,44 @@ export function useHudMeasure({
     } else { 
         // --- Landscape Logic (Side-by-Side) ---
         
-        // 1. Calculate HUD Center (Based on Scores)
-        const leftScoreEdge = rectScoreA.right;
-        const rightScoreEdge = rectScoreB.left;
+        // 1. Determine Edges
+        const leftScoreRightEdge = rectScoreA.right;
+        const rightScoreLeftEdge = rectScoreB.left;
         
-        // Precise geometric center between the two numbers
-        const hudCenterX = (leftScoreEdge + rightScoreEdge) / 2;
-        const availableWidth = rightScoreEdge - leftScoreEdge;
+        // 2. Calculate Precise Geometric Gap
+        // placement.left = (scoreA.left + scoreA.width) + HUD_SAFETY_MARGIN_PX
+        const calculatedLeft = leftScoreRightEdge + HUD_SAFETY_MARGIN_PX;
+        
+        // placement.width = scoreB.left - (scoreA.left + scoreA.width) - (2 * HUD_SAFETY_MARGIN_PX)
+        const calculatedWidth = rightScoreLeftEdge - leftScoreRightEdge - (2 * HUD_SAFETY_MARGIN_PX);
 
-        // 2. Calculate TopBar Center (Based on Names)
+        // 3. Calculate TopBar Center (Based on Names)
         let topBarCenterX = window.innerWidth / 2; // Default
         if (leftNameEl && rightNameEl) {
             const rectNameA = leftNameEl.getBoundingClientRect();
             const rectNameB = rightNameEl.getBoundingClientRect();
-            // Use midpoint of inner edges for names too, to ensure centering in the gap
-            // If names overlap, this might be weird, but assumption is they don't in landscape
-            const leftNameEdge = rectNameA.right;
-            const rightNameEdge = rectNameB.left;
-            topBarCenterX = (leftNameEdge + rightNameEdge) / 2;
+            topBarCenterX = (rectNameA.right + rectNameB.left) / 2;
         }
 
-        if (availableWidth < MIN_HUD_WIDTH / 3) {
-            // Gap too small?
+        if (calculatedWidth < MIN_HUD_WIDTH / 2) {
+            // Gap too small? Fallback to fixed positioning to avoid broken layout
             newPlacement = { ...INITIAL_PLACEMENT, mode: 'fallback' };
         } else {
-            const width = Math.max(MIN_HUD_WIDTH, Math.min(availableWidth - GAP_PADDING, MAX_HUD_WIDTH));
             const height = Math.min(window.innerHeight * 0.8, MAX_HUD_HEIGHT);
             
             // Calculate Top based on screen center
             const top = (window.innerHeight - height) / 2;
-            const left = hudCenterX - (width / 2);
-
-            const internalScale = Math.min(1, width / PREFERRED_HUD_WIDTH);
+            
+            // Determine internal scale if the gap is smaller than preferred
+            const internalScale = Math.min(1, calculatedWidth / PREFERRED_HUD_WIDTH);
 
             newPlacement = { 
                 mode: 'landscape', 
-                left, 
+                left: calculatedLeft, 
                 top, 
-                width, 
+                width: calculatedWidth, 
                 height, 
-                compact: availableWidth < COMPACT_THRESHOLD_LANDSCAPE, 
+                compact: calculatedWidth < COMPACT_THRESHOLD_LANDSCAPE, 
                 internalScale,
                 topBarLeft: topBarCenterX
             };
@@ -183,7 +181,7 @@ export function useHudMeasure({
       resizeObserver.disconnect();
       mutationObserver.disconnect();
     };
-  }, [calculateLayout, enabled, debounceMs]);
+  }, [calculateLayout, enabled, debounceMs, leftScoreEl, rightScoreEl, leftNameEl, rightNameEl]);
 
   return placement;
 }

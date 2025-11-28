@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TeamId } from '../types';
 import { Zap } from 'lucide-react';
@@ -73,8 +72,11 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
 
   // Logic: "HUD Central based ONLY on size of score"
   const isVisualLeft = reverseLayout ? teamId === 'B' : teamId === 'A';
-  // Reduced push out to keep scores closer to center but separate
-  const pushOutClass = isVisualLeft ? '-translate-x-2 md:-translate-x-6' : 'translate-x-2 md:translate-x-6';
+  
+  // Expanded push out to create larger central gap for HUD
+  // Mobile: 2rem (32px), Desktop: 6rem (96px)
+  const pushOutClass = isVisualLeft ? '-translate-x-8 md:-translate-x-24' : 'translate-x-8 md:translate-x-24';
+  
   const orderClass = reverseLayout 
     ? (teamId === 'A' ? 'order-last' : 'order-first') 
     : (teamId === 'A' ? 'order-first' : 'order-last');
@@ -101,14 +103,16 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
         className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${theme.glowRadial} pointer-events-none mix-blend-screen ${isServing ? 'opacity-100' : 'opacity-0'}`} 
       />
 
-      {/* Main Content Anchor - Centered strictly */}
+      {/* Main Content Anchor - Centered strictly then pushed out */}
       <div 
         className={`relative flex items-center justify-center transition-transform duration-500 ${pushOutClass}`}
-        style={{ transform: `${pushOutClass} scale(${scale})` }}
       >
         
-        {/* SCORE (The Centerpiece) */}
-        <div className="relative z-10 flex flex-col items-center">
+        {/* Scale Wrapper - Separated from Translate wrapper to avoid conflict */}
+        <div 
+            className="relative z-10 flex flex-col items-center transition-transform duration-300"
+            style={{ transform: `scale(${scale})` }}
+        >
              {/* Badge floating above score */}
             {(isMatchPoint || isSetPoint || inSuddenDeath) && (
                 <div className={`absolute left-0 right-0 flex justify-center ${badgeOffset} transition-all duration-300 z-20`}>

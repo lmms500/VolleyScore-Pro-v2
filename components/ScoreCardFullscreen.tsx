@@ -80,7 +80,7 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
         `} 
       />
 
-      <div className="flex flex-col h-full w-full relative z-10 p-2 md:p-8 landscape:px-20 pb-4 justify-between items-center">
+      <div className="flex flex-col h-full w-full relative z-10 p-2 md:p-8 landscape:px-20 py-4 justify-center items-center gap-4">
         
         <div className="flex flex-col items-center justify-center w-full flex-none">
             <div className={`
@@ -101,41 +101,39 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
             </h2>
         </div>
 
-        {(isMatchPoint || isSetPoint || inSuddenDeath) ? (
-            <div className="flex items-center justify-center transition-all duration-300 flex-none min-h-[6rem] sm:min-h-[8rem] py-4">
+        {(isMatchPoint || isSetPoint || inSuddenDeath) && (
+            <div className="flex items-center justify-center transition-all duration-300 flex-none">
                 <div 
                     className={`
-                        px-8 py-3 sm:px-12 sm:py-4 rounded-full backdrop-blur-xl border border-white/20 shadow-2xl
-                        animate-pulse font-black uppercase tracking-[0.2em] text-center whitespace-nowrap
-                        text-2xl sm:text-4xl md:text-6xl shadow-[0_0_80px_rgba(0,0,0,0.9)] transform flex items-center gap-3 sm:gap-6
+                        px-2 py-0.5 sm:px-3 sm:py-1 rounded-md backdrop-blur-xl border border-white/20 shadow-2xl
+                        animate-pulse font-semibold uppercase tracking-[0.2em] text-center whitespace-nowrap
+                        text-xs sm:text-sm shadow-[0_0_80px_rgba(0,0,0,0.9)] transform flex items-center gap-1.5 sm:gap-2
                         ${inSuddenDeath
-                            ? 'bg-red-600 text-white shadow-red-500/60 ring-8 ring-red-500/20'
+                            ? 'bg-red-600 text-white shadow-red-500/60 ring-4 ring-red-500/20'
                             : isMatchPoint 
-                                ? 'bg-amber-500 text-black shadow-amber-500/60 ring-8 ring-amber-500/20' 
+                                ? 'bg-amber-500 text-black shadow-amber-500/60 ring-4 ring-amber-500/20' 
                                 : isSetPoint 
-                                    ? `${theme.bg} text-white ring-8 ring-white/10`
+                                    ? `${theme.bg} text-white ring-4 ring-white/10`
                                     : 'bg-slate-200 text-slate-900'} 
                     `}
                 >
-                    {inSuddenDeath && <Zap className="w-8 h-8 sm:w-12 sm:h-12 md:w-16 md:h-16" fill="currentColor" />}
+                    {inSuddenDeath && <Zap className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" />}
                     {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
                 </div>
             </div>
-        ) : (
-            <div className="min-h-[6rem] sm:min-h-[8rem]"></div>
         )}
 
         <div 
             className={`
                 flex items-center w-full flex-1 min-h-0
-                font-black leading-none tracking-[-0.08em] text-white
+                font-black leading-none text-white
                 drop-shadow-2xl transition-transform duration-100 active:scale-95
-                outline-none select-none text-[35vh]
+                outline-none select-none
                 ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
                 ${alignmentClass} landscape:px-[10vw] md:landscape:px-[8vw]
             `}
         >
-            <span ref={scoreRef}>{score}</span>
+            <span ref={scoreRef} className="tracking-tight text-8xl sm:text-9xl">{score}</span>
         </div>
       </div>
     </div>

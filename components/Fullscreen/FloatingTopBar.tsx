@@ -10,6 +10,7 @@ interface FloatingTopBarProps {
   onToggleTimer: () => void;
   isTimerRunning: boolean;
   inSuddenDeath: boolean;
+  centeredLeft?: number;
 }
 
 const formatTime = (seconds: number) => {
@@ -19,12 +20,11 @@ const formatTime = (seconds: number) => {
 };
 
 export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
-  time, currentSet, isTieBreak, isDeuce, onToggleTimer, isTimerRunning, inSuddenDeath
+  time, currentSet, isTieBreak, isDeuce, onToggleTimer, isTimerRunning, inSuddenDeath, centeredLeft
 }) => {
   const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(true);
 
-  // Auto-fade logic similar to controls, but maybe longer timeout
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
     const resetTimer = () => {
@@ -44,15 +44,20 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
     };
   }, []);
 
+  const style: React.CSSProperties = centeredLeft 
+    ? { left: `${centeredLeft}px`, transform: 'translateX(-50%)' } 
+    : { left: '50%', transform: 'translateX(-50%)' };
+
   return (
     <div 
+      style={style}
       className={`
-        fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-[55] 
+        fixed top-4 md:top-6 z-[55] 
         transition-opacity duration-700 ease-in-out
         ${isVisible ? 'opacity-100' : 'opacity-40 hover:opacity-100'}
       `}
     >
-      <div className="flex items-center gap-4 px-6 py-3 rounded-full bg-black/30 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+      <div className="flex items-center gap-4 px-6 py-3 rounded-full bg-black/30 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] whitespace-nowrap">
         
         {/* Timer */}
         <button 

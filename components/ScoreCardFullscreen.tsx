@@ -1,6 +1,6 @@
 import React, { forwardRef, Ref, useState, useEffect } from 'react';
 import { Team, TeamId } from '../types';
-import { Volleyball, Zap, RefreshCw } from 'lucide-react';
+import { Volleyball, Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -24,29 +24,24 @@ interface ScoreCardFullscreenProps {
   onInteractionEnd?: () => void;
   reverseLayout?: boolean;
   scoreRef?: Ref<HTMLSpanElement>;
-  bottomAnchorRef?: Ref<HTMLHeadingElement>;
+  nameRef?: Ref<HTMLHeadingElement>;
 }
 
 export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscreenProps>(({
   teamId, team, score, isServing, onAdd, onSubtract, onToggleServe, timeouts, onTimeout, 
   isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, colorTheme, 
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
-  scoreRef, bottomAnchorRef
+  scoreRef, nameRef
 }, ref) => {
   const { t } = useTranslation();
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Trigger spring animation on score change
   useEffect(() => {
     setIsAnimating(true);
     const timer = setTimeout(() => setIsAnimating(false), 200);
     return () => clearTimeout(timer);
   }, [score]);
 
-  // Determine Undo Direction based on Team ID and Side
-  // Assuming Team A is Left, Team B is Right in default layout.
-  // Swipe Left on Team A -> Undo A
-  // Swipe Right on Team B -> Undo B
   const onSwipeLeft = teamId === 'A' ? onSubtract : undefined;
   const onSwipeRight = teamId === 'B' ? onSubtract : undefined;
 
@@ -74,6 +69,15 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
       glowShadow: 'drop-shadow-[0_0_20px_rgba(244,63,94,0.6)]'
     }
   }[colorTheme];
+
+  // Visual Direction Logic
+  // If teamId is A and NOT reverse, it's Left. If reverse, it's Right.
+  // We want to push Left items to the Left (-X) and Right items to the Right (+X).
+  const isVisualLeft = reverseLayout ? teamId === 'B' : teamId === 'A';
+  
+  // Requirement 3: Push scores slightly outwards to create breathing room
+  // Translate -1.5rem for Left, +1.5rem for Right
+  const pushOutClass = isVisualLeft ? '-translate-x-6' : 'translate-x-6';
 
   const orderClass = reverseLayout 
     ? (teamId === 'A' ? 'order-last' : 'order-first') 
@@ -110,7 +114,7 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
         <div className="flex flex-col items-center justify-center w-full flex-none pointer-events-none">
              {/* Service Indicator integrated */}
             <h2 
-                ref={bottomAnchorRef}
+                ref={nameRef}
                 className="pointer-events-auto font-black uppercase tracking-tighter text-center cursor-pointer hover:text-white transition-all z-10 leading-none text-3xl md:text-5xl landscape:text-4xl text-white drop-shadow-[0_5px_5px_rgba(0,0,0,1)] px-2 w-full truncate flex items-center justify-center gap-3"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
@@ -135,7 +139,7 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
         </div>
 
         {/* Score and Badges Container */}
-        <div className="flex-1 w-full flex flex-col justify-center items-center gap-2 pointer-events-none">
+        <div className={`flex-1 w-full flex flex-col justify-center items-center gap-2 pointer-events-none transition-transform duration-500 ${pushOutClass}`}>
 
             {(isMatchPoint || isSetPoint || inSuddenDeath) && (
                 <div className="flex items-center justify-center transition-all duration-300 flex-none">

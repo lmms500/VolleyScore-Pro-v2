@@ -34,14 +34,19 @@ function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [interactingTeam, setInteractingTeam] = useState<TeamId | null>(null);
 
+  // --- Refs for Measure Logic ---
+  // We need to know which element is visually on the LEFT and which is on the RIGHT.
+  // These state-refs will be assigned dynamically based on 'swappedSides'.
   const [leftScoreNode, setLeftScoreNode] = useState<HTMLSpanElement | null>(null);
   const [rightScoreNode, setRightScoreNode] = useState<HTMLSpanElement | null>(null);
-  const [bottomAnchorNode, setBottomAnchorNode] = useState<HTMLHeadingElement | null>(null);
+  const [leftNameNode, setLeftNameNode] = useState<HTMLElement | null>(null);
+  const [rightNameNode, setRightNameNode] = useState<HTMLElement | null>(null);
 
   const hudPlacement = useHudMeasure({
     leftScoreEl: leftScoreNode,
     rightScoreEl: rightScoreNode,
-    bottomAnchorEl: bottomAnchorNode,
+    leftNameEl: leftNameNode,
+    rightNameEl: rightNameNode,
     enabled: isFullscreen,
   });
 
@@ -94,18 +99,22 @@ function App() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Timer Toggle Logic
   const toggleTimer = () => {
     setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
   };
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
+  // --- Dynamic Ref Assignment ---
+  // If not swapped: A is Left, B is Right.
+  // If swapped: B is Left, A is Right.
   const isSwapped = state.swappedSides;
   
-  const refA: Ref<HTMLSpanElement> = isSwapped ? setRightScoreNode : setLeftScoreNode;
-  const refB: Ref<HTMLSpanElement> = isSwapped ? setLeftScoreNode : setRightScoreNode;
-  const bottomAnchorForB: Ref<HTMLHeadingElement> | undefined = isSwapped ? undefined : setBottomAnchorNode;
+  const refScoreA: Ref<HTMLSpanElement> = isSwapped ? setRightScoreNode : setLeftScoreNode;
+  const refScoreB: Ref<HTMLSpanElement> = isSwapped ? setLeftScoreNode : setRightScoreNode;
+  
+  const refNameA: Ref<HTMLHeadingElement> = isSwapped ? setRightNameNode : setLeftNameNode;
+  const refNameB: Ref<HTMLHeadingElement> = isSwapped ? setLeftNameNode : setRightNameNode;
 
   // Visual Props Calculation for HUD (Swap Handling)
   const setsLeft = isSwapped ? state.setsB : state.setsA;
@@ -155,6 +164,7 @@ function App() {
                 onToggleTimer={toggleTimer}
                 isTimerRunning={state.isTimerRunning}
                 inSuddenDeath={state.inSuddenDeath}
+                centeredLeft={hudPlacement.topBarLeft}
             />
 
             <MeasuredFullscreenHUD
@@ -179,7 +189,8 @@ function App() {
          
          {isFullscreen ? (
             <ScoreCardFullscreen 
-                scoreRef={refA}
+                scoreRef={refScoreA}
+                nameRef={refNameA}
                 teamId="A"
                 team={state.teamARoster}
                 score={state.scoreA}
@@ -226,8 +237,8 @@ function App() {
 
          {isFullscreen ? (
             <ScoreCardFullscreen
-                scoreRef={refB}
-                bottomAnchorRef={bottomAnchorForB}
+                scoreRef={refScoreB}
+                nameRef={refNameB}
                 teamId="B"
                 team={state.teamBRoster}
                 score={state.scoreB}

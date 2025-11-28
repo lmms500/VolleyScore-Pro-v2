@@ -2,27 +2,16 @@ import { useState, useLayoutEffect, useCallback } from 'react';
 
 /**
  * =================================================================================
- * useHudMeasure Hook
+ * useHudMeasure Hook (Geometric Alignment V2)
  * =================================================================================
- * Este hook é o cérebro por trás do layout dinâmico do HUD em tela cheia.
- * Ele mede a posição real dos dígitos na tela e calcula o espaço disponível
- * entre eles para posicionar e dimensionar o HUD de forma inteligente.
+ * Calculates precise layout positions based on the visual gap between elements.
  * 
- * Saídas (HudPlacement):
- *   - mode: 'portrait', 'landscape', ou 'fallback' se não houver espaço.
- *   - left, top, width, height: As coordenadas e dimensões calculadas para o HUD.
- *   - compact: Um booleano que indica se o HUD deve usar um layout mais denso.
- *   - internalScale: Um fator de escala (0.0 a 1.0) para ajustar o tamanho dos
- *     elementos internos do HUD (ícones, texto) sem alterar o tamanho do contêiner.
- * 
- * Parâmetros (UseHudMeasureOptions):
- *   - enabled: Ativa ou desativa os cálculos (essencial para performance).
- *   - debug: Se true, desenha caixas visuais na tela para depuração do layout.
- *   - debounceMs: Tempo de espera em milissegundos para recalcular o layout após um evento.
+ * Logic:
+ * 1. HUD Center X = Midpoint between Left Score Right-Edge and Right Score Left-Edge.
+ * 2. TopBar Center X = Midpoint between Left Name Right-Edge and Right Name Left-Edge.
+ * 3. Mode is determined by available aspect ratio (Landscape vs Portrait).
  * =================================================================================
  */
-
-// --- Tipos e Interfaces ---
 
 export interface HudPlacement {
   mode: "landscape" | "portrait" | "fallback";
@@ -32,41 +21,37 @@ export interface HudPlacement {
   height: number;
   compact: boolean;
   internalScale: number;
+  topBarLeft?: number; // New property for TopBar positioning
 }
 
 interface UseHudMeasureProps {
   leftScoreEl: HTMLElement | null;
   rightScoreEl: HTMLElement | null;
-  bottomAnchorEl: HTMLElement | null; // Usado em modo retrato (ex: nome do time B)
+  leftNameEl: HTMLElement | null; // Added
+  rightNameEl: HTMLElement | null; // Added
   enabled?: boolean;
-  debug?: boolean;
   debounceMs?: number;
 }
 
-// --- Constantes de Design ---
-
+// --- Design Constants ---
 const MIN_HUD_WIDTH = 220;
 const PREFERRED_HUD_WIDTH = 420;
 const MAX_HUD_WIDTH = 650;
 const MIN_HUD_HEIGHT = 160; 
-// Increased to allow taller HUD in landscape, making it more legible
 const MAX_HUD_HEIGHT = 480; 
 const COMPACT_THRESHOLD_LANDSCAPE = 300;
-const COMPACT_THRESHOLD_PORTRAIT = 150;
-const GAP_PADDING = 20; // Espaçamento mínimo entre o HUD e os dígitos
+const GAP_PADDING = 20;
 
 const INITIAL_PLACEMENT: HudPlacement = {
   mode: 'portrait', left: -9999, top: -9999, width: 0, height: 0, compact: false, internalScale: 1
 };
 
-// --- O Hook ---
-
 export function useHudMeasure({
   leftScoreEl,
   rightScoreEl,
-  bottomAnchorEl,
+  leftNameEl,
+  rightNameEl,
   enabled = true,
-  debug = false,
   debounceMs = 100
 }: UseHudMeasureProps): HudPlacement {
   
@@ -78,49 +63,84 @@ export function useHudMeasure({
         return;
     }
 
-    const rectA = leftScoreEl.getBoundingClientRect();
-    const rectB = rightScoreEl.getBoundingClientRect();
-    const rectBottom = bottomAnchorEl?.getBoundingClientRect();
+    const rectScoreA = leftScoreEl.getBoundingClientRect();
+    const rectScoreB = rightScoreEl.getBoundingClientRect();
 
     const isPortrait = window.innerHeight > window.innerWidth;
     let newPlacement: HudPlacement;
 
     if (isPortrait) {
-        const bottomAnchorTop = rectBottom?.top ?? (rectB.top + rectB.height + 20);
-        const availableHeight = bottomAnchorTop - rectA.bottom;
-
-        if (availableHeight < MIN_HUD_HEIGHT / 2) {
-            newPlacement = { ...INITIAL_PLACEMENT, mode: 'fallback' };
-        } else {
-            const height = Math.max(MIN_HUD_HEIGHT, Math.min(availableHeight - GAP_PADDING * 2, MAX_HUD_HEIGHT));
-            const width = Math.min(window.innerWidth - GAP_PADDING * 2, MAX_HUD_WIDTH);
-            const top = rectA.bottom + (availableHeight - height) / 2;
-            const left = (window.innerWidth - width) / 2;
-            const compact = availableHeight < COMPACT_THRESHOLD_PORTRAIT;
-            const internalScale = Math.min(1, height / MAX_HUD_HEIGHT);
-
-            newPlacement = { mode: 'portrait', left, top, width, height, compact, internalScale };
-        }
-    } else { // Landscape
-        const availableWidth = rectB.left - rectA.right;
+        // --- Portrait Logic (Stacked) ---
+        // In portrait, we usually just center horizontally on screen
+        const availableHeight = rectScoreB.top - rectScoreA.bottom;
         
+        if (availableHeight < MIN_HUD_HEIGHT / 2) {
+             newPlacement = { ...INITIAL_PLACEMENT, mode: 'fallback' };
+        } else {
+             const width = Math.min(window.innerWidth - GAP_PADDING * 2, MAX_HUD_WIDTH);
+             const height = Math.max(MIN_HUD_HEIGHT, Math.min(availableHeight - GAP_PADDING, MAX_HUD_HEIGHT));
+             
+             newPlacement = {
+                 mode: 'portrait',
+                 left: (window.innerWidth - width) / 2,
+                 top: rectScoreA.bottom + (availableHeight - height) / 2,
+                 width,
+                 height,
+                 compact: availableHeight < 150,
+                 internalScale: Math.min(1, height / MAX_HUD_HEIGHT),
+                 topBarLeft: window.innerWidth / 2 // Center TopBar on screen in portrait
+             };
+        }
+
+    } else { 
+        // --- Landscape Logic (Side-by-Side) ---
+        
+        // 1. Calculate HUD Center (Based on Scores)
+        const leftScoreEdge = rectScoreA.right;
+        const rightScoreEdge = rectScoreB.left;
+        
+        // Precise geometric center between the two numbers
+        const hudCenterX = (leftScoreEdge + rightScoreEdge) / 2;
+        const availableWidth = rightScoreEdge - leftScoreEdge;
+
+        // 2. Calculate TopBar Center (Based on Names)
+        let topBarCenterX = window.innerWidth / 2; // Default
+        if (leftNameEl && rightNameEl) {
+            const rectNameA = leftNameEl.getBoundingClientRect();
+            const rectNameB = rightNameEl.getBoundingClientRect();
+            const leftNameEdge = rectNameA.right;
+            const rightNameEdge = rectNameB.left;
+            topBarCenterX = (leftNameEdge + rightNameEdge) / 2;
+        }
+
         if (availableWidth < MIN_HUD_WIDTH / 2) {
             newPlacement = { ...INITIAL_PLACEMENT, mode: 'fallback' };
         } else {
             const width = Math.max(MIN_HUD_WIDTH, Math.min(availableWidth - GAP_PADDING * 2, MAX_HUD_WIDTH));
-            // In Landscape, height is freer, but we respect MAX_HUD_HEIGHT.
-            const height = Math.min(window.innerHeight * 0.8, MAX_HUD_HEIGHT); // Allow up to 80% of screen height or MAX
-            const left = rectA.right + (availableWidth - width) / 2;
-            const top = (window.innerHeight - height) / 2;
-            const compact = availableWidth < COMPACT_THRESHOLD_LANDSCAPE;
-            const internalScale = Math.min(1, width / PREFERRED_HUD_WIDTH);
+            const height = Math.min(window.innerHeight * 0.8, MAX_HUD_HEIGHT);
             
-            newPlacement = { mode: 'landscape', left, top, width, height, compact, internalScale };
+            // Calculate Top based on screen center
+            const top = (window.innerHeight - height) / 2;
+            const left = hudCenterX - (width / 2);
+
+            const internalScale = Math.min(1, width / PREFERRED_HUD_WIDTH);
+
+            newPlacement = { 
+                mode: 'landscape', 
+                left, 
+                top, 
+                width, 
+                height, 
+                compact: availableWidth < COMPACT_THRESHOLD_LANDSCAPE, 
+                internalScale,
+                topBarLeft: topBarCenterX
+            };
         }
     }
+
     setPlacement(newPlacement);
 
-  }, [enabled, leftScoreEl, rightScoreEl, bottomAnchorEl, placement.left]);
+  }, [enabled, leftScoreEl, rightScoreEl, leftNameEl, rightNameEl]);
 
   useLayoutEffect(() => {
     if (!enabled) return;
@@ -134,80 +154,35 @@ export function useHudMeasure({
     };
     const triggerCalc = debouncedCalculation();
     
-    // Dispara o cálculo inicial
     triggerCalc();
-    
-    // BUG FIX: Fullscreen transition animation causes elements to move.
-    // We trigger calculation again after common transition durations to catch the final position.
+    // Re-trigger during transitions
     setTimeout(calculateLayout, 350); 
     setTimeout(calculateLayout, 600); 
 
-    // --- Observadores ---
-    const observers: (ResizeObserver | MutationObserver)[] = [];
-    
-    // 1. ResizeObserver para mudanças de tamanho da janela e dos elementos
     const resizeObserver = new ResizeObserver(triggerCalc);
     if(leftScoreEl) resizeObserver.observe(leftScoreEl);
     if(rightScoreEl) resizeObserver.observe(rightScoreEl);
+    if(leftNameEl) resizeObserver.observe(leftNameEl); // Observe names too
+    if(rightNameEl) resizeObserver.observe(rightNameEl);
+    
     window.addEventListener('resize', triggerCalc);
     window.addEventListener('orientationchange', triggerCalc);
-    observers.push(resizeObserver);
     
-    // 2. MutationObserver para mudanças no conteúdo (pontuação)
+    // Observer content changes (scores/names length changing)
     const mutationObserver = new MutationObserver(triggerCalc);
-    if (leftScoreEl) mutationObserver.observe(leftScoreEl, { childList: true, subtree: true, characterData: true });
-    if (rightScoreEl) mutationObserver.observe(rightScoreEl, { childList: true, subtree: true, characterData: true });
-    observers.push(mutationObserver);
-    
-    // --- Lógica de Debug ---
-    if (debug) {
-      const debugElements: HTMLElement[] = [];
-      const createDebugBox = (rect: DOMRect, color: string, label: string) => {
-        const box = document.createElement('div');
-        box.style.position = 'fixed';
-        box.style.left = `${rect.left}px`;
-        box.style.top = `${rect.top}px`;
-        box.style.width = `${rect.width}px`;
-        box.style.height = `${rect.height}px`;
-        box.style.border = `2px dashed ${color}`;
-        box.style.zIndex = '9998';
-        box.style.pointerEvents = 'none';
-        box.textContent = label;
-        box.style.color = 'white';
-        box.style.fontSize = '10px';
-        document.body.appendChild(box);
-        debugElements.push(box);
-      };
+    const obsConfig = { childList: true, subtree: true, characterData: true };
+    if (leftScoreEl) mutationObserver.observe(leftScoreEl, obsConfig);
+    if (rightScoreEl) mutationObserver.observe(rightScoreEl, obsConfig);
+    if (leftNameEl) mutationObserver.observe(leftNameEl, obsConfig);
+    if (rightNameEl) mutationObserver.observe(rightNameEl, obsConfig);
 
-      if (leftScoreEl) createDebugBox(leftScoreEl.getBoundingClientRect(), 'cyan', 'Left Score');
-      if (rightScoreEl) createDebugBox(rightScoreEl.getBoundingClientRect(), 'magenta', 'Right Score');
-      if (bottomAnchorEl) createDebugBox(bottomAnchorEl.getBoundingClientRect(), 'yellow', 'Bottom Anchor');
-      
-      const gapBox = document.createElement('div');
-      gapBox.style.position = 'fixed';
-      gapBox.style.left = `${placement.left}px`;
-      gapBox.style.top = `${placement.top}px`;
-      gapBox.style.width = `${placement.width}px`;
-      gapBox.style.height = `${placement.height}px`;
-      gapBox.style.backgroundColor = 'rgba(0, 255, 0, 0.2)';
-      gapBox.style.border = `2px solid green`;
-      gapBox.style.zIndex = '9999';
-      gapBox.style.pointerEvents = 'none';
-      document.body.appendChild(gapBox);
-      debugElements.push(gapBox);
-
-      return () => {
-        debugElements.forEach(el => el.remove());
-      };
-    }
-    
-    // --- Cleanup ---
     return () => {
       window.removeEventListener('resize', triggerCalc);
       window.removeEventListener('orientationchange', triggerCalc);
-      observers.forEach(obs => obs.disconnect());
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
     };
-  }, [calculateLayout, enabled, debounceMs, debug, placement.mode]); // Added placement.mode to dep array to help re-trigger if mode changes
+  }, [calculateLayout, enabled, debounceMs]);
 
   return placement;
 }

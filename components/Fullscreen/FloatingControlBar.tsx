@@ -39,12 +39,13 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
     };
   }, []);
 
-  const buttonBase = "p-5 rounded-full transition-all duration-300 active:scale-90 flex items-center justify-center text-slate-200 hover:text-white bg-white/5 hover:bg-white/20 border border-white/5 hover:border-white/20 backdrop-blur-md";
+  // Reduced padding (p-4) to make it shorter height-wise
+  const buttonBase = "p-4 rounded-full transition-all duration-300 active:scale-90 flex items-center justify-center text-slate-200 hover:text-white bg-white/5 hover:bg-white/20 border border-white/5 hover:border-white/20 backdrop-blur-md";
 
   return (
     <div 
       className={`
-        fixed bottom-8 left-1/2 -translate-x-1/2 z-50 
+        fixed bottom-10 left-1/2 -translate-x-1/2 z-50 
         transition-opacity duration-700 ease-in-out
         ${isVisible ? 'opacity-100 pointer-events-auto' : 'opacity-30 hover:opacity-100 pointer-events-auto'}
       `}
@@ -57,21 +58,21 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
           className={`${buttonBase} disabled:opacity-30 disabled:cursor-not-allowed`}
           title={t('controls.undo')}
         >
-          <Undo2 size={28} />
+          <Undo2 size={24} />
         </button>
 
         <button onClick={onSwap} className={buttonBase} title={t('controls.swap')}>
-          <ArrowLeftRight size={28} />
+          <ArrowLeftRight size={24} />
         </button>
 
-        <div className="w-px h-10 bg-white/10 mx-1"></div>
+        <div className="w-px h-8 bg-white/10 mx-1"></div>
 
         <button onClick={onReset} className={`${buttonBase} text-rose-400 hover:text-rose-200 hover:bg-rose-500/20 hover:border-rose-500/30`} title={t('controls.reset')}>
-          <RotateCcw size={28} />
+          <RotateCcw size={24} />
         </button>
 
         <button onClick={onMenu} className={`${buttonBase} text-indigo-400 hover:text-indigo-200 hover:bg-indigo-500/20 hover:border-indigo-500/30`} title={t('game.menu')}>
-            <Menu size={28} />
+            <Menu size={24} />
         </button>
 
       </div>

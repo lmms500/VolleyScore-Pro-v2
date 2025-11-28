@@ -42,12 +42,14 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
     indigo: {
       text: 'text-indigo-400',
       bg: 'bg-indigo-500',
-      glowRadial: 'bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.35)_0%,rgba(99,102,241,0)_70%)]'
+      glowRadial: 'bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.35)_0%,rgba(99,102,241,0)_70%)]',
+      glowShadow: 'drop-shadow-[0_0_25px_rgba(99,102,241,0.7)]'
     },
     rose: {
       text: 'text-rose-400',
       bg: 'bg-rose-500',
-      glowRadial: 'bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.35)_0%,rgba(244,63,94,0)_70%)]'
+      glowRadial: 'bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.35)_0%,rgba(244,63,94,0)_70%)]',
+      glowShadow: 'drop-shadow-[0_0_25px_rgba(244,63,94,0.7)]'
     }
   }[colorTheme];
 
@@ -55,9 +57,7 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
     ? (teamId === 'A' ? 'order-last' : 'order-first') 
     : (teamId === 'A' ? 'order-first' : 'order-last');
 
-  const alignmentClass = teamId === 'A'
-    ? (reverseLayout ? 'justify-end' : 'justify-start')
-    : (reverseLayout ? 'justify-start' : 'justify-end');
+  const glowClass = (isMatchPoint || isSetPoint) ? theme.glowShadow : '';
 
   return (
     <div 
@@ -80,7 +80,7 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
         `} 
       />
 
-      <div className="flex flex-col h-full w-full relative z-10 p-2 md:p-8 landscape:px-20 py-4 justify-center items-center gap-4">
+      <div className="flex flex-col h-full w-full relative z-10 p-2 md:p-8 landscape:px-8 py-4 justify-center items-center gap-2 sm:gap-4">
         
         <div className="flex flex-col items-center justify-center w-full flex-none">
             <div className={`
@@ -102,12 +102,12 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
         </div>
 
         {(isMatchPoint || isSetPoint || inSuddenDeath) && (
-            <div className="flex items-center justify-center transition-all duration-300 flex-none">
+            <div className="flex items-center justify-center transition-all duration-300 flex-none py-1">
                 <div 
                     className={`
-                        px-2 py-0.5 sm:px-3 sm:py-1 rounded-md backdrop-blur-xl border border-white/20 shadow-2xl
+                        px-1.5 py-0.5 rounded-sm backdrop-blur-xl border border-white/20 shadow-2xl
                         animate-pulse font-semibold uppercase tracking-[0.2em] text-center whitespace-nowrap
-                        text-xs sm:text-sm shadow-[0_0_80px_rgba(0,0,0,0.9)] transform flex items-center gap-1.5 sm:gap-2
+                        text-[0.625rem] leading-3 sm:text-xs shadow-[0_0_80px_rgba(0,0,0,0.9)] transform flex items-center gap-1.5 sm:gap-2
                         ${inSuddenDeath
                             ? 'bg-red-600 text-white shadow-red-500/60 ring-4 ring-red-500/20'
                             : isMatchPoint 
@@ -125,15 +125,16 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
 
         <div 
             className={`
-                flex items-center w-full flex-1 min-h-0
-                font-black leading-none text-white
-                drop-shadow-2xl transition-transform duration-100 active:scale-95
+                flex items-center justify-center w-full
+                font-bold leading-none text-white
+                transition-all duration-100 active:scale-95
                 outline-none select-none
                 ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
-                ${alignmentClass} landscape:px-[10vw] md:landscape:px-[8vw]
             `}
         >
-            <span ref={scoreRef} className="tracking-tight text-8xl sm:text-9xl">{score}</span>
+            <span ref={scoreRef} className={`tracking-tight text-9xl sm:text-[10rem] lg:text-[12rem] transition-all duration-300 ${glowClass}`}>
+                {score}
+            </span>
         </div>
       </div>
     </div>

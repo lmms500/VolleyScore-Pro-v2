@@ -30,8 +30,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout
 }) => {
   
-  // FIX: Destructure correct event handlers (`onPointer...`) from the updated hook and pass props as a single object.
-  const { onPointerDown, onPointerUp, onPointerCancel, onPointerLeave } = useScoreGestures({
+  const { handlePointerDown, handlePointerUp, handlePointerCancel } = useScoreGestures({
     onAdd, onSubtract, isLocked, onInteractionStart, onInteractionEnd
   });
 
@@ -59,12 +58,10 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
             ${orderClass}
             ${isLocked ? 'opacity-90 grayscale-[0.2]' : ''}
         `}
-        style={{ touchAction: 'none' }}
-        // FIX: Apply correct pointer event handlers.
-        onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        onPointerLeave={onPointerLeave}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        onPointerLeave={handlePointerCancel}
     >
       
       {/* Intense Glow for Fullscreen */}

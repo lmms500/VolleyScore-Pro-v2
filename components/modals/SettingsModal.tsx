@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameConfig } from '../../types';
-import { Check, Trophy, Sun, Zap, Download } from 'lucide-react';
+import { Check, Trophy, Sun, Zap, Download, Share, Smartphone, Menu } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -11,14 +11,15 @@ interface SettingsModalProps {
   teamAName: string;
   teamBName: string;
   onSave: (config: GameConfig, names: { nameA: string, nameB: string }) => void;
-  // Props PWA
-  canInstallPWA: boolean;
-  onPromptInstall: () => void;
+  onInstall?: () => void;
+  canInstall?: boolean;
+  isIOS?: boolean;
+  isStandalone?: boolean;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
-  isOpen, onClose, config, teamAName, teamBName, onSave,
-  canInstallPWA, onPromptInstall
+    isOpen, onClose, config, teamAName, teamBName, onSave, 
+    onInstall, canInstall, isIOS, isStandalone 
 }) => {
   const [localConfig, setLocalConfig] = useState<GameConfig>(config);
   const [names, setNames] = useState({ nameA: teamAName, nameB: teamBName });
@@ -94,12 +95,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     </button>
   );
 
-  // Verificação de status de instalação para exibição
-  const isStandalone = (typeof window !== 'undefined') && (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone);
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Configuration">
-      <div className="space-y-6">
+      <div className="space-y-6 pb-2">
         
         {/* Presets */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -168,7 +166,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Rules */}
         <div className={sectionClass}>
           <label className={labelClass}>Match Rules</label>
-           <div className="space-y-4">
+          
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <span className="text-slate-300 text-sm">Sets to Play</span>
                 <div className="flex bg-white/5 rounded-lg p-1 gap-1">
@@ -183,7 +182,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 ))}
                 </div>
             </div>
-             <div className="flex items-center justify-between">
+
+            <div className="flex items-center justify-between">
                 <span className="text-slate-300 text-sm">Points per Set</span>
                 <div className="flex bg-white/5 rounded-lg p-1 gap-1">
                 {[15, 21, 25].map(val => (
@@ -197,6 +197,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 ))}
                 </div>
             </div>
+
             <div className="flex items-center justify-between border-t border-white/5 pt-4">
                 <span className="text-slate-300 text-sm">Tie Break (Final Set)</span>
                 <div className="flex items-center gap-3">
@@ -218,6 +219,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </button>
                 </div>
             </div>
+
             <div className="flex flex-col gap-2 border-t border-white/5 pt-4">
                 <span className="text-slate-300 text-sm">Deuce Logic</span>
                 <div className="grid grid-cols-2 gap-2">
@@ -239,26 +241,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
         </div>
-
-        {/* ------------------ PWA INSTALLATION ------------------ */}
-        <div className={sectionClass}>
-            <label className={labelClass}>App Installation</label>
-            
-            {canInstallPWA ? (
-                <Button onClick={onPromptInstall} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white" size="lg">
-                    <Download size={18} className="mr-2" /> Install App
-                </Button>
-            ) : (
-                <button disabled className="w-full py-3 rounded-xl border border-white/5 text-slate-600 text-xs font-bold uppercase cursor-not-allowed bg-white/5 flex items-center justify-center gap-2">
-                    {isStandalone ? <><Check size={16}/> App Installed</> : "Not Available / Installed"}
-                </button>
-            )}
-            
-            <p className="text-[10px] text-slate-600 italic mt-2 text-center">
-                Works best on Chrome (Android) or Safari (iOS - Share {'>'} Add to Home Screen)
-            </p>
-        </div>
         
+        {/* INSTALL APP SECTION - Shows if NOT standalone (installed) */}
+        {isStandalone === false && (
+             <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-between gap-4">
+                 <div className="flex-1">
+                     <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                        <Smartphone size={12} /> Install App
+                     </span>
+                     <p className="text-xs text-slate-400">Add to home screen for full experience.</p>
+                 </div>
+                 
+                 {canInstall ? (
+                    <Button onClick={onInstall} size="sm" className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/40">
+                        <Download size={14} /> Install Now
+                    </Button>
+                 ) : isIOS ? (
+                    <div className="flex flex-col items-end text-right">
+                        <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                            Tap <Share size={10} /> then
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-300">"Add to Home Screen"</span>
+                    </div>
+                 ) : (
+                    /* Fallback for Android/Chrome when event hasn't fired yet */
+                    <div className="flex flex-col items-end text-right">
+                         <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                            Tap <Menu size={10} /> then
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-300">"Install App"</span>
+                    </div>
+                 )}
+             </div>
+        )}
+
         <Button onClick={handleSave} className="w-full" size="lg">
             Apply Changes
         </Button>

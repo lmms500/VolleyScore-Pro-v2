@@ -1,77 +1,65 @@
 import { useState, useEffect, useCallback } from 'react';
 
-// Interface do evento nativo
-interface BeforeInstallPromptEvent extends Event {
-  readonly platforms: Array<string>;
-  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed', platform: string }>;
-  prompt: () => Promise<void>;
+interface IBeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
 }
 
 export const usePWAInstallPrompt = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
-  const [isAppInstalled, setIsAppInstalled] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<IBeforeInstallPromptEvent | null>(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // 1. Verifica se já está instalado (Modo Standalone)
-    const checkInstalled = () => {
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-        setIsAppInstalled(!!isStandalone);
-    };
-    checkInstalled();
-    
-    // Listener para mudanças no modo de exibição
-    window.matchMedia('(display-mode: standalone)').addEventListener('change', checkInstalled);
+    // Detect iOS
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIPad = navigator.maxTouchPoints > 0 && /macintosh/.test(userAgent); // iPadOS 13+
+    setIsIOS(/iphone|ipad|ipod/.test(userAgent) || isIPad);
 
-    // 2. Captura o evento 'beforeinstallprompt'
-    const handleBeforeInstallPrompt = (e: Event) => {
-      // Previne o banner automático do Chrome (queremos acionar via botão)
+    // Detect Standalone Mode (Already Installed)
+    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+    setIsStandalone(isStandaloneMode);
+
+    // Capture install prompt
+    const handler = (e: Event) => {
+      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Guarda o evento para usar depois
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      // Habilita a UI
-      setIsInstallable(true);
-      console.log("PWA: Evento 'beforeinstallprompt' capturado.");
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e as IBeforeInstallPromptEvent);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // 3. Listener para quando o app é instalado com sucesso
-    const handleAppInstalled = () => {
-        setIsAppInstalled(true);
-        setIsInstallable(false);
-        setDeferredPrompt(null);
-        console.log("PWA: App instalado com sucesso.");
-    };
-    window.addEventListener('appinstalled', handleAppInstalled);
+    window.addEventListener('beforeinstallprompt', handler);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener('beforeinstallprompt', handler);
     };
   }, []);
 
   const promptInstall = useCallback(async () => {
-    if (!deferredPrompt) {
-        console.log("PWA: Nenhuma instalação pendente.");
-        return;
-    }
+    if (!deferredPrompt) return;
 
-    // Mostra o prompt nativo
-    deferredPrompt.prompt();
-    
-    // Aguarda a escolha do usuário
+    // Show the install prompt
+    await deferredPrompt.prompt();
+
+    // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
-    console.log(`PWA: Usuário escolheu: ${outcome}`);
     
-    // Limpa o evento, pois ele só pode ser usado uma vez
-    setDeferredPrompt(null);
-    setIsInstallable(false);
+    if (outcome === 'accepted') {
+      console.log('User accepted the install prompt');
+      setDeferredPrompt(null);
+    } else {
+      console.log('User dismissed the install prompt');
+    }
   }, [deferredPrompt]);
 
-  return { 
-    isInstallable, // Verdadeiro se o navegador permitir instalação
-    isAppInstalled, 
-    promptInstall 
+  return {
+    isInstallable: !!deferredPrompt && !isStandalone,
+    isIOS: isIOS && !isStandalone,
+    isStandalone,
+    promptInstall
   };
 };

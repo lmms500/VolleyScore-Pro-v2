@@ -43,13 +43,13 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
       text: 'text-indigo-400',
       bg: 'bg-indigo-500',
       glowRadial: 'bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.35)_0%,rgba(99,102,241,0)_70%)]',
-      glowShadow: 'drop-shadow-[0_0_25px_rgba(99,102,241,0.7)]'
+      glowShadow: 'drop-shadow-[0_0_20px_rgba(99,102,241,0.6)]'
     },
     rose: {
       text: 'text-rose-400',
       bg: 'bg-rose-500',
       glowRadial: 'bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.35)_0%,rgba(244,63,94,0)_70%)]',
-      glowShadow: 'drop-shadow-[0_0_25px_rgba(244,63,94,0.7)]'
+      glowShadow: 'drop-shadow-[0_0_20px_rgba(244,63,94,0.6)]'
     }
   }[colorTheme];
 
@@ -80,8 +80,10 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
         `} 
       />
 
-      <div className="flex flex-col h-full w-full relative z-10 p-2 md:p-8 landscape:px-8 py-4 justify-center items-center gap-2 sm:gap-4">
+      {/* Main container with robust vertical centering */}
+      <div className="flex flex-col h-full w-full relative z-10 p-2 md:p-8 landscape:px-8 py-4">
         
+        {/* Header (flex-none) */}
         <div className="flex flex-col items-center justify-center w-full flex-none">
             <div className={`
                 flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md shadow-lg transition-all duration-300 mb-2 scale-110
@@ -101,40 +103,44 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
             </h2>
         </div>
 
-        {(isMatchPoint || isSetPoint || inSuddenDeath) && (
-            <div className="flex items-center justify-center transition-all duration-300 flex-none py-1">
-                <div 
-                    className={`
-                        px-1.5 py-0.5 rounded-sm backdrop-blur-xl border border-white/20 shadow-2xl
-                        animate-pulse font-semibold uppercase tracking-[0.2em] text-center whitespace-nowrap
-                        text-[0.625rem] leading-3 sm:text-xs shadow-[0_0_80px_rgba(0,0,0,0.9)] transform flex items-center gap-1.5 sm:gap-2
-                        ${inSuddenDeath
-                            ? 'bg-red-600 text-white shadow-red-500/60 ring-4 ring-red-500/20'
-                            : isMatchPoint 
-                                ? 'bg-amber-500 text-black shadow-amber-500/60 ring-4 ring-amber-500/20' 
-                                : isSetPoint 
-                                    ? `${theme.bg} text-white ring-4 ring-white/10`
-                                    : 'bg-slate-200 text-slate-900'} 
-                    `}
-                >
-                    {inSuddenDeath && <Zap className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" />}
-                    {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
-                </div>
-            </div>
-        )}
+        {/* Score and Badges Container (flex-1 to take up remaining space) */}
+        <div className="flex-1 w-full flex flex-col justify-center items-center gap-2">
 
-        <div 
-            className={`
-                flex items-center justify-center w-full
-                font-bold leading-none text-white
-                transition-all duration-100 active:scale-95
-                outline-none select-none
-                ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
-            `}
-        >
-            <span ref={scoreRef} className={`tracking-tight text-9xl sm:text-[10rem] lg:text-[12rem] transition-all duration-300 ${glowClass}`}>
-                {score}
-            </span>
+            {(isMatchPoint || isSetPoint || inSuddenDeath) && (
+                <div className="flex items-center justify-center transition-all duration-300 flex-none">
+                    <div 
+                        className={`
+                            px-1.5 py-0.5 rounded-sm backdrop-blur-xl border border-white/20 shadow-2xl
+                            animate-pulse font-semibold uppercase tracking-[0.2em] text-center whitespace-nowrap
+                            text-2xs shadow-[0_0_80px_rgba(0,0,0,0.9)] transform flex items-center gap-1.5
+                            ${inSuddenDeath
+                                ? 'bg-red-600 text-white shadow-red-500/60 ring-4 ring-red-500/20'
+                                : isMatchPoint 
+                                    ? 'bg-amber-500 text-black shadow-amber-500/60 ring-4 ring-amber-500/20' 
+                                    : isSetPoint 
+                                        ? `${theme.bg} text-white ring-4 ring-white/10`
+                                        : 'bg-slate-200 text-slate-900'} 
+                        `}
+                    >
+                        {inSuddenDeath && <Zap className="w-3 h-3" fill="currentColor" />}
+                        {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
+                    </div>
+                </div>
+            )}
+
+            <div 
+                className={`
+                    flex items-center justify-center w-full
+                    font-bold leading-none text-white
+                    transition-all duration-100 active:scale-95
+                    outline-none select-none
+                    ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
+                `}
+            >
+                <span ref={scoreRef} className={`tracking-tight text-[10rem] sm:text-[12rem] transition-all duration-300 ${glowClass}`}>
+                    {score}
+                </span>
+            </div>
         </div>
       </div>
     </div>

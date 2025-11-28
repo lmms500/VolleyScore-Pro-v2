@@ -1,8 +1,8 @@
 import React from 'react';
-import { Team, TeamId } from '/workspaces/VolleyScore-Pro-v2/src/types.ts';
+import { Team, TeamId } from '../types';
 import { Circle, Zap } from 'lucide-react';
-import { useScoreGestures } from '/workspaces/VolleyScore-Pro-v2/src/hooks/useScoreGestures.ts';
-import { useTranslation } from '/workspaces/VolleyScore-Pro-v2/src/contexts/LanguageContext.tsx';
+import { useScoreGestures } from '../hooks/useScoreGestures';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface ScoreCardNormalProps {
   teamId: TeamId;

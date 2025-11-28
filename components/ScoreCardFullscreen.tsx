@@ -1,6 +1,6 @@
 import React, { forwardRef, Ref } from 'react';
 import { Team, TeamId } from '../types';
-import { Dribbble, Zap } from 'lucide-react';
+import { Volleyball, Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -59,8 +59,6 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
     ? (reverseLayout ? 'justify-end' : 'justify-start')
     : (reverseLayout ? 'justify-start' : 'justify-end');
 
-  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
-
   return (
     <div 
         ref={ref}
@@ -82,14 +80,14 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
         `} 
       />
 
-      <div className={`flex flex-col h-full w-full relative z-10 p-2 md:p-8 justify-center items-center`}>
+      <div className="flex flex-col h-full w-full relative z-10 p-2 md:p-8 landscape:px-20 pb-4 justify-between items-center">
         
         <div className="flex flex-col items-center justify-center w-full flex-none">
             <div className={`
                 flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md shadow-lg transition-all duration-300 mb-2 scale-110
                 ${isServing ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}
             `}>
-                <Dribbble size={16} className={`${theme.text} animate-bounce`} />
+                <Volleyball size={16} className={`${theme.text} animate-bounce`} />
                 <span className={`text-[10px] font-black uppercase tracking-widest ${theme.text}`}>{t('game.serving')}</span>
             </div>
 
@@ -103,43 +101,41 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
             </h2>
         </div>
 
-        <div className="flex-1 flex flex-col justify-center items-center gap-4 py-2">
-            {(isMatchPoint || isSetPoint || inSuddenDeath) && (
-                <div className="flex items-center justify-center transition-all duration-300 flex-none">
-                    <div 
-                        className={`
-                            backdrop-blur-xl border border-white/20 shadow-2xl
-                            animate-pulse font-semibold uppercase tracking-widest text-center whitespace-nowrap
-                            shadow-[0_0_80px_rgba(0,0,0,0.9)] transform flex items-center
-                            text-xs sm:text-sm px-2 py-0.5 rounded-md gap-1 sm:gap-1.5
-                            ${inSuddenDeath
-                                ? 'bg-red-600 text-white shadow-red-500/60 ring-4 ring-red-500/20'
-                                : isMatchPoint 
-                                    ? 'bg-amber-500 text-black shadow-amber-500/60 ring-4 ring-amber-500/20' 
-                                    : isSetPoint 
-                                        ? `${theme.bg} text-white ring-4 ring-white/10`
-                                        : 'bg-slate-200 text-slate-900'} 
-                        `}
-                    >
-                        {inSuddenDeath && <Zap className="size-3 sm:size-4" fill="currentColor" />}
-                        {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
-                    </div>
+        {(isMatchPoint || isSetPoint || inSuddenDeath) ? (
+            <div className="flex items-center justify-center transition-all duration-300 flex-none min-h-[6rem] sm:min-h-[8rem] py-4">
+                <div 
+                    className={`
+                        px-8 py-3 sm:px-12 sm:py-4 rounded-full backdrop-blur-xl border border-white/20 shadow-2xl
+                        animate-pulse font-black uppercase tracking-[0.2em] text-center whitespace-nowrap
+                        text-2xl sm:text-4xl md:text-6xl shadow-[0_0_80px_rgba(0,0,0,0.9)] transform flex items-center gap-3 sm:gap-6
+                        ${inSuddenDeath
+                            ? 'bg-red-600 text-white shadow-red-500/60 ring-8 ring-red-500/20'
+                            : isMatchPoint 
+                                ? 'bg-amber-500 text-black shadow-amber-500/60 ring-8 ring-amber-500/20' 
+                                : isSetPoint 
+                                    ? `${theme.bg} text-white ring-8 ring-white/10`
+                                    : 'bg-slate-200 text-slate-900'} 
+                    `}
+                >
+                    {inSuddenDeath && <Zap className="w-8 h-8 sm:w-12 sm:h-12 md:w-16 md:h-16" fill="currentColor" />}
+                    {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
                 </div>
-            )}
-
-            <div 
-                className={`
-                    flex items-center w-full flex-1 min-h-0
-                    font-black leading-none tracking-tight text-white
-                    drop-shadow-2xl transition-transform duration-100 active:scale-95
-                    outline-none select-none
-                    text-[45vh] landscape:text-[60vh]
-                    ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
-                    ${alignmentClass} px-10 lg:px-14
-                `}
-            >
-                <span ref={scoreRef}>{score}</span>
             </div>
+        ) : (
+            <div className="min-h-[6rem] sm:min-h-[8rem]"></div>
+        )}
+
+        <div 
+            className={`
+                flex items-center w-full flex-1 min-h-0
+                font-black leading-none tracking-[-0.08em] text-white
+                drop-shadow-2xl transition-transform duration-100 active:scale-95
+                outline-none select-none text-[35vh]
+                ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
+                ${alignmentClass} landscape:px-[10vw] md:landscape:px-[8vw]
+            `}
+        >
+            <span ref={scoreRef}>{score}</span>
         </div>
       </div>
     </div>

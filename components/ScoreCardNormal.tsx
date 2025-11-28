@@ -1,6 +1,6 @@
 import React from 'react';
 import { Team, TeamId } from '../types';
-import { Dribbble, Zap } from 'lucide-react';
+import { Volleyball, Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -81,7 +81,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
                 flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/30 dark:bg-white/10 border border-black/10 dark:border-white/20 backdrop-blur-md shadow-lg transition-all duration-300 mb-0.5 scale-90
                 ${isServing ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}
             `}>
-                <Dribbble size={14} className={`${theme.text} animate-bounce`} />
+                <Volleyball size={14} className={`${theme.text} animate-bounce`} />
                 <span className={`text-[10px] font-black uppercase tracking-widest ${theme.text}`}>{t('game.serving')}</span>
             </div>
 
@@ -104,9 +104,9 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
         {(isMatchPoint || isSetPoint || isDeuce || inSuddenDeath) ? (
             <div className="flex-none py-2 order-2 w-full flex justify-center z-10 min-h-[2rem]">
                  <div className={`
-                    px-2 md:px-3 py-0.5 md:py-1 rounded-full backdrop-blur-xl border border-black/10 dark:border-white/20 shadow-2xl
+                    px-3 py-1 rounded-full backdrop-blur-xl border border-black/10 dark:border-white/20 shadow-2xl
                     animate-pulse font-black uppercase tracking-[0.1em] text-center whitespace-nowrap
-                    text-[8px] md:text-[9px] shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center gap-1 transform transition-all
+                    text-[9px] shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center gap-1 transform transition-all
                     ${inSuddenDeath
                         ? 'bg-red-600 text-white shadow-red-500/50 scale-105 border-red-400'
                         : isMatchPoint 
@@ -127,7 +127,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
                 font-black leading-none tracking-[-0.08em] text-slate-900 dark:text-white
                 drop-shadow-2xl transition-transform duration-100 active:scale-95
                 outline-none select-none
-                text-[17vh] md:text-[15vh] landscape:text-[22vh]
+                text-[13vh] sm:text-[15vh] landscape:text-[22vh]
                 ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
             `}
             style={{ touchAction: 'none' }}

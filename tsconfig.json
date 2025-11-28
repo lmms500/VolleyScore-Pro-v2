@@ -10,14 +10,18 @@
       "DOM.Iterable"
     ],
     "skipLibCheck": true,
-    "types": ["node"],
-    "moduleResolution": "Node",
+    "types": [
+      "node"
+    ],
+    "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",
     "allowJs": true,
     "jsx": "react-jsx",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./*"
+      ]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true

@@ -48,8 +48,9 @@ interface UseHudMeasureProps {
 const MIN_HUD_WIDTH = 220;
 const PREFERRED_HUD_WIDTH = 420;
 const MAX_HUD_WIDTH = 650;
-const MIN_HUD_HEIGHT = 140; 
-const MAX_HUD_HEIGHT = 240; 
+const MIN_HUD_HEIGHT = 160; 
+// Increased to allow taller HUD in landscape, making it more legible
+const MAX_HUD_HEIGHT = 480; 
 const COMPACT_THRESHOLD_LANDSCAPE = 300;
 const COMPACT_THRESHOLD_PORTRAIT = 150;
 const GAP_PADDING = 20; // Espaçamento mínimo entre o HUD e os dígitos
@@ -106,7 +107,8 @@ export function useHudMeasure({
         if (availableWidth < MIN_HUD_WIDTH / 2) {
             newPlacement = { ...INITIAL_PLACEMENT, mode: 'fallback' };
         } else {
-            const width = Math.max(MIN_HUD_WIDTH, Math.min(availableWidth - GAP_PADDING * 2, PREFERRED_HUD_WIDTH));
+            const width = Math.max(MIN_HUD_WIDTH, Math.min(availableWidth - GAP_PADDING * 2, MAX_HUD_WIDTH));
+            // In Landscape, height is freer, but we respect MAX_HUD_HEIGHT.
             const height = Math.min(window.innerHeight * 0.8, MAX_HUD_HEIGHT); // Allow up to 80% of screen height or MAX
             const left = rectA.right + (availableWidth - width) / 2;
             const top = (window.innerHeight - height) / 2;

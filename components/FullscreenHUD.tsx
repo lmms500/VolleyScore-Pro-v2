@@ -37,7 +37,7 @@ export const FullscreenHUD: React.FC<FullscreenHUDProps> = ({
   const separatorClass = "w-px h-5 sm:h-6 md:h-10 bg-white/10 mx-1 md:mx-2"; 
 
   return (
-    // The outer container now provides padding to ensure the HUD never touches the screen edges.
+    // The outer container provides padding to ensure the HUD never touches the screen edges.
     <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 pointer-events-none flex flex-col items-center justify-center w-full px-4">
       {/* 
         CORE FIX: 

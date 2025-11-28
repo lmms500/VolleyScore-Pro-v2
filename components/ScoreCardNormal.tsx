@@ -1,6 +1,6 @@
 import React from 'react';
 import { Team, TeamId } from '../types';
-import { Volleyball, Zap } from 'lucide-react';
+import { Dribbble, Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -81,7 +81,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
                 flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/30 dark:bg-white/10 border border-black/10 dark:border-white/20 backdrop-blur-md shadow-lg transition-all duration-300 mb-0.5 scale-90
                 ${isServing ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}
             `}>
-                <Volleyball size={14} className={`${theme.text} animate-bounce`} />
+                <Dribbble size={14} className={`${theme.text} animate-bounce`} />
                 <span className={`text-[10px] font-black uppercase tracking-widest ${theme.text}`}>{t('game.serving')}</span>
             </div>
 

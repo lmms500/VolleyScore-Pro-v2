@@ -1,6 +1,6 @@
 import React, { forwardRef, Ref } from 'react';
 import { Team, TeamId } from '../types';
-import { Volleyball, Zap } from 'lucide-react';
+import { Dribbble, Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -89,7 +89,7 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
                 flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md shadow-lg transition-all duration-300 mb-2 scale-110
                 ${isServing ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}
             `}>
-                <Volleyball size={16} className={`${theme.text} animate-bounce`} />
+                <Dribbble size={16} className={`${theme.text} animate-bounce`} />
                 <span className={`text-[10px] font-black uppercase tracking-widest ${theme.text}`}>{t('game.serving')}</span>
             </div>
 

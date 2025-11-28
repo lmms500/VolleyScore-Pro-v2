@@ -160,6 +160,9 @@ function App() {
                   isTimerRunning={state.isTimerRunning}
                   inSuddenDeath={state.inSuddenDeath}
                   centeredLeft={hudPlacement.topBarLeft}
+                  teamNameA={state.teamAName}
+                  teamNameB={state.teamBName}
+                  server={state.servingTeam}
               />
 
               <MeasuredFullscreenHUD

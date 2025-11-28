@@ -32,7 +32,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
   isLocked = false, onInteractionStart, onInteractionEnd
 }) => {
   
-  const { handlePointerDown, handlePointerUp, handlePointerCancel } = useScoreGestures({
+  const gestureHandlers = useScoreGestures({
     onAdd, onSubtract, isLocked, onInteractionStart, onInteractionEnd
   });
 
@@ -62,10 +62,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
             ${isLocked ? 'opacity-90 grayscale-[0.2]' : ''}
             ${isServing ? 'z-20' : 'z-0'} 
         `}
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
-        onPointerLeave={handlePointerCancel}
     >
       
       {/* Glow Background */}
@@ -98,7 +94,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
             >
-                {team.name}
+                {team?.name || ''}
             </h2>
 
             {/* Set Dots */}
@@ -132,14 +128,18 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
         ) : <div className="order-2 min-h-[1.5rem] flex-none"></div>}
 
         {/* 3. SCORE NUMBER (Order 3) */}
-        <div className={`
-            order-3 flex items-center justify-center w-full flex-1 min-h-0
-            font-black leading-none tracking-[-0.08em] text-white
-            drop-shadow-2xl transition-transform duration-100 active:scale-95
-            outline-none select-none
-            text-[15dvh] landscape:text-[22dvh]
-            ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
-        `}>
+        <div 
+            className={`
+                order-3 flex items-center justify-center w-full flex-1 min-h-0
+                font-black leading-none tracking-[-0.08em] text-white
+                drop-shadow-2xl transition-transform duration-100 active:scale-95
+                outline-none select-none
+                text-[15dvh] landscape:text-[22dvh]
+                ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
+            `}
+            style={{ touchAction: 'none' }}
+            {...gestureHandlers}
+        >
             {score}
         </div>
 

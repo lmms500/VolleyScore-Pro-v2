@@ -8,6 +8,11 @@ interface UseScoreGesturesProps {
   onInteractionEnd?: () => void;
 }
 
+// Constants for gesture detection
+const SWIPE_THRESHOLD_Y = 30; // Min vertical distance to be a swipe
+const TAP_MAX_DURATION_MS = 250; // Max time for a tap
+const TAP_MAX_DISTANCE_Y = 15; // Max vertical distance for a tap
+
 export const useScoreGestures = ({ 
   onAdd, 
   onSubtract, 
@@ -17,18 +22,14 @@ export const useScoreGestures = ({
 }: UseScoreGesturesProps) => {
   
   const startY = useRef<number | null>(null);
-  const SWIPE_THRESHOLD = 30; // Increased threshold for clearer distinction
-  const TAP_THRESHOLD = 15;   // Increased threshold for tap/deadzone
+  const startTime = useRef<number | null>(null);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (isLocked) return; 
     
-    // Prevent default touch actions like text selection or scrolling
-    e.preventDefault();
-    
     // Capture the pointer to this element, ensuring subsequent events are directed here
     try {
-        e.currentTarget.setPointerCapture(e.pointerId);
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
     } catch (error) {
         console.warn("Failed to capture pointer:", error);
     }
@@ -36,36 +37,41 @@ export const useScoreGestures = ({
     if (onInteractionStart) onInteractionStart();
     
     startY.current = e.clientY;
+    startTime.current = Date.now();
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     if (onInteractionEnd) onInteractionEnd();
-    if (startY.current === null) return;
+    if (startY.current === null || startTime.current === null) return;
     
     try {
-        e.currentTarget.releasePointerCapture(e.pointerId);
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     } catch (error) {
         console.warn("Failed to release pointer:", error);
     }
 
-
     const endY = e.clientY;
-    const distance = startY.current - endY; // Positive = Swipe Up
-    const absDist = Math.abs(distance);
+    const deltaTime = Date.now() - startTime.current;
+    
+    const deltaY = startY.current - endY; // Positive = Swipe Up
+    const absDeltaY = Math.abs(deltaY);
 
-    if (absDist > SWIPE_THRESHOLD) {
-      if (distance > 0) {
+    // Rule 1: It's a TAP if it's fast and short
+    if (deltaTime < TAP_MAX_DURATION_MS && absDeltaY < TAP_MAX_DISTANCE_Y) {
+      onAdd();
+    } 
+    // Rule 2: It's a SWIPE if it's long enough
+    else if (absDeltaY > SWIPE_THRESHOLD_Y) {
+      if (deltaY > 0) {
         onAdd(); // Swipe Up
       } else {
         onSubtract(); // Swipe Down
       }
-    } else if (absDist < TAP_THRESHOLD) {
-      // It's a tap, not a failed swipe
-      onAdd();
     }
-    // Any movement between TAP_THRESHOLD and SWIPE_THRESHOLD is ignored (dead zone)
+    // Movements in the "dead zone" (short and slow) are ignored.
     
     startY.current = null;
+    startTime.current = null;
   };
 
   const handlePointerCancel = (e: React.PointerEvent) => {
@@ -73,17 +79,18 @@ export const useScoreGestures = ({
     if (startY.current === null) return;
     
     try {
-        e.currentTarget.releasePointerCapture(e.pointerId);
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     } catch (error) {
         console.warn("Failed to release pointer on cancel:", error);
     }
 
     startY.current = null;
+    startTime.current = null;
   };
 
   return {
-    handlePointerDown,
-    handlePointerUp,
-    handlePointerCancel
+    onPointerDown: handlePointerDown,
+    onPointerUp: handlePointerUp,
+    onPointerCancel: handlePointerCancel
   };
 };

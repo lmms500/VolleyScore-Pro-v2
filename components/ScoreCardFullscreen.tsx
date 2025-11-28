@@ -30,7 +30,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout
 }) => {
   
-  const { handlePointerDown, handlePointerUp, handlePointerCancel } = useScoreGestures({
+  const gestureHandlers = useScoreGestures({
     onAdd, onSubtract, isLocked, onInteractionStart, onInteractionEnd
   });
 
@@ -58,10 +58,8 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
             ${orderClass}
             ${isLocked ? 'opacity-90 grayscale-[0.2]' : ''}
         `}
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
-        onPointerLeave={handlePointerCancel}
+        style={{ touchAction: 'none' }}
+        {...gestureHandlers}
     >
       
       {/* Intense Glow for Fullscreen */}
@@ -93,7 +91,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
             >
-                {team.name}
+                {team?.name || ''}
             </h2>
         </div>
 

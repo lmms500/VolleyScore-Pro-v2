@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Clock, Zap } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
+import { useLayoutManager } from '../../contexts/LayoutContext';
+import { useElementSize } from '../../hooks/useElementSize';
 
 interface FloatingTopBarProps {
   time: number;
@@ -23,52 +25,43 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
   time, currentSet, isTieBreak, isDeuce, onToggleTimer, isTimerRunning, inSuddenDeath, centeredLeft
 }) => {
   const { t } = useTranslation();
-  const [isVisible, setIsVisible] = useState(true);
+  const { mode, scale, registerElement } = useLayoutManager();
+  const { ref, width, height } = useElementSize<HTMLDivElement>();
 
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
-    const resetTimer = () => {
-      setIsVisible(true);
-      clearTimeout(timeout);
-      timeout = setTimeout(() => setIsVisible(false), 5000);
-    };
-
-    resetTimer();
-    window.addEventListener('pointerdown', resetTimer);
-    window.addEventListener('keydown', resetTimer);
-
-    return () => {
-      clearTimeout(timeout);
-      window.removeEventListener('pointerdown', resetTimer);
-      window.removeEventListener('keydown', resetTimer);
-    };
-  }, []);
+    registerElement('topbar', width, height);
+  }, [width, height, registerElement]);
 
   const style: React.CSSProperties = centeredLeft 
-    ? { left: `${centeredLeft}px`, transform: 'translateX(-50%)' } 
-    : { left: '50%', transform: 'translateX(-50%)' };
+    ? { left: `${centeredLeft}px`, transform: `translateX(-50%) scale(${scale})` } 
+    : { left: '50%', transform: `translateX(-50%) scale(${scale})` };
+
+  // Adjust padding/size based on mode
+  const paddingClass = mode === 'ultra' ? 'px-4 py-2' : 'px-6 py-3';
+  const textSize = mode === 'ultra' ? 'text-lg' : 'text-xl';
+  const iconSize = mode === 'ultra' ? 14 : 18;
 
   return (
     <div 
+      ref={ref}
       style={style}
       className={`
-        fixed top-4 md:top-6 z-[55] 
-        transition-opacity duration-700 ease-in-out
-        ${isVisible ? 'opacity-100' : 'opacity-40 hover:opacity-100'}
+        fixed top-4 z-[55] 
+        transition-all duration-500 ease-out origin-top
       `}
     >
-      <div className="flex items-center gap-4 px-6 py-3 rounded-full bg-black/30 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] whitespace-nowrap">
+      <div className={`flex items-center gap-4 ${paddingClass} rounded-full bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] whitespace-nowrap ring-1 ring-white/5`}>
         
         {/* Timer */}
         <button 
             onClick={onToggleTimer}
             className={`
-                flex items-center justify-center gap-2 px-2 py-0.5 rounded-lg transition-all active:scale-95
+                flex items-center justify-center gap-2 rounded-lg transition-all active:scale-95
                 ${isTimerRunning ? 'text-indigo-300' : 'text-slate-400 opacity-80'}
             `}
         >
-            <Clock size={18} className={isTimerRunning ? 'text-indigo-400' : 'text-slate-500'} />
-            <span className="font-mono text-xl font-bold tabular-nums tracking-wide">{formatTime(time)}</span>
+            <Clock size={iconSize} className={isTimerRunning ? 'text-indigo-400' : 'text-slate-500'} />
+            <span className={`font-mono ${textSize} font-bold tabular-nums tracking-wide`}>{formatTime(time)}</span>
         </button>
 
         <div className="w-px h-6 bg-white/10"></div>
@@ -84,8 +77,8 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
                     flex items-center gap-1.5 px-2 py-0.5 rounded-md
                     ${inSuddenDeath ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'}
                  `}>
-                     {inSuddenDeath && <Zap size={12} fill="currentColor" />}
-                     <span className="text-[10px] font-black uppercase tracking-widest">
+                     {inSuddenDeath && <Zap size={10} fill="currentColor" />}
+                     <span className="text-[9px] font-black uppercase tracking-widest">
                         {inSuddenDeath ? t('game.suddenDeath') : t('game.deuce')}
                      </span>
                  </div>

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Undo2, ArrowLeftRight, RotateCcw, Menu } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
+import { useLayoutManager } from '../../contexts/LayoutContext';
+import { useElementSize } from '../../hooks/useElementSize';
 
 interface FloatingControlBarProps {
   onUndo: () => void;
@@ -15,6 +17,12 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(true);
+  const { mode, scale, registerElement } = useLayoutManager();
+  const { ref, width, height } = useElementSize<HTMLDivElement>();
+
+  useEffect(() => {
+    registerElement('controls', width, height);
+  }, [width, height, registerElement]);
 
   // Auto-fade logic
   useEffect(() => {
@@ -24,14 +32,9 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
       clearTimeout(timeout);
       timeout = setTimeout(() => setIsVisible(false), 4000);
     };
-
-    // Initial timer
     resetTimer();
-
-    // Listeners to wake up the bar
     window.addEventListener('pointerdown', resetTimer);
     window.addEventListener('keydown', resetTimer);
-
     return () => {
       clearTimeout(timeout);
       window.removeEventListener('pointerdown', resetTimer);
@@ -39,40 +42,46 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
     };
   }, []);
 
-  // Reduced padding (p-4) to make it shorter height-wise
-  const buttonBase = "p-4 rounded-full transition-all duration-300 active:scale-90 flex items-center justify-center text-slate-200 hover:text-white bg-white/5 hover:bg-white/20 border border-white/5 hover:border-white/20 backdrop-blur-md";
+  const buttonBase = "rounded-full transition-all duration-300 active:scale-90 flex items-center justify-center text-slate-200 hover:text-white bg-white/5 hover:bg-white/20 border border-white/5 hover:border-white/20 backdrop-blur-md";
+  
+  // Compact adjustments
+  const pClass = mode === 'ultra' ? 'p-3' : 'p-4';
+  const iconSize = mode === 'ultra' ? 20 : 24;
+  const bottomPos = mode === 'ultra' ? 'bottom-4' : 'bottom-10';
 
   return (
     <div 
+      ref={ref}
+      style={{ transform: `translateX(-50%) scale(${scale})` }}
       className={`
-        fixed bottom-10 left-1/2 -translate-x-1/2 z-50 
-        transition-opacity duration-700 ease-in-out
+        fixed ${bottomPos} left-1/2 z-50 
+        transition-all duration-700 ease-in-out origin-bottom
         ${isVisible ? 'opacity-100 pointer-events-auto' : 'opacity-30 hover:opacity-100 pointer-events-auto'}
       `}
     >
-      <div className="flex items-center gap-4 p-2.5 rounded-full bg-black/20 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+      <div className={`flex items-center gap-4 ${mode === 'ultra' ? 'p-2' : 'p-2.5'} rounded-full bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] ring-1 ring-white/5`}>
         
         <button 
           onClick={onUndo} 
           disabled={!canUndo}
-          className={`${buttonBase} disabled:opacity-30 disabled:cursor-not-allowed`}
+          className={`${buttonBase} ${pClass} disabled:opacity-30 disabled:cursor-not-allowed`}
           title={t('controls.undo')}
         >
-          <Undo2 size={24} />
+          <Undo2 size={iconSize} />
         </button>
 
-        <button onClick={onSwap} className={buttonBase} title={t('controls.swap')}>
-          <ArrowLeftRight size={24} />
+        <button onClick={onSwap} className={`${buttonBase} ${pClass}`} title={t('controls.swap')}>
+          <ArrowLeftRight size={iconSize} />
         </button>
 
         <div className="w-px h-8 bg-white/10 mx-1"></div>
 
-        <button onClick={onReset} className={`${buttonBase} text-rose-400 hover:text-rose-200 hover:bg-rose-500/20 hover:border-rose-500/30`} title={t('controls.reset')}>
-          <RotateCcw size={24} />
+        <button onClick={onReset} className={`${buttonBase} ${pClass} text-rose-400 hover:text-rose-200 hover:bg-rose-500/20 hover:border-rose-500/30`} title={t('controls.reset')}>
+          <RotateCcw size={iconSize} />
         </button>
 
-        <button onClick={onMenu} className={`${buttonBase} text-indigo-400 hover:text-indigo-200 hover:bg-indigo-500/20 hover:border-indigo-500/30`} title={t('game.menu')}>
-            <Menu size={24} />
+        <button onClick={onMenu} className={`${buttonBase} ${pClass} text-indigo-400 hover:text-indigo-200 hover:bg-indigo-500/20 hover:border-indigo-500/30`} title={t('game.menu')}>
+            <Menu size={iconSize} />
         </button>
 
       </div>

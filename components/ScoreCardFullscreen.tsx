@@ -1,8 +1,10 @@
-import React, { forwardRef, Ref, useState, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Team, TeamId } from '../types';
 import { Volleyball, Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useLayoutManager } from '../contexts/LayoutContext';
+import { useElementSize } from '../hooks/useElementSize';
 
 interface ScoreCardFullscreenProps {
   teamId: TeamId;
@@ -23,36 +25,35 @@ interface ScoreCardFullscreenProps {
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
   reverseLayout?: boolean;
-  scoreRef?: Ref<HTMLSpanElement>;
-  nameRef?: Ref<HTMLHeadingElement>;
+  scoreRef?: React.Ref<HTMLSpanElement>; // Kept for HUD compatibility if needed
+  nameRef?: React.Ref<HTMLHeadingElement>;
 }
 
-export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscreenProps>(({
-  teamId, team, score, isServing, onAdd, onSubtract, onToggleServe, timeouts, onTimeout, 
-  isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, colorTheme, 
+export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
+  teamId, team, score, isServing, onAdd, onSubtract, onToggleServe,
+  isMatchPoint, isSetPoint, inSuddenDeath, colorTheme,
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
   scoreRef, nameRef
-}, ref) => {
+}) => {
   const { t } = useTranslation();
-  const [isAnimating, setIsAnimating] = useState(false);
+  const { mode, scale, registerElement } = useLayoutManager();
+  
+  // Measurement hooks
+  const { ref: internalScoreRef, width: scoreW, height: scoreH } = useElementSize<HTMLSpanElement>();
+  const { ref: internalNameRef, width: nameW, height: nameH } = useElementSize<HTMLDivElement>();
 
+  // Report sizes to Layout Manager
   useEffect(() => {
-    setIsAnimating(true);
-    const timer = setTimeout(() => setIsAnimating(false), 200);
-    return () => clearTimeout(timer);
-  }, [score]);
+    registerElement(`score${teamId}`, scoreW, scoreH);
+    registerElement(`name${teamId}`, nameW, nameH);
+  }, [scoreW, scoreH, nameW, nameH, teamId, registerElement]);
 
   const onSwipeLeft = teamId === 'A' ? onSubtract : undefined;
   const onSwipeRight = teamId === 'B' ? onSubtract : undefined;
 
   const gestureHandlers = useScoreGestures({
-    onAdd, 
-    onSubtract, 
-    onSwipeLeft,
-    onSwipeRight,
-    isLocked, 
-    onInteractionStart, 
-    onInteractionEnd
+    onAdd, onSubtract, onSwipeLeft, onSwipeRight,
+    isLocked, onInteractionStart, onInteractionEnd
   });
 
   const theme = {
@@ -70,92 +71,59 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
     }
   }[colorTheme];
 
-  // Visual Direction Logic
-  // If teamId is A and NOT reverse, it's Left. If reverse, it's Right.
-  // We want to push Left items to the Left (-X) and Right items to the Right (+X).
-  const isVisualLeft = reverseLayout ? teamId === 'B' : teamId === 'A';
-  
-  // Requirement 3: Push scores slightly outwards to create breathing room
-  // Translate -1.5rem for Left, +1.5rem for Right
-  const pushOutClass = isVisualLeft ? '-translate-x-6' : 'translate-x-6';
+  // Logic: "HUD Central based ONLY on size of score"
+  // We use Flex to center the Score Container. 
+  // The Name is absolute positioned relative to the Score Container to avoid pushing it down.
 
+  const isVisualLeft = reverseLayout ? teamId === 'B' : teamId === 'A';
+  const pushOutClass = isVisualLeft ? '-translate-x-4 md:-translate-x-8' : 'translate-x-4 md:translate-x-8';
   const orderClass = reverseLayout 
     ? (teamId === 'A' ? 'order-last' : 'order-first') 
     : (teamId === 'A' ? 'order-first' : 'order-last');
 
   const glowClass = (isMatchPoint || isSetPoint) ? theme.glowShadow : '';
 
+  // Dynamic Styles based on Mode
+  const nameBottom = mode === 'ultra' ? '100%' : (mode === 'compact' ? '110%' : '120%');
+  const nameScale = mode === 'ultra' ? 0.7 : (mode === 'compact' ? 0.85 : 1);
+  const badgeScale = mode === 'ultra' ? 0.8 : 1;
+  const badgeOffset = mode === 'ultra' ? 'top-[-2rem]' : 'top-[-3rem]';
+
   return (
     <div 
-        ref={ref}
         className={`
-            flex flex-col flex-1 relative h-full transition-all duration-500 select-none overflow-hidden 
-            ${orderClass}
-            ${isLocked ? 'opacity-90 grayscale-[0.2]' : ''}
-            cursor-pointer active:cursor-grabbing
+            flex-1 relative h-full flex items-center justify-center select-none 
+            ${orderClass} ${isLocked ? 'opacity-50 grayscale' : ''}
+            transition-all duration-300
         `}
         style={{ touchAction: 'none' }}
         {...gestureHandlers}
     >
       
+      {/* Background Glow */}
       <div 
-        className={`
-            absolute inset-0 transition-opacity duration-1000 ease-in-out 
-            ${theme.glowRadial} 
-            pointer-events-none mix-blend-screen
-            ${isServing ? 'opacity-100' : 'opacity-0'}
-        `} 
+        className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${theme.glowRadial} pointer-events-none mix-blend-screen ${isServing ? 'opacity-100' : 'opacity-0'}`} 
       />
 
-      {/* Main container */}
-      <div className="flex flex-col h-full w-full relative z-10 p-2 md:p-8 landscape:px-8 py-4">
+      {/* Main Content Anchor - Centered strictly */}
+      <div 
+        className={`relative flex items-center justify-center transition-transform duration-500 ${pushOutClass}`}
+        style={{ transform: `${pushOutClass} scale(${scale})` }}
+      >
         
-        {/* Header - Interactive Name/Serve Toggle */}
-        <div className="flex flex-col items-center justify-center w-full flex-none pointer-events-none">
-             {/* Service Indicator integrated */}
-            <h2 
-                ref={nameRef}
-                className="pointer-events-auto font-black uppercase tracking-tighter text-center cursor-pointer hover:text-white transition-all z-10 leading-none text-3xl md:text-5xl landscape:text-4xl text-white drop-shadow-[0_5px_5px_rgba(0,0,0,1)] px-2 w-full truncate flex items-center justify-center gap-3"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
-            >
-                {teamId === 'A' && isServing && <Volleyball size={24} className={`${theme.text} animate-bounce`} />}
-                <span className="truncate max-w-[80%]">{team?.name || ''}</span>
-                {teamId === 'B' && isServing && <Volleyball size={24} className={`${theme.text} animate-bounce`} />}
-            </h2>
-            
-            {/* Manual Serve Toggle Button (small badge below name) */}
-            <button 
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
-                className={`
-                    pointer-events-auto mt-2 px-2 py-1 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors flex items-center gap-1.5
-                    ${isServing ? 'opacity-100' : 'opacity-40 hover:opacity-100'}
-                `}
-            >
-                <div className={`w-1.5 h-1.5 rounded-full ${isServing ? theme.bg : 'bg-slate-500'}`}></div>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{t('game.serving')}</span>
-            </button>
-        </div>
-
-        {/* Score and Badges Container */}
-        <div className={`flex-1 w-full flex flex-col justify-center items-center gap-2 pointer-events-none transition-transform duration-500 ${pushOutClass}`}>
-
+        {/* SCORE (The Centerpiece) */}
+        <div className="relative z-10">
+             {/* Badge floating above score */}
             {(isMatchPoint || isSetPoint || inSuddenDeath) && (
-                <div className="flex items-center justify-center transition-all duration-300 flex-none">
+                <div className={`absolute left-0 right-0 flex justify-center ${badgeOffset} transition-all duration-300`}>
                     <div 
                         className={`
                             px-2 py-0.5 rounded-sm backdrop-blur-xl border border-white/20 shadow-2xl
-                            animate-pulse font-semibold uppercase tracking-[0.2em] text-center whitespace-nowrap
-                            text-xs shadow-[0_0_80px_rgba(0,0,0,0.9)] transform flex items-center gap-1.5
-                            ${inSuddenDeath
-                                ? 'bg-red-600 text-white shadow-red-500/60 ring-4 ring-red-500/20'
-                                : isMatchPoint 
-                                    ? 'bg-amber-500 text-black shadow-amber-500/60 ring-4 ring-amber-500/20' 
-                                    : isSetPoint 
-                                        ? `${theme.bg} text-white ring-4 ring-white/10`
-                                        : 'bg-slate-200 text-slate-900'} 
+                            font-semibold uppercase tracking-[0.2em] text-center whitespace-nowrap
+                            text-xs shadow-[0_0_80px_rgba(0,0,0,0.9)] flex items-center gap-1.5
+                            ${inSuddenDeath ? 'bg-red-600 text-white shadow-red-500/60 ring-2 ring-red-500/20' : isMatchPoint ? 'bg-amber-500 text-black shadow-amber-500/60 ring-2 ring-amber-500/20' : isSetPoint ? `${theme.bg} text-white ring-2 ring-white/10` : 'bg-slate-200 text-slate-900'} 
                         `}
+                        style={{ transform: `scale(${badgeScale})` }}
                     >
                         {inSuddenDeath && <Zap className="w-3 h-3" fill="currentColor" />}
                         {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
@@ -163,21 +131,59 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
                 </div>
             )}
 
-            <div 
+            {/* The Number */}
+            <span 
+                ref={(node) => {
+                    internalScoreRef.current = node;
+                    if (typeof scoreRef === 'function') scoreRef(node);
+                    else if (scoreRef) (scoreRef as any).current = node;
+                }}
+                className={`block font-black leading-none text-white tracking-tighter transition-all duration-300 ${glowClass}`}
+                style={{ 
+                    fontSize: 'clamp(8rem, 25vh, 16rem)',
+                    textShadow: '0 10px 30px rgba(0,0,0,0.5)'
+                 }}
+            >
+                {score}
+            </span>
+        </div>
+
+        {/* NAME (Absolute positioned relative to Score to not affect center) */}
+        <div 
+            ref={internalNameRef}
+            className="absolute w-[300%] text-center flex flex-col items-center justify-end pointer-events-none"
+            style={{ 
+                bottom: nameBottom, 
+                left: '50%', 
+                transform: `translateX(-50%) scale(${nameScale})`,
+                transformOrigin: 'bottom center'
+            }}
+        >
+            <h2 
+                ref={nameRef}
+                className="pointer-events-auto font-black uppercase tracking-tighter text-white drop-shadow-[0_5px_5px_rgba(0,0,0,1)] text-3xl md:text-5xl lg:text-6xl px-4 py-2 cursor-pointer hover:scale-105 transition-transform truncate max-w-full flex items-center justify-center gap-2"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
+            >
+                {isServing && <Volleyball size={24} className={`${theme.text} animate-bounce`} />}
+                {team?.name || ''}
+            </h2>
+
+             {/* Manual Serve Toggle (Small Pill) */}
+             <button 
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
                 className={`
-                    flex items-center justify-center w-full
-                    font-bold leading-none text-white
-                    transition-transform duration-150 ease-out
-                    outline-none select-none
-                    ${isAnimating ? 'scale-105' : 'scale-100'}
+                    pointer-events-auto mt-1 px-2 py-0.5 rounded-full bg-black/40 border border-white/10 hover:bg-white/10 transition-colors flex items-center gap-1.5 backdrop-blur-md
+                    ${isServing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 transition-opacity'}
                 `}
             >
-                <span ref={scoreRef} className={`tracking-tight text-[10rem] sm:text-[12rem] transition-all duration-300 ${glowClass}`}>
-                    {score}
-                </span>
-            </div>
+                <div className={`w-1.5 h-1.5 rounded-full ${isServing ? theme.bg : 'bg-slate-500'}`}></div>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-300">{t('game.serving')}</span>
+            </button>
         </div>
+
       </div>
     </div>
   );
-});
+};

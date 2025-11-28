@@ -74,8 +74,8 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
   const isVisualLeft = reverseLayout ? teamId === 'B' : teamId === 'A';
   
   // Expanded push out to create larger central gap for HUD
-  // Mobile: 2rem (32px), Desktop: 6rem (96px)
-  const pushOutClass = isVisualLeft ? '-translate-x-8 md:-translate-x-24' : 'translate-x-8 md:translate-x-24';
+  // Mobile: 2.5rem (40px), Desktop: 8rem (128px) to ensure ample space
+  const pushOutClass = isVisualLeft ? '-translate-x-10 md:-translate-x-32' : 'translate-x-10 md:translate-x-32';
   
   const orderClass = reverseLayout 
     ? (teamId === 'A' ? 'order-last' : 'order-first') 

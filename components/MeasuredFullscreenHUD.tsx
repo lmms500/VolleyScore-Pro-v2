@@ -20,8 +20,9 @@ export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = ({
   timeoutsLeft, timeoutsRight, onTimeoutLeft, onTimeoutRight,
   colorLeft, colorRight
 }) => {
-  // If fallback or invalid measurement, default to centered fixed
-  const isMeasured = placement.mode !== 'fallback' && placement.left > -9000;
+  // Check if we have valid measurements or if we should fallback
+  const isFallback = placement.mode === 'fallback';
+  const { compact, internalScale } = placement;
 
   // Theme logic
   const getTheme = (color: 'indigo' | 'rose') => ({
@@ -34,54 +35,66 @@ export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = ({
   const themeLeft = getTheme(colorLeft);
   const themeRight = getTheme(colorRight);
 
-  const containerStyle: React.CSSProperties = isMeasured ? {
+  // Dynamic Styles based on Compact Mode
+  // If compact is true, we use significantly smaller sizing to ensure fit
+  const gapClass = compact ? 'gap-4 md:gap-6' : 'gap-8 md:gap-16';
+  const textClass = compact ? 'text-5xl sm:text-6xl' : 'text-7xl sm:text-9xl';
+  const iconSizeClass = compact ? 'size-5' : 'size-6 sm:size-7';
+  const dividerHeight = compact ? 'h-8 sm:h-12' : 'h-16';
+
+  // Logic for container positioning
+  const containerStyle: React.CSSProperties = !isFallback ? {
       position: 'absolute',
       left: placement.left,
       top: placement.top,
       width: placement.width,
       height: placement.height,
-      transform: `scale(${placement.internalScale})`, // Scale down if gap is small
-      pointerEvents: 'none' // Allow click-through to background if needed, but buttons need events
+      transform: `scale(${internalScale})`, 
+      transformOrigin: 'center center',
+      pointerEvents: 'none',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
   } : {
+      // Fallback: Fixed centered positioning
       position: 'fixed',
       inset: 0,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      pointerEvents: 'none'
+      pointerEvents: 'none',
+      zIndex: 40
   };
 
-  const contentClass = isMeasured 
-    ? "w-full h-full flex items-center justify-center gap-8 md:gap-16 pointer-events-auto"
-    : "flex items-center justify-center gap-12 sm:gap-24 md:gap-32 pointer-events-auto";
+  const contentWrapperClass = `flex items-center justify-center ${gapClass} pointer-events-auto transition-all duration-300`;
 
   return (
     <div style={containerStyle} className="z-40 transition-all duration-300 ease-out">
         {/* Sets & Timeouts Center Display */}
-        <div className={contentClass}>
+        <div className={contentWrapperClass}>
               {/* Left Side Info */}
-              <div className="flex items-center gap-4 text-center">
+              <div className="flex items-center gap-2 sm:gap-4 text-center">
                 <button onClick={onTimeoutLeft} disabled={timeoutsLeft >= 2} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-colors hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent group active:scale-95">
-                  <Hand className={`size-6 sm:size-7 ${themeLeft.icon} group-hover:scale-110 transition-transform`} />
+                  <Hand className={`${iconSizeClass} ${themeLeft.icon} group-hover:scale-110 transition-transform`} />
                   <div className="flex gap-1.5">
                     {[1, 2].map(t => <div key={t} className={`w-2.5 h-2.5 rounded-full ${t <= timeoutsLeft ? 'bg-slate-700' : themeLeft.dot}`} />)}
                   </div>
                 </button>
-                <span className={`font-black ${themeLeft.text} ${themeLeft.glow} text-7xl sm:text-9xl leading-none`}>
+                <span className={`font-black ${themeLeft.text} ${themeLeft.glow} ${textClass} leading-none`}>
                     {setsLeft}
                 </span>
               </div>
 
               {/* Divider */}
-              <div className="w-px h-16 bg-gradient-to-b from-transparent via-white/10 to-transparent"></div>
+              <div className={`w-px ${dividerHeight} bg-gradient-to-b from-transparent via-white/10 to-transparent`}></div>
 
               {/* Right Side Info */}
-              <div className="flex items-center gap-4 text-center">
-                <span className={`font-black ${themeRight.text} ${themeRight.glow} text-7xl sm:text-9xl leading-none`}>
+              <div className="flex items-center gap-2 sm:gap-4 text-center">
+                <span className={`font-black ${themeRight.text} ${themeRight.glow} ${textClass} leading-none`}>
                     {setsRight}
                 </span>
                 <button onClick={onTimeoutRight} disabled={timeoutsRight >= 2} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-colors hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent group active:scale-95">
-                  <Hand className={`size-6 sm:size-7 ${themeRight.icon} group-hover:scale-110 transition-transform`} />
+                  <Hand className={`${iconSizeClass} ${themeRight.icon} group-hover:scale-110 transition-transform`} />
                   <div className="flex gap-1.5">
                     {[1, 2].map(t => <div key={t} className={`w-2.5 h-2.5 rounded-full ${t <= timeoutsRight ? 'bg-slate-700' : themeRight.dot}`} />)}
                   </div>

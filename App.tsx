@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
+import { useAdaptiveLayout } from './hooks/useAdaptiveLayout';
 import { ScoreCardNormal } from './components/ScoreCardNormal';
 import { ScoreCardFullscreen } from './components/ScoreCardFullscreen';
 import { HistoryBar } from './components/HistoryBar';
@@ -17,23 +18,29 @@ function App() {
   const game = useVolleyGame();
   const { state, isLoaded } = game;
   
-  // PWA Hook
   const pwa = usePWAInstallPrompt();
   
   const [showSettings, setShowSettings] = useState(false);
   const [showManager, setShowManager] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  
-  // State to track which scorecard is currently being interacted with (Mutex lock)
   const [interactingTeam, setInteractingTeam] = useState<TeamId | null>(null);
 
-  // Handle native fullscreen toggle if desired (optional, purely UI driven for now)
+  // Adaptive Layout Refs & Hook
+  const leftScoreRef = useRef<HTMLDivElement>(null);
+  const rightScoreRef = useRef<HTMLDivElement>(null);
+
+  const { styles: adaptiveStyles, compactMode } = useAdaptiveLayout({
+    leftScoreRef: leftScoreRef,
+    rightScoreRef: rightScoreRef,
+    scoreA: state.scoreA,
+    scoreB: state.scoreB,
+    isFullscreen,
+  });
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch((e) => {
-            console.log("Fullscreen not supported/allowed", e);
-        });
+        document.documentElement.requestFullscreen().catch(() => {});
         setIsFullscreen(true);
     } else {
         if (document.exitFullscreen) {
@@ -43,11 +50,8 @@ function App() {
     }
   };
 
-  // Listen to fullscreen changes (ESC key, etc)
   useEffect(() => {
-      const handleChange = () => {
-          setIsFullscreen(!!document.fullscreenElement);
-      };
+      const handleChange = () => setIsFullscreen(!!document.fullscreenElement);
       document.addEventListener('fullscreenchange', handleChange);
       return () => document.removeEventListener('fullscreenchange', handleChange);
   }, []);
@@ -57,24 +61,19 @@ function App() {
   const isSwapped = state.swappedSides;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-[#020617] text-slate-100 overflow-hidden relative">
+    <div className="flex flex-col h-[100dvh] bg-[#020617] text-slate-100 overflow-hidden relative" style={adaptiveStyles}>
       
-      {/* Background Spotlights - Dynamic based on Swap State */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-        {/* Top Left Spotlight (Defaults to Team A/Indigo) */}
         <div className={`
             absolute -top-[20%] -left-[20%] w-[80vw] h-[80vw] blur-[120px] rounded-full mix-blend-screen opacity-60 animate-pulse duration-[4000ms] transition-colors duration-1000
             ${isSwapped ? 'bg-rose-600/20' : 'bg-indigo-600/20'}
         `}></div>
-        
-        {/* Bottom Right Spotlight (Defaults to Team B/Rose) */}
         <div className={`
             absolute -bottom-[20%] -right-[20%] w-[80vw] h-[80vw] blur-[120px] rounded-full mix-blend-screen opacity-60 animate-pulse duration-[5000ms] transition-colors duration-1000
             ${isSwapped ? 'bg-indigo-600/20' : 'bg-rose-600/20'}
         `}></div>
       </div>
 
-      {/* Top Bar - Floating Glass (Hidden in Fullscreen) */}
       <div className={`
           z-30 transition-all duration-500 flex-none
           ${isFullscreen 
@@ -89,7 +88,6 @@ function App() {
         />
       </div>
 
-      {/* FULLSCREEN HUD (The Central Glass Hub) */}
       {isFullscreen && (
           <FullscreenHUD 
             setsA={state.setsA}
@@ -108,10 +106,10 @@ function App() {
             timeoutsB={state.timeoutsB}
             onTimeoutA={() => game.useTimeout('A')}
             onTimeoutB={() => game.useTimeout('B')}
+            compactMode={compactMode}
           />
       )}
 
-      {/* Main Game Area */}
       <main className={`
           flex-1 flex relative z-10 transition-all duration-500 min-h-0 overflow-visible
           flex-col landscape:flex-row md:flex-row
@@ -121,6 +119,7 @@ function App() {
          {isFullscreen ? (
             <ScoreCardFullscreen 
                 teamId="A"
+                ref={state.swappedSides ? rightScoreRef : leftScoreRef}
                 team={state.teamARoster}
                 score={state.scoreA}
                 isServing={state.servingTeam === 'A'}
@@ -164,17 +163,17 @@ function App() {
             />
          )}
 
-         {/* Spacer */}
          <div className={`
             flex-shrink-0 transition-all duration-500
             ${isFullscreen 
-                ? 'h-0 w-0 landscape:w-32 landscape:h-full md:w-32' // Gap for HUD in landscape 
+                ? 'h-0 w-0'
                 : 'w-px h-2 landscape:h-px landscape:w-4 md:w-8'}
          `}></div>
 
          {isFullscreen ? (
             <ScoreCardFullscreen
                 teamId="B"
+                ref={state.swappedSides ? leftScoreRef : rightScoreRef}
                 team={state.teamBRoster}
                 score={state.scoreB}
                 isServing={state.servingTeam === 'B'}
@@ -218,7 +217,6 @@ function App() {
             />
          )}
 
-         {/* Exit Fullscreen Button Floating */}
          {isFullscreen && (
              <button 
                 onClick={toggleFullscreen}
@@ -230,7 +228,6 @@ function App() {
 
       </main>
 
-      {/* Floating Controls Dock Container */}
       <div 
         className={`
             fixed bottom-0 left-0 w-full z-50 flex justify-center pb-6 
@@ -251,7 +248,6 @@ function App() {
         </div>
       </div>
 
-      {/* Modals */}
       <SettingsModal 
         isOpen={showSettings} 
         onClose={() => setShowSettings(false)}
@@ -285,7 +281,7 @@ function App() {
         isOpen={state.isMatchOver}
         state={state}
         onRotate={game.rotateTeams}
-        onClose={() => { /* Prevent closing without decision */ }}
+        onClose={() => {}}
       />
 
       <ConfirmationModal 

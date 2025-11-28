@@ -32,71 +32,81 @@ export const FullscreenHUD: React.FC<FullscreenHUDProps> = ({
   timeoutsA, timeoutsB, onTimeoutA, onTimeoutB
 }) => {
   
-  const btnClass = "p-3 rounded-full hover:bg-white/10 active:scale-95 text-slate-400 hover:text-white transition-all";
-  const iconSize = 20;
+  // Design ultra-compacto
+  const btnClass = "p-2 rounded-full hover:bg-white/10 active:scale-95 text-slate-400 hover:text-white transition-all";
+  const iconSize = 18; 
 
   return (
-    // Responsive Container: 
-    // Landscape: Vertical Column (h-full w-auto)
-    // Portrait: Horizontal Bar (w-full h-auto)
-    <div className="
-        flex items-center justify-center p-2
-        landscape:flex-col landscape:h-full landscape:w-32 landscape:border-x landscape:border-y-0
-        flex-row w-full h-auto border-y landscape:py-4
-        bg-[#0f172a]/95 backdrop-blur-md border-white/5
-    ">
+    <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none flex justify-center w-full px-4">
+      
+      {/* Container "Pílula" Flutuante Centralizada - Muito menor */}
+      <div className="
+        pointer-events-auto
+        flex flex-col items-center
+        bg-[#0f172a]/95 backdrop-blur-md
+        border border-white/10 rounded-2xl
+        shadow-2xl shadow-black/80
+        p-3 gap-2
+        w-full max-w-[280px]
+      ">
         
-        {/* TOP: Info & Time */}
-        <div className="flex landscape:flex-col items-center gap-2 landscape:mb-auto flex-1 landscape:flex-none justify-start px-2">
-            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${isTieBreak ? 'border-amber-500/30 text-amber-500' : 'border-white/10 text-slate-500'}`}>
-                {isTieBreak ? 'Tie' : `S${currentSet}`}
+        {/* Info Line: Set & Timer */}
+        <div className="flex items-center justify-between w-full text-[10px] font-bold uppercase tracking-widest text-slate-500 px-1">
+            <span className={isTieBreak ? 'text-amber-500' : ''}>
+                {isTieBreak ? 'Tie Break' : `Set ${currentSet}`}
             </span>
-            <div className="flex items-center gap-1 text-slate-300 bg-white/5 px-2 py-1 rounded">
-                <Clock size={12} />
-                <span className="font-mono text-xs font-bold">{formatTime(time)}</span>
+            <div className="flex items-center gap-1.5 text-slate-300 bg-white/5 px-2 py-0.5 rounded-md">
+                <Clock size={10} />
+                <span className="font-mono">{formatTime(time)}</span>
             </div>
         </div>
 
-        {/* MIDDLE: Scores & Timeouts */}
-        <div className="flex landscape:flex-col items-center justify-center gap-4 landscape:gap-6 flex-1">
+        {/* Score Sets Main - Reduzido */}
+        <div className="flex items-center justify-center gap-4 w-full py-1">
              {/* Timeout A */}
-             <button onClick={onTimeoutA} disabled={timeoutsA >= 2} className="group flex flex-col landscape:flex-row items-center gap-1">
-                <div className={`p-2 rounded-full border flex items-center justify-center transition-all ${timeoutsA >= 2 ? 'border-slate-800 text-slate-700' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400 group-active:scale-95'}`}>
-                    <Hand size={16} />
+             <button onClick={onTimeoutA} disabled={timeoutsA >= 2} className="group flex flex-col items-center gap-1">
+                <div className="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-active:scale-95 transition-all">
+                    <Hand size={14} />
                 </div>
-                <div className="flex landscape:flex-col gap-1">
-                    {[1, 2].map(t => <div key={t} className={`w-1.5 h-1.5 rounded-full ${t <= timeoutsA ? 'bg-slate-800' : 'bg-indigo-500'}`} />)}
+                <div className="flex gap-0.5">
+                    {[1, 2].map(t => <div key={t} className={`w-1 h-1 rounded-full ${t <= timeoutsA ? 'bg-slate-700' : 'bg-indigo-500'}`} />)}
                 </div>
              </button>
 
-             <div className="flex landscape:flex-col items-center gap-2">
-                <span className="text-4xl font-black text-indigo-400 leading-none">{setsA}</span>
-                <div className="h-6 w-px landscape:w-6 landscape:h-px bg-white/10"></div>
-                <span className="text-4xl font-black text-rose-400 leading-none">{setsB}</span>
+             <div className="flex items-center gap-3">
+                <span className="text-4xl font-black text-indigo-400 leading-none drop-shadow-lg">{setsA}</span>
+                <div className="h-6 w-px bg-white/10"></div>
+                <span className="text-4xl font-black text-rose-400 leading-none drop-shadow-lg">{setsB}</span>
              </div>
 
              {/* Timeout B */}
-             <button onClick={onTimeoutB} disabled={timeoutsB >= 2} className="group flex flex-col landscape:flex-row-reverse items-center gap-1">
-                <div className={`p-2 rounded-full border flex items-center justify-center transition-all ${timeoutsB >= 2 ? 'border-slate-800 text-slate-700' : 'bg-rose-500/10 border-rose-500/30 text-rose-400 group-active:scale-95'}`}>
-                    <Hand size={16} />
+             <button onClick={onTimeoutB} disabled={timeoutsB >= 2} className="group flex flex-col items-center gap-1">
+                <div className="w-8 h-8 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 group-active:scale-95 transition-all">
+                    <Hand size={14} />
                 </div>
-                <div className="flex landscape:flex-col gap-1">
-                    {[1, 2].map(t => <div key={t} className={`w-1.5 h-1.5 rounded-full ${t <= timeoutsB ? 'bg-slate-800' : 'bg-rose-500'}`} />)}
+                <div className="flex gap-0.5">
+                    {[1, 2].map(t => <div key={t} className={`w-1 h-1 rounded-full ${t <= timeoutsB ? 'bg-slate-700' : 'bg-rose-500'}`} />)}
                 </div>
              </button>
         </div>
 
-        {/* BOTTOM: Controls */}
-        <div className="flex landscape:flex-col items-center gap-1 landscape:mt-auto flex-1 landscape:flex-none justify-end px-2">
-            <button onClick={onUndo} disabled={!canUndo} className={`${btnClass} ${!canUndo && 'opacity-30'}`}><Undo2 size={iconSize} /></button>
-            <button onClick={onSwap} className={btnClass}><ArrowLeftRight size={iconSize} /></button>
-            <div className="w-px h-4 landscape:w-4 landscape:h-px bg-white/10 mx-1"></div>
-            <button onClick={onRoster} className={btnClass}><Users size={iconSize} /></button>
-            <button onClick={onSettings} className={btnClass}><Settings size={iconSize} /></button>
-            <div className="w-px h-4 landscape:w-4 landscape:h-px bg-white/10 mx-1"></div>
-            <button onClick={onReset} className={`${btnClass} text-rose-500/80 hover:bg-rose-500/10`}><RotateCcw size={iconSize} /></button>
+        {/* Controls Row - Compact */}
+        <div className="w-full h-px bg-white/5"></div>
+        <div className="flex items-center justify-between w-full px-1">
+            <div className="flex gap-0.5">
+                <button onClick={onUndo} disabled={!canUndo} className={`${btnClass} ${!canUndo && 'opacity-30'}`}><Undo2 size={iconSize} /></button>
+                <button onClick={onSwap} className={btnClass}><ArrowLeftRight size={iconSize} /></button>
+            </div>
+            <div className="w-px h-5 bg-white/5 mx-1"></div>
+            <div className="flex gap-0.5">
+                <button onClick={onRoster} className={`${btnClass} text-cyan-500/80`}><Users size={iconSize} /></button>
+                <button onClick={onSettings} className={btnClass}><Settings size={iconSize} /></button>
+            </div>
+            <div className="w-px h-5 bg-white/5 mx-1"></div>
+            <button onClick={onReset} className={`${btnClass} text-rose-500/80`}><RotateCcw size={iconSize} /></button>
         </div>
 
+      </div>
     </div>
   );
 };

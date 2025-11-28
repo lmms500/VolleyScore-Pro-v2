@@ -1,11 +1,11 @@
 import React from 'react';
-import { Team, TeamId } from '../types';
-import { Volleyball, Zap } from 'lucide-react';
+import { Player, TeamId } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
+import { Minus, Plus, MoreVertical, Hand } from 'lucide-react';
 
 interface ScoreCardNormalProps {
   teamId: TeamId;
-  team: Team;
+  team: { name: string; players: Player[] };
   score: number;
   setsWon: number;
   isServing: boolean;
@@ -16,165 +16,158 @@ interface ScoreCardNormalProps {
   onTimeout: () => void;
   isMatchPoint: boolean;
   isSetPoint: boolean;
-  isDeuce?: boolean;
+  isDeuce: boolean;
   inSuddenDeath?: boolean;
-  reverseLayout?: boolean; 
+  reverseLayout?: boolean;
   setsNeededToWin: number;
   colorTheme: 'indigo' | 'rose';
-  isLocked?: boolean;
-  onInteractionStart?: () => void;
-  onInteractionEnd?: () => void;
+  isLocked: boolean;
+  onInteractionStart: () => void;
+  onInteractionEnd: () => void;
 }
 
 export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
-  teamId, team, score, setsWon, isServing, onAdd, onSubtract, onToggleServe, timeouts, onTimeout, 
-  isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, reverseLayout, setsNeededToWin, colorTheme, 
-  isLocked = false, onInteractionStart, onInteractionEnd
+  teamId, team, score, setsWon, isServing, onAdd, onSubtract, onToggleServe,
+  timeouts, onTimeout, isMatchPoint, isSetPoint, isDeuce, inSuddenDeath,
+  reverseLayout, setsNeededToWin, colorTheme, isLocked, onInteractionStart, onInteractionEnd
 }) => {
   
-  const { handlePointerDown, handlePointerUp, handlePointerCancel } = useScoreGestures({
-    onAdd, onSubtract, isLocked, onInteractionStart, onInteractionEnd
+  // FIX: Update call to useScoreGestures to pass a single options object for consistency.
+  const gestureHandlers = useScoreGestures({
+    onAdd,
+    onSubtract,
+    isLocked,
+    onInteractionStart,
+    onInteractionEnd
   });
 
-  const theme = {
+  const themeColors = {
     indigo: {
-      text: 'text-indigo-400',
-      bg: 'bg-indigo-500',
-      shadow: 'shadow-indigo-500/50',
-      glowRadial: 'bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.25)_0%,rgba(99,102,241,0)_60%)]'
+      bg: 'from-indigo-900/40 to-slate-900/80',
+      border: 'border-indigo-500/30',
+      text: 'text-indigo-100',
+      highlight: 'text-indigo-400',
+      button: 'bg-indigo-500 hover:bg-indigo-400',
+      glow: 'shadow-indigo-500/20'
     },
     rose: {
-      text: 'text-rose-400',
-      bg: 'bg-rose-500',
-      shadow: 'shadow-rose-500/50',
-      glowRadial: 'bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.25)_0%,rgba(244,63,94,0)_60%)]'
+      bg: 'from-rose-900/40 to-slate-900/80',
+      border: 'border-rose-500/30',
+      text: 'text-rose-100',
+      highlight: 'text-rose-400',
+      button: 'bg-rose-500 hover:bg-rose-400',
+      glow: 'shadow-rose-500/20'
     }
   }[colorTheme];
 
-  const orderClass = reverseLayout ? (teamId === 'A' ? 'order-last' : 'order-first') : (teamId === 'A' ? 'order-first' : 'order-last');
-  const timeoutsExhausted = timeouts >= 2;
-
   return (
-    <div 
-        className={`
-            flex flex-col flex-1 relative h-full transition-all duration-500 select-none overflow-visible
-            ${orderClass} 
-            ${isLocked ? 'opacity-90 grayscale-[0.2]' : ''}
-            ${isServing ? 'z-20' : 'z-0'} 
-        `}
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
-        onPointerLeave={handlePointerCancel}
-    >
+    <div className={`flex flex-col flex-1 p-2 relative overflow-hidden transition-colors ${isServing ? `bg-${colorTheme}-500/5` : ''}`}>
       
-      {/* Glow Background */}
+      {/* Header: Name & Sets */}
+      <div className={`flex items-center gap-3 mb-2 w-full ${reverseLayout ? 'flex-row-reverse' : 'flex-row'}`}>
+         {/* Set Indicators */}
+         <div className="flex gap-1">
+            {Array.from({ length: setsNeededToWin }).map((_, i) => (
+                <div 
+                    key={i} 
+                    className={`
+                        w-2 h-2 rounded-full transition-all
+                        ${i < setsWon ? `bg-${colorTheme}-500 shadow-[0_0_8px_currentColor]` : 'bg-slate-800'}
+                    `}
+                />
+            ))}
+         </div>
+         <h2 className="text-sm font-bold uppercase tracking-widest text-slate-300 truncate flex-1 leading-none">
+            {team.name}
+         </h2>
+         {isServing && (
+             <div className={`w-2 h-2 rounded-full animate-pulse bg-${colorTheme}-400 shadow-[0_0_10px_currentColor]`} />
+         )}
+      </div>
+
+      {/* Main Score Area (GESTURE TARGET) */}
+      {/* ADICIONADO style={{ touchAction: 'none' }} PARA BLOQUEAR SCROLL NATIVO */}
       <div 
         className={`
-            absolute -inset-5 transition-opacity duration-1000 ease-in-out 
-            ${theme.glowRadial} 
-            pointer-events-none mix-blend-screen z-0
-            ${isServing ? 'opacity-100' : 'opacity-0'}
-        `} 
-      />
+            flex-1 w-full relative rounded-2xl border border-white/5 
+            bg-gradient-to-b ${themeColors.bg} backdrop-blur-sm
+            flex items-center justify-center overflow-hidden
+            cursor-ns-resize active:cursor-grabbing
+            select-none
+        `}
+        style={{ touchAction: 'none' }} 
+        {...gestureHandlers}
+      >
+          {/* Status Badges */}
+          <div className="absolute top-4 left-0 w-full flex justify-center gap-2 pointer-events-none">
+              {isMatchPoint && <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-500 text-black animate-pulse">Match Point</span>}
+              {isSetPoint && !isMatchPoint && <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-black">Set Point</span>}
+              {isDeuce && <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-slate-200 text-slate-900">Deuce</span>}
+              {inSuddenDeath && <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-rose-600 text-white animate-pulse">Sudden Death</span>}
+          </div>
 
-      {/* Normal Mode Layout: Flex column with justify-between to prevent overlap */}
-      <div className="flex flex-col h-full w-full relative z-10 py-2 md:py-4 px-2 justify-between items-center">
-        
-        {/* 1. HEADER (Order 1) */}
-        <div className="flex flex-col items-center justify-center w-full flex-none order-1">
-            {/* Serving Indicator */}
-            <div className={`
-                flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md shadow-lg transition-all duration-300 mb-0.5 scale-90
-                ${isServing ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}
-            `}>
-                <Volleyball size={14} className={`${theme.text} animate-bounce`} />
-                <span className={`text-[10px] font-black uppercase tracking-widest ${theme.text}`}>Serving</span>
-            </div>
+          <span className={`text-[8rem] sm:text-[10rem] font-black leading-none tracking-tighter ${themeColors.highlight} drop-shadow-2xl select-none`}>
+              {score}
+          </span>
+          
+          {/* Gesture Hints */}
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-8 opacity-10 pointer-events-none">
+              <MoreVertical size={24} />
+          </div>
+      </div>
 
-            {/* Team Name */}
-            <h2 
-                className="font-black uppercase tracking-tighter text-center cursor-pointer hover:text-white transition-all z-10 leading-none text-lg md:text-2xl text-slate-200 tracking-widest px-2 truncate w-full max-w-[90%]"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
+      {/* Footer Controls */}
+      <div className={`mt-3 flex items-center gap-2 w-full ${reverseLayout ? 'flex-row-reverse' : 'flex-row'}`}>
+         
+         <div className="flex bg-white/5 rounded-lg p-1 gap-1">
+            <button 
+                onClick={onSubtract}
+                className="w-10 h-8 flex items-center justify-center rounded hover:bg-white/10 text-slate-400 hover:text-white transition-colors active:scale-95"
             >
-                {team.name}
-            </h2>
+                <Minus size={16} />
+            </button>
+            <div className="w-px h-full bg-white/10" />
+            <button 
+                onClick={onAdd}
+                className={`w-10 h-8 flex items-center justify-center rounded hover:bg-white/10 ${themeColors.highlight} hover:text-white transition-colors active:scale-95`}
+            >
+                <Plus size={16} />
+            </button>
+         </div>
 
-            {/* Set Dots */}
-            <div className="flex gap-1.5 mt-1.5">
-                {[...Array(setsNeededToWin)].map((_, i) => (
-                    <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i < setsWon ? theme.bg : 'bg-white/10'}`} />
+         <div className="flex-1" />
+
+         {/* Timeouts */}
+         <button 
+            onClick={onTimeout}
+            disabled={timeouts >= 2}
+            className={`
+                flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all active:scale-95
+                ${timeouts >= 2 
+                    ? 'border-transparent text-slate-700 bg-transparent' 
+                    : `border-white/5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-${colorTheme}-400`}
+            `}
+         >
+            <div className="flex gap-0.5">
+                {[1,2].map(t => (
+                    <div key={t} className={`w-1.5 h-1.5 rounded-full ${t <= timeouts ? 'bg-slate-700' : `bg-${colorTheme}-500`}`} />
                 ))}
             </div>
-        </div>
+            <Hand size={14} />
+         </button>
 
-
-        {/* 2. BADGES (Order 2) - Rendered inline to push content */}
-        {(isMatchPoint || isSetPoint || isDeuce || inSuddenDeath) ? (
-            <div className="flex-none py-2 order-2 w-full flex justify-center z-10 min-h-[3rem]">
-                 <div className={`
-                    px-8 py-2.5 rounded-full backdrop-blur-xl border border-white/20 shadow-2xl
-                    animate-pulse font-black uppercase tracking-[0.2em] text-center whitespace-nowrap
-                    text-sm md:text-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center gap-2 transform transition-all
-                    ${inSuddenDeath
-                        ? 'bg-red-600 text-white shadow-red-500/50 scale-110 border-red-400'
-                        : isMatchPoint 
-                            ? 'bg-amber-500 text-black shadow-amber-500/50 scale-110' 
-                            : isSetPoint 
-                                ? `${theme.bg} text-white ${theme.shadow} scale-110`
-                                : 'bg-slate-200 text-slate-900'} 
-                `}>
-                    {inSuddenDeath && <Zap size={18} fill="currentColor" />}
-                    {inSuddenDeath ? 'Sudden Death' : isMatchPoint ? 'Match Point' : isSetPoint ? 'Set Point' : 'Deuce'}
-                </div>
-            </div>
-        ) : <div className="order-2 min-h-[1.5rem] flex-none"></div>}
-
-        {/* 3. SCORE NUMBER (Order 3) */}
-        <div className={`
-            order-3 flex items-center justify-center w-full flex-1 min-h-0
-            font-black leading-none tracking-[-0.08em] text-white
-            drop-shadow-2xl transition-transform duration-100 active:scale-95
-            outline-none select-none
-            text-[15dvh] landscape:text-[22dvh]
-            ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
-        `}>
-            {score}
-        </div>
-
-
-        {/* 4. TIMEOUTS (Order 4) - FULLY ACTIONABLE BUTTON */}
-        <div className="order-4 w-full flex items-center justify-center flex-none transition-all z-20 mt-2 mb-2">
-           <button 
-             onPointerDown={(e) => e.stopPropagation()}
-             onClick={(e) => { 
-                e.stopPropagation(); 
-                if(!timeoutsExhausted) onTimeout(); 
-             }}
-             disabled={timeoutsExhausted}
-             className={`
-                flex items-center justify-center gap-4 transition-all rounded-full border border-white/5 py-4 px-10 bg-black/20 opacity-90 w-auto min-w-[140px]
-                ${timeoutsExhausted ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer hover:bg-black/50 active:scale-95 hover:border-white/30 shadow-lg'}
-             `}
-             title="Use Timeout"
-           >
-              <span className="font-bold text-slate-400 uppercase tracking-widest text-xs">TIMEOUT</span>
-              <div className="flex gap-2">
-                {[1, 2].map(t => (
-                    <div 
-                    key={t}
-                    className={`
-                        transition-all duration-300 rounded-full w-3.5 h-3.5
-                        ${t <= timeouts 
-                        ? 'bg-slate-800 border border-slate-700' 
-                        : `${theme.bg} shadow-[0_0_10px_currentColor] border border-white/20`}
-                    `}
-                    />
-                ))}
-              </div>
-           </button>
-        </div>
+         {/* Serve Toggle */}
+         <button 
+            onClick={onToggleServe}
+            className={`
+                w-10 h-10 rounded-full flex items-center justify-center border transition-all active:scale-95 shadow-lg
+                ${isServing 
+                    ? `bg-${colorTheme}-500 border-${colorTheme}-400 text-white shadow-${colorTheme}-500/20` 
+                    : 'bg-slate-800 border-white/5 text-slate-500 hover:text-white hover:border-white/20'}
+            `}
+         >
+             <div className="w-2 h-2 rounded-full bg-current" />
+         </button>
 
       </div>
     </div>

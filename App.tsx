@@ -205,8 +205,9 @@ function App() {
       <SettingsModal 
         isOpen={showSettings} onClose={() => setShowSettings(false)}
         config={state.config} teamAName={state.teamAName} teamBName={state.teamBName}
-        onSave={game.applySettings} onInstall={pwa.promptInstall}
-        canInstall={pwa.isInstallable} isIOS={pwa.isIOS} isStandalone={pwa.isStandalone}
+        onSave={game.applySettings}
+        canInstallPWA={pwa.isInstallable}
+        onPromptInstall={pwa.promptInstall}
       />
       <TeamManagerModal 
         isOpen={showManager} onClose={() => setShowManager(false)}

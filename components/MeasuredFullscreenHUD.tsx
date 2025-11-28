@@ -1,49 +1,28 @@
 import React from 'react';
-import { Clock, Undo2, ArrowLeftRight, RotateCcw, Settings, Users, Hand } from 'lucide-react';
+import { Hand } from 'lucide-react';
 import { HudPlacement } from '../hooks/useHudMeasure';
-import { useTranslation } from '../contexts/LanguageContext';
 
 interface MeasuredFullscreenHUDProps {
   placement: HudPlacement;
-  setsA: number;
-  setsB: number;
-  time: number;
-  currentSet: number;
-  isTieBreak: boolean;
-  isDeuce: boolean;
-  onUndo: () => void;
-  canUndo: boolean;
-  onSwap: () => void;
-  onReset: () => void;
-  onSettings: () => void;
-  onRoster: () => void;
-  timeoutsA: number;
-  timeoutsB: number;
-  onTimeoutA: () => void;
-  onTimeoutB: () => void;
+  setsLeft: number;
+  setsRight: number;
+  timeoutsLeft: number;
+  timeoutsRight: number;
+  onTimeoutLeft: () => void;
+  onTimeoutRight: () => void;
+  colorLeft: 'indigo' | 'rose';
+  colorRight: 'indigo' | 'rose';
 }
 
-const formatTime = (seconds: number) => {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-};
-
 export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = ({
-  placement, setsA, setsB, time, currentSet, isTieBreak, isDeuce,
-  onUndo, canUndo, onSwap, onReset, onSettings, onRoster,
-  timeoutsA, timeoutsB, onTimeoutA, onTimeoutB
+  placement, setsLeft, setsRight, 
+  timeoutsLeft, timeoutsRight, onTimeoutLeft, onTimeoutRight,
+  colorLeft, colorRight
 }) => {
-  const { t } = useTranslation();
 
   if (placement.mode === 'fallback') {
     return null;
   }
-  
-  const isCompact = placement.compact;
-
-  const buttonClass = `p-1 rounded-full hover:bg-white/10 active:scale-95 transition-all text-slate-300 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:active:scale-100 flex items-center justify-center shrink-0`;
-  const iconSizeClass = 'size-4';
   
   const containerStyle: React.CSSProperties = {
     position: 'fixed',
@@ -54,68 +33,59 @@ export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = ({
     transform: 'translate(0, 0)',
   };
 
+  const getTheme = (color: 'indigo' | 'rose') => ({
+      text: color === 'indigo' ? 'text-indigo-400' : 'text-rose-400',
+      glow: color === 'indigo' ? 'drop-shadow-[0_0_30px_rgba(99,102,241,0.6)]' : 'drop-shadow-[0_0_30px_rgba(244,63,94,0.6)]',
+      dot: color === 'indigo' ? 'bg-indigo-500 shadow-[0_0_8px_currentColor]' : 'bg-rose-500 shadow-[0_0_8px_currentColor]',
+      icon: color === 'indigo' ? 'text-indigo-400' : 'text-rose-400'
+  });
+
+  const themeLeft = getTheme(colorLeft);
+  const themeRight = getTheme(colorRight);
+
   return (
     <div 
       style={containerStyle}
       className="z-40 pointer-events-none flex items-center justify-center transition-all duration-300 ease-out"
     >
       <div 
-        data-compact={isCompact}
         className={`
           w-full h-full
-          pointer-events-auto transition-all duration-300 flex flex-col
-          items-center justify-center gap-1.5
+          pointer-events-auto transition-all duration-300 flex items-center justify-center
           [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]
         `}
       >
-        <div className="flex-none flex items-center justify-center w-full px-2 gap-1.5 flex-wrap">
-             <div className="flex items-center justify-center gap-1.5">
-                  <Clock className="size-4 text-slate-300" />
-                  <span className="font-mono text-base sm:text-lg font-bold text-slate-100 tabular-nums">{formatTime(time)}</span>
-              </div>
-              <div className="h-4 w-px bg-white/20 hidden sm:block"></div>
-              <div className="flex items-center justify-center flex-wrap gap-1.5">
-                  <span className={`text-xs sm:text-sm font-bold uppercase tracking-widest ${isTieBreak ? 'text-amber-400 animate-pulse' : 'text-slate-300'}`}>
-                      {isTieBreak ? t('game.tieBreak') : t('history.setLabel', { setNumber: currentSet })}
-                  </span>
-                  {isDeuce && <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-slate-100 animate-pulse">{t('game.deuce')}</span>}
-              </div>
-        </div>
-
+        {/* Sets & Timeouts Center Display */}
         <div className="flex-shrink flex items-center justify-around w-full px-2 min-h-0">
-              <div className="flex items-center gap-1.5 text-center">
-                <button onClick={onTimeoutA} disabled={timeoutsA >= 2} className="flex flex-col items-center gap-1 p-1 rounded-xl transition-colors hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent">
-                  <Hand className="size-6 text-indigo-400" />
-                  <div className="flex gap-2">
-                    {[1, 2].map(t => <div key={t} className={`w-2.5 h-2.5 rounded-full ${t <= timeoutsA ? 'bg-slate-700' : 'bg-indigo-500 shadow-[0_0_8px_currentColor]'}`} />)}
+              {/* Left Side Info */}
+              <div className="flex items-center gap-4 text-center">
+                <button onClick={onTimeoutLeft} disabled={timeoutsLeft >= 2} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-colors hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent group active:scale-95">
+                  <Hand className={`size-6 sm:size-7 ${themeLeft.icon} group-hover:scale-110 transition-transform`} />
+                  <div className="flex gap-1.5">
+                    {[1, 2].map(t => <div key={t} className={`w-2.5 h-2.5 rounded-full ${t <= timeoutsLeft ? 'bg-slate-700' : themeLeft.dot}`} />)}
                   </div>
                 </button>
-                <span className="font-black text-indigo-400 drop-shadow-[0_0_30px_rgba(99,102,241,0.6)] text-5xl sm:text-7xl leading-none" style={{ transform: `scale(${placement.internalScale})`}}>{setsA}</span>
+                <span className={`font-black ${themeLeft.text} ${themeLeft.glow} text-7xl sm:text-9xl leading-none transition-all duration-300`} style={{ transform: `scale(${placement.internalScale * 1.2})`}}>
+                    {setsLeft}
+                </span>
               </div>
 
-              <div className="w-px h-16 bg-white/20 rounded-full mx-1"></div>
+              {/* Divider */}
+              <div className="w-px h-32 bg-gradient-to-b from-transparent via-white/10 to-transparent mx-4 sm:mx-8"></div>
 
-              <div className="flex items-center gap-1.5 text-center">
-                <span className="font-black text-rose-400 drop-shadow-[0_0_30px_rgba(244,63,94,0.6)] text-5xl sm:text-7xl leading-none" style={{ transform: `scale(${placement.internalScale})`}}>{setsB}</span>
-                <button onClick={onTimeoutB} disabled={timeoutsB >= 2} className="flex flex-col items-center gap-1 p-1 rounded-xl transition-colors hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent">
-                  <Hand className="size-6 text-rose-400" />
-                  <div className="flex gap-2">
-                    {[1, 2].map(t => <div key={t} className={`w-2.5 h-2.5 rounded-full ${t <= timeoutsB ? 'bg-slate-700' : 'bg-rose-500 shadow-[0_0_8px_currentColor]'}`} />)}
+              {/* Right Side Info */}
+              <div className="flex items-center gap-4 text-center">
+                <span className={`font-black ${themeRight.text} ${themeRight.glow} text-7xl sm:text-9xl leading-none transition-all duration-300`} style={{ transform: `scale(${placement.internalScale * 1.2})`}}>
+                    {setsRight}
+                </span>
+                <button onClick={onTimeoutRight} disabled={timeoutsRight >= 2} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-colors hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent group active:scale-95">
+                  <Hand className={`size-6 sm:size-7 ${themeRight.icon} group-hover:scale-110 transition-transform`} />
+                  <div className="flex gap-1.5">
+                    {[1, 2].map(t => <div key={t} className={`w-2.5 h-2.5 rounded-full ${t <= timeoutsRight ? 'bg-slate-700' : themeRight.dot}`} />)}
                   </div>
                 </button>
               </div>
         </div>
-
-        <div className="flex-none flex items-center justify-center w-full gap-x-1">
-              <button onClick={onUndo} disabled={!canUndo} className={buttonClass} title={t('controls.undo')}><Undo2 className={iconSizeClass} /></button>
-              <button onClick={onSwap} className={buttonClass} title={t('controls.swap')}><ArrowLeftRight className={iconSizeClass} /></button>
-              <div className="w-px h-6 bg-white/20 mx-1"></div>
-              <button onClick={onRoster} className={`${buttonClass} text-cyan-400 hover:text-white`} title={t('controls.teams')}><Users className={iconSizeClass} /></button>
-              <button onClick={onSettings} className={buttonClass} title={t('controls.settings')}><Settings className={iconSizeClass} /></button>
-              <div className="w-px h-6 bg-white/20 mx-1"></div>
-              <button onClick={onReset} className={`${buttonClass} text-rose-500/80 hover:text-rose-400`} title={t('controls.reset')}><RotateCcw className={iconSizeClass} /></button>
-        </div>
-
       </div>
     </div>
   );

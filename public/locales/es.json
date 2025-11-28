@@ -13,6 +13,7 @@
     "teams": "Equipos",
     "settings": "Ajustes",
     "fullscreen": "Pantalla Completa",
+    "exitFullscreen": "Salir Pantalla Completa",
     "reset": "Reiniciar Partido"
   },
   "history": {
@@ -27,7 +28,8 @@
     "suddenDeath": "Muerte Súbita",
     "tieBreak": "Tie Break",
     "timeout": "TIEMPO FUERA",
-    "useTimeout": "Usar Tiempo Fuera"
+    "useTimeout": "Usar Tiempo Fuera",
+    "menu": "Menú"
   },
   "settings": {
     "title": "Configuración",

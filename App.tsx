@@ -15,10 +15,13 @@ import { TeamId } from './types';
 import { useHudMeasure } from './hooks/useHudMeasure';
 import { MeasuredFullscreenHUD } from './components/MeasuredFullscreenHUD';
 import { useTranslation } from './contexts/LanguageContext';
+import { FloatingControlBar } from './components/Fullscreen/FloatingControlBar';
+import { FloatingTopBar } from './components/Fullscreen/FloatingTopBar';
+import { FullscreenMenuDrawer } from './components/Fullscreen/FullscreenMenuDrawer';
 
 function App() {
   const game = useVolleyGame();
-  const { state, isLoaded } = game;
+  const { state, setState, isLoaded } = game;
   const { t } = useTranslation();
   
   const pwa = usePWAInstallPrompt();
@@ -26,6 +29,8 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showManager, setShowManager] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showFullscreenMenu, setShowFullscreenMenu] = useState(false);
+  
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [interactingTeam, setInteractingTeam] = useState<TeamId | null>(null);
 
@@ -45,18 +50,11 @@ function App() {
     if (element.requestFullscreen && !document.fullscreenElement) {
       try {
         await element.requestFullscreen();
-        // Attempt to lock orientation, but don't throw an error if it fails.
-        // This can fail in sandboxed environments, which is an expected behavior.
         if (screen.orientation && typeof (screen.orientation as any).lock === 'function') {
           const lockPromise = (screen.orientation as any).lock('landscape');
-          if (lockPromise && typeof lockPromise.catch === 'function') {
-            lockPromise.catch(() => {
-              // Silently ignore orientation lock errors.
-            });
-          }
+          if (lockPromise && typeof lockPromise.catch === 'function') lockPromise.catch(() => {});
         }
       } catch (error) {
-        // We still want to log if fullscreen itself fails.
         console.error("Error entering fullscreen:", error);
       }
     }
@@ -66,7 +64,6 @@ function App() {
     if (document.exitFullscreen && document.fullscreenElement) {
       try {
         await document.exitFullscreen();
-        // screen.orientation.unlock() is handled by the fullscreenchange event listener
       } catch (error) {
         console.error("Error exiting fullscreen:", error);
       }
@@ -85,16 +82,10 @@ function App() {
     const handleFullscreenChange = () => {
       const isCurrentlyFullscreen = !!document.fullscreenElement;
       setIsFullscreen(isCurrentlyFullscreen);
-
       if (!isCurrentlyFullscreen) {
         if (screen.orientation && typeof (screen.orientation as any).unlock === 'function') {
-          // Attempt to unlock orientation, silently failing if not permitted.
-          const unlockPromise = (screen.orientation as any).unlock();
-          if (unlockPromise && typeof unlockPromise.catch === 'function') {
-            unlockPromise.catch(() => {
-              // Silently ignore unlock errors.
-            });
-          }
+           const unlockPromise = (screen.orientation as any).unlock();
+           if (unlockPromise && typeof unlockPromise.catch === 'function') unlockPromise.catch(() => {});
         }
       }
     };
@@ -103,6 +94,10 @@ function App() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  // Timer Toggle Logic
+  const toggleTimer = () => {
+    setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
+  };
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
@@ -111,6 +106,16 @@ function App() {
   const refA: Ref<HTMLSpanElement> = isSwapped ? setRightScoreNode : setLeftScoreNode;
   const refB: Ref<HTMLSpanElement> = isSwapped ? setLeftScoreNode : setRightScoreNode;
   const bottomAnchorForB: Ref<HTMLHeadingElement> | undefined = isSwapped ? undefined : setBottomAnchorNode;
+
+  // Visual Props Calculation for HUD (Swap Handling)
+  const setsLeft = isSwapped ? state.setsB : state.setsA;
+  const setsRight = isSwapped ? state.setsA : state.setsB;
+  const timeoutsLeft = isSwapped ? state.timeoutsB : state.timeoutsA;
+  const timeoutsRight = isSwapped ? state.timeoutsA : state.timeoutsB;
+  const onTimeoutLeft = isSwapped ? () => game.useTimeout('B') : () => game.useTimeout('A');
+  const onTimeoutRight = isSwapped ? () => game.useTimeout('A') : () => game.useTimeout('B');
+  const colorLeft = isSwapped ? 'rose' : 'indigo';
+  const colorRight = isSwapped ? 'indigo' : 'rose';
 
   return (
     <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative">
@@ -139,26 +144,31 @@ function App() {
         />
       </div>
       
+      {/* Fullscreen Floating Elements */}
       {isFullscreen && (
-          <MeasuredFullscreenHUD
-            placement={hudPlacement}
-            setsA={state.setsA}
-            setsB={state.setsB}
-            time={state.matchDurationSeconds}
-            currentSet={state.currentSet}
-            isTieBreak={game.isTieBreak}
-            isDeuce={game.isDeuce}
-            onUndo={game.undo}
-            canUndo={game.canUndo}
-            onSwap={game.toggleSides}
-            onReset={() => setShowResetConfirm(true)}
-            onSettings={() => setShowSettings(true)}
-            onRoster={() => setShowManager(true)}
-            timeoutsA={state.timeoutsA}
-            timeoutsB={state.timeoutsB}
-            onTimeoutA={() => game.useTimeout('A')}
-            onTimeoutB={() => game.useTimeout('B')}
-          />
+          <>
+            <FloatingTopBar
+                time={state.matchDurationSeconds}
+                currentSet={state.currentSet}
+                isTieBreak={game.isTieBreak}
+                isDeuce={game.isDeuce}
+                onToggleTimer={toggleTimer}
+                isTimerRunning={state.isTimerRunning}
+                inSuddenDeath={state.inSuddenDeath}
+            />
+
+            <MeasuredFullscreenHUD
+                placement={hudPlacement}
+                setsLeft={setsLeft}
+                setsRight={setsRight}
+                timeoutsLeft={timeoutsLeft}
+                timeoutsRight={timeoutsRight}
+                onTimeoutLeft={onTimeoutLeft}
+                onTimeoutRight={onTimeoutRight}
+                colorLeft={colorLeft}
+                colorRight={colorRight}
+            />
+          </>
       )}
 
       <main className={`
@@ -175,7 +185,7 @@ function App() {
                 score={state.scoreA}
                 isServing={state.servingTeam === 'A'}
                 onAdd={() => game.addPoint('A')}
-                onSubtract={() => game.subtractPoint('A')}
+                onSubtract={() => game.undo()} 
                 onToggleServe={() => game.toggleService()}
                 timeouts={state.timeoutsA}
                 onTimeout={() => game.useTimeout('A')}
@@ -223,7 +233,7 @@ function App() {
                 score={state.scoreB}
                 isServing={state.servingTeam === 'B'}
                 onAdd={() => game.addPoint('B')}
-                onSubtract={() => game.subtractPoint('B')}
+                onSubtract={() => game.undo()} 
                 onToggleServe={() => game.toggleService()}
                 timeouts={state.timeoutsB}
                 onTimeout={() => game.useTimeout('B')}
@@ -265,32 +275,51 @@ function App() {
          {isFullscreen && (
              <button 
                 onClick={toggleFullscreen}
-                className="absolute top-4 right-4 z-50 p-3 rounded-full bg-black/20 text-white/30 hover:text-white hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all"
+                className="absolute top-4 right-4 z-[60] p-3 rounded-full bg-black/20 text-white/30 hover:text-white hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all active:scale-95"
              >
                  <Minimize2 size={24} />
              </button>
          )}
       </main>
 
+      {/* Standard Bottom Controls (Only visible in Normal Mode) */}
       <div 
         className={`
             fixed bottom-0 left-0 w-full z-50 flex justify-center pb-6 
-            transition-all duration-500 pointer-events-none
-            ${isFullscreen ? 'translate-y-32 opacity-0' : 'translate-y-0 opacity-100'}
+            transition-all duration-500
+            ${isFullscreen ? 'translate-y-32 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'}
         `}
       >
-        <div className={isFullscreen ? 'pointer-events-none' : 'pointer-events-auto'}>
-            <Controls 
-                onUndo={game.undo}
-                canUndo={game.canUndo}
-                onSwap={game.toggleSides}
-                onSettings={() => setShowSettings(true)}
-                onRoster={() => setShowManager(true)}
-                onReset={() => setShowResetConfirm(true)}
-                onToggleFullscreen={toggleFullscreen}
-            />
-        </div>
+          <Controls 
+              onUndo={game.undo}
+              canUndo={game.canUndo}
+              onSwap={game.toggleSides}
+              onSettings={() => setShowSettings(true)}
+              onRoster={() => setShowManager(true)}
+              onReset={() => setShowResetConfirm(true)}
+              onToggleFullscreen={toggleFullscreen}
+          />
       </div>
+
+      {/* Floating Control Bar (Only visible in Fullscreen) */}
+      {isFullscreen && (
+        <FloatingControlBar 
+            onUndo={game.undo}
+            canUndo={game.canUndo}
+            onSwap={game.toggleSides}
+            onReset={() => setShowResetConfirm(true)}
+            onMenu={() => setShowFullscreenMenu(true)}
+        />
+      )}
+
+      {/* Fullscreen Drawer */}
+      <FullscreenMenuDrawer 
+         isOpen={showFullscreenMenu}
+         onClose={() => setShowFullscreenMenu(false)}
+         onOpenSettings={() => setShowSettings(true)}
+         onOpenRoster={() => setShowManager(true)}
+         onExitFullscreen={exitFullscreenMode}
+      />
 
       <SettingsModal 
         isOpen={showSettings} 

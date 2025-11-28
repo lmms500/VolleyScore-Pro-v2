@@ -13,6 +13,7 @@
     "teams": "Equipes",
     "settings": "Configurações",
     "fullscreen": "Tela Cheia",
+    "exitFullscreen": "Sair Tela Cheia",
     "reset": "Zerar Partida"
   },
   "history": {
@@ -27,7 +28,8 @@
     "suddenDeath": "Morte Súbita",
     "tieBreak": "Tie Break",
     "timeout": "TEMPO",
-    "useTimeout": "Pedir Tempo"
+    "useTimeout": "Pedir Tempo",
+    "menu": "Menu"
   },
   "settings": {
     "title": "Configuração",

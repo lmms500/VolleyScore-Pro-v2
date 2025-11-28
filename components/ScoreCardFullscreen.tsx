@@ -1,6 +1,6 @@
-import React, { forwardRef, Ref } from 'react';
+import React, { forwardRef, Ref, useState, useEffect } from 'react';
 import { Team, TeamId } from '../types';
-import { Volleyball, Zap } from 'lucide-react';
+import { Volleyball, Zap, RefreshCw } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -34,8 +34,30 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
   scoreRef, bottomAnchorRef
 }, ref) => {
   const { t } = useTranslation();
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // Trigger spring animation on score change
+  useEffect(() => {
+    setIsAnimating(true);
+    const timer = setTimeout(() => setIsAnimating(false), 200);
+    return () => clearTimeout(timer);
+  }, [score]);
+
+  // Determine Undo Direction based on Team ID and Side
+  // Assuming Team A is Left, Team B is Right in default layout.
+  // Swipe Left on Team A -> Undo A
+  // Swipe Right on Team B -> Undo B
+  const onSwipeLeft = teamId === 'A' ? onSubtract : undefined;
+  const onSwipeRight = teamId === 'B' ? onSubtract : undefined;
+
   const gestureHandlers = useScoreGestures({
-    onAdd, onSubtract, isLocked, onInteractionStart, onInteractionEnd
+    onAdd, 
+    onSubtract, 
+    onSwipeLeft,
+    onSwipeRight,
+    isLocked, 
+    onInteractionStart, 
+    onInteractionEnd
   });
 
   const theme = {
@@ -66,6 +88,7 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
             flex flex-col flex-1 relative h-full transition-all duration-500 select-none overflow-hidden 
             ${orderClass}
             ${isLocked ? 'opacity-90 grayscale-[0.2]' : ''}
+            cursor-pointer active:cursor-grabbing
         `}
         style={{ touchAction: 'none' }}
         {...gestureHandlers}
@@ -80,39 +103,47 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
         `} 
       />
 
-      {/* Main container with robust vertical centering */}
+      {/* Main container */}
       <div className="flex flex-col h-full w-full relative z-10 p-2 md:p-8 landscape:px-8 py-4">
         
-        {/* Header (flex-none) */}
-        <div className="flex flex-col items-center justify-center w-full flex-none">
-            <div className={`
-                flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md shadow-lg transition-all duration-300 mb-2 scale-110
-                ${isServing ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}
-            `}>
-                <Volleyball size={16} className={`${theme.text} animate-bounce`} />
-                <span className={`text-[10px] font-black uppercase tracking-widest ${theme.text}`}>{t('game.serving')}</span>
-            </div>
-
+        {/* Header - Interactive Name/Serve Toggle */}
+        <div className="flex flex-col items-center justify-center w-full flex-none pointer-events-none">
+             {/* Service Indicator integrated */}
             <h2 
                 ref={bottomAnchorRef}
-                className="font-black uppercase tracking-tighter text-center cursor-pointer hover:text-white transition-all z-10 leading-none text-3xl md:text-5xl landscape:text-4xl text-white drop-shadow-[0_5px_5px_rgba(0,0,0,1)] px-2 w-full truncate"
+                className="pointer-events-auto font-black uppercase tracking-tighter text-center cursor-pointer hover:text-white transition-all z-10 leading-none text-3xl md:text-5xl landscape:text-4xl text-white drop-shadow-[0_5px_5px_rgba(0,0,0,1)] px-2 w-full truncate flex items-center justify-center gap-3"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
             >
-                {team?.name || ''}
+                {teamId === 'A' && isServing && <Volleyball size={24} className={`${theme.text} animate-bounce`} />}
+                <span className="truncate max-w-[80%]">{team?.name || ''}</span>
+                {teamId === 'B' && isServing && <Volleyball size={24} className={`${theme.text} animate-bounce`} />}
             </h2>
+            
+            {/* Manual Serve Toggle Button (small badge below name) */}
+            <button 
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
+                className={`
+                    pointer-events-auto mt-2 px-2 py-1 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors flex items-center gap-1.5
+                    ${isServing ? 'opacity-100' : 'opacity-40 hover:opacity-100'}
+                `}
+            >
+                <div className={`w-1.5 h-1.5 rounded-full ${isServing ? theme.bg : 'bg-slate-500'}`}></div>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{t('game.serving')}</span>
+            </button>
         </div>
 
-        {/* Score and Badges Container (flex-1 to take up remaining space) */}
-        <div className="flex-1 w-full flex flex-col justify-center items-center gap-2">
+        {/* Score and Badges Container */}
+        <div className="flex-1 w-full flex flex-col justify-center items-center gap-2 pointer-events-none">
 
             {(isMatchPoint || isSetPoint || inSuddenDeath) && (
                 <div className="flex items-center justify-center transition-all duration-300 flex-none">
                     <div 
                         className={`
-                            px-1.5 py-0.5 rounded-sm backdrop-blur-xl border border-white/20 shadow-2xl
+                            px-2 py-0.5 rounded-sm backdrop-blur-xl border border-white/20 shadow-2xl
                             animate-pulse font-semibold uppercase tracking-[0.2em] text-center whitespace-nowrap
-                            text-2xs shadow-[0_0_80px_rgba(0,0,0,0.9)] transform flex items-center gap-1.5
+                            text-xs shadow-[0_0_80px_rgba(0,0,0,0.9)] transform flex items-center gap-1.5
                             ${inSuddenDeath
                                 ? 'bg-red-600 text-white shadow-red-500/60 ring-4 ring-red-500/20'
                                 : isMatchPoint 
@@ -132,9 +163,9 @@ export const ScoreCardFullscreen = forwardRef<HTMLDivElement, ScoreCardFullscree
                 className={`
                     flex items-center justify-center w-full
                     font-bold leading-none text-white
-                    transition-all duration-100 active:scale-95
+                    transition-transform duration-150 ease-out
                     outline-none select-none
-                    ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
+                    ${isAnimating ? 'scale-105' : 'scale-100'}
                 `}
             >
                 <span ref={scoreRef} className={`tracking-tight text-[10rem] sm:text-[12rem] transition-all duration-300 ${glowClass}`}>

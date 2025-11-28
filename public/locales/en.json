@@ -13,6 +13,7 @@
     "teams": "Teams",
     "settings": "Settings",
     "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit Fullscreen",
     "reset": "Reset Match"
   },
   "history": {
@@ -27,7 +28,8 @@
     "suddenDeath": "Sudden Death",
     "tieBreak": "Tie Break",
     "timeout": "TIMEOUT",
-    "useTimeout": "Use Timeout"
+    "useTimeout": "Use Timeout",
+    "menu": "Menu"
   },
   "settings": {
     "title": "Configuration",

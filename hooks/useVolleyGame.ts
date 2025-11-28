@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { GameState, TeamId, SetHistory, GameConfig, Team, Player, RotationReport } from '../types';
 import { DEFAULT_CONFIG, MIN_LEAD_TO_WIN, SETS_TO_WIN_MATCH } from '../constants';
@@ -222,21 +223,9 @@ export const useVolleyGame = () => {
     if (state.isMatchOver) return; 
 
     setState(prev => {
-        // If log is empty, try legacy heuristic fallback (for points only)
-        if (prev.actionLog.length === 0) {
-            let newScoreA = prev.scoreA;
-            let newScoreB = prev.scoreB;
-            if (prev.servingTeam === 'A' || (prev.scoreA > prev.scoreB && prev.scoreA > 0)) {
-                if (newScoreA > 0) newScoreA -= 1;
-            } else if (prev.servingTeam === 'B' || (prev.scoreB > prev.scoreA && prev.scoreB > 0)) {
-                if (newScoreB > 0) newScoreB -= 1;
-            } else if (prev.scoreA === prev.scoreB && prev.scoreA > 0) {
-                newScoreA -= 1;
-            } else {
-                return prev; 
-            }
-            return { ...prev, scoreA: newScoreA, scoreB: newScoreB, servingTeam: null };
-        }
+        // Strict undo logic: Only undo if there are actions in the log.
+        // Heuristic fallback has been removed to ensure data consistency.
+        if (prev.actionLog.length === 0) return prev;
 
         const newLog = [...prev.actionLog];
         const lastAction = newLog.pop()!;
@@ -256,8 +245,17 @@ export const useVolleyGame = () => {
                 actionLog: newLog,
                 scoreA: lastAction.team === 'A' ? Math.max(0, prev.scoreA - 1) : prev.scoreA,
                 scoreB: lastAction.team === 'B' ? Math.max(0, prev.scoreB - 1) : prev.scoreB,
-                // On undo point, we reset server to avoid confusion, user can re-select
+                // On undo point, we reset server to avoid confusion.
+                // Trade-off: User has to re-select server, but prevents invalid server state.
                 servingTeam: null 
+            };
+        }
+
+        if (lastAction.type === 'TOGGLE_SERVE') {
+            return {
+                ...prev,
+                actionLog: newLog,
+                servingTeam: lastAction.previousServer
             };
         }
 
@@ -278,7 +276,18 @@ export const useVolleyGame = () => {
   }, []);
 
   const toggleSides = useCallback(() => setState(prev => ({ ...prev, swappedSides: !prev.swappedSides })), []);
-  const toggleService = useCallback(() => setState(prev => ({ ...prev, servingTeam: prev.servingTeam === 'A' ? 'B' : (prev.servingTeam === 'B' ? null : 'A') })), []);
+  
+  const toggleService = useCallback(() => {
+      setState(prev => {
+          // Logic: A -> B -> null -> A
+          const nextServer = prev.servingTeam === 'A' ? 'B' : (prev.servingTeam === 'B' ? null : 'A');
+          return { 
+              ...prev, 
+              servingTeam: nextServer,
+              actionLog: [...prev.actionLog, { type: 'TOGGLE_SERVE', previousServer: prev.servingTeam }]
+          };
+      });
+  }, []);
 
   const applySettings = useCallback((newConfig: GameConfig, names: {nameA: string, nameB: string}) => {
       setState(prev => ({ ...prev, config: newConfig, teamAName: names.nameA, teamBName: names.nameB }));
@@ -296,7 +305,7 @@ export const useVolleyGame = () => {
 
   return {
     state, setState, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, toggleService, useTimeout, applySettings, 
-    canUndo: state.actionLog.length > 0 || state.scoreA > 0 || state.scoreB > 0, 
+    canUndo: state.actionLog.length > 0, 
     generateTeams: queueManager.generateTeams,
     updateRosters: queueManager.updateRosters,
     rotateTeams,

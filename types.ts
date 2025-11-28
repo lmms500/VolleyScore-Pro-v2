@@ -1,3 +1,4 @@
+
 export type TeamId = 'A' | 'B';
 
 export type DeuceType = 'standard' | 'sudden_death_3pt';
@@ -38,10 +39,10 @@ export interface RotationReport {
   queueAfterRotation: Team[]; 
 }
 
-export interface ActionLog {
-  type: 'POINT' | 'TIMEOUT';
-  team: TeamId;
-}
+export type ActionLog = 
+  | { type: 'POINT'; team: TeamId }
+  | { type: 'TIMEOUT'; team: TeamId }
+  | { type: 'TOGGLE_SERVE'; previousServer: TeamId | null };
 
 export interface GameState {
   // Names

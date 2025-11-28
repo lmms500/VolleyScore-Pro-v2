@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -188,14 +189,10 @@ function App() {
            {isFullscreen ? (
               <ScoreCardFullscreen 
                   teamId="A"
-                  team={state.teamARoster}
                   score={state.scoreA}
                   isServing={state.servingTeam === 'A'}
                   onAdd={() => game.addPoint('A')}
                   onSubtract={() => game.undo()} 
-                  onToggleServe={() => game.toggleService()}
-                  timeouts={state.timeoutsA}
-                  onTimeout={() => game.useTimeout('A')}
                   isMatchPoint={game.isMatchPointA}
                   isSetPoint={game.isSetPointA}
                   isDeuce={game.isDeuce}
@@ -206,7 +203,6 @@ function App() {
                   onInteractionEnd={() => setInteractingTeam(null)}
                   reverseLayout={isSwapped}
                   scoreRefCallback={setScoreElA}
-                  nameRefCallback={setNameElA}
               />
            ) : (
               <ScoreCardNormal
@@ -236,14 +232,10 @@ function App() {
            {isFullscreen ? (
               <ScoreCardFullscreen
                   teamId="B"
-                  team={state.teamBRoster}
                   score={state.scoreB}
                   isServing={state.servingTeam === 'B'}
                   onAdd={() => game.addPoint('B')}
                   onSubtract={() => game.undo()} 
-                  onToggleServe={() => game.toggleService()}
-                  timeouts={state.timeoutsB}
-                  onTimeout={() => game.useTimeout('B')}
                   isMatchPoint={game.isMatchPointB}
                   isSetPoint={game.isSetPointB}
                   isDeuce={game.isDeuce}
@@ -254,7 +246,6 @@ function App() {
                   onInteractionEnd={() => setInteractingTeam(null)}
                   reverseLayout={isSwapped}
                   scoreRefCallback={setScoreElB}
-                  nameRefCallback={setNameElB}
               />
            ) : (
               <ScoreCardNormal

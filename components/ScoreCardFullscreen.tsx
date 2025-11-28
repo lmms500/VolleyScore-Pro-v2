@@ -1,6 +1,7 @@
+
 import React from 'react';
-import { Team, TeamId } from '../types';
-import { Volleyball, Zap } from 'lucide-react';
+import { TeamId } from '../types';
+import { Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useLayoutManager } from '../contexts/LayoutContext';
@@ -8,14 +9,10 @@ import { useElementSize } from '../hooks/useElementSize';
 
 interface ScoreCardFullscreenProps {
   teamId: TeamId;
-  team: Team;
   score: number;
   isServing: boolean;
   onAdd: () => void;
   onSubtract: () => void;
-  onToggleServe: () => void;
-  timeouts: number;
-  onTimeout: () => void;
   isMatchPoint: boolean;
   isSetPoint: boolean;
   isDeuce?: boolean;
@@ -26,21 +23,19 @@ interface ScoreCardFullscreenProps {
   onInteractionEnd?: () => void;
   reverseLayout?: boolean;
   scoreRefCallback?: (node: HTMLElement | null) => void;
-  nameRefCallback?: (node: HTMLElement | null) => void;
 }
 
 export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
-  teamId, team, score, isServing, onAdd, onSubtract, onToggleServe,
+  teamId, score, isServing, onAdd, onSubtract,
   isMatchPoint, isSetPoint, inSuddenDeath, colorTheme,
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
-  scoreRefCallback, nameRefCallback
+  scoreRefCallback
 }) => {
   const { t } = useTranslation();
   const { mode, scale, registerElement } = useLayoutManager();
   
   // Measurement hooks for layout context (dimensions only)
   const { ref: internalScoreRef, width: scoreW, height: scoreH } = useElementSize<HTMLSpanElement>();
-  const { ref: internalNameRef, width: nameW, height: nameH } = useElementSize<HTMLDivElement>();
 
   // Combine refs
   const setScoreRef = (node: HTMLElement | null) => {
@@ -48,16 +43,10 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
     if (scoreRefCallback) scoreRefCallback(node);
   };
 
-  const setNameRef = (node: HTMLElement | null) => {
-    (internalNameRef as any).current = node;
-    if (nameRefCallback) nameRefCallback(node);
-  };
-
   // Report sizes to Layout Manager
   React.useEffect(() => {
     registerElement(`score${teamId}`, scoreW, scoreH);
-    registerElement(`name${teamId}`, nameW, nameH);
-  }, [scoreW, scoreH, nameW, nameH, teamId, registerElement]);
+  }, [scoreW, scoreH, teamId, registerElement]);
 
   const onSwipeLeft = teamId === 'A' ? onSubtract : undefined;
   const onSwipeRight = teamId === 'B' ? onSubtract : undefined;
@@ -151,35 +140,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
             >
                 {score}
             </span>
-        </div>
-
-        {/* NAME (Absolute positioned relative to Score to not affect center) */}
-        <div 
-            ref={setNameRef}
-            className="absolute w-[300%] text-center flex flex-col items-center justify-end pointer-events-none"
-            style={{ 
-                bottom: '100%', 
-                left: '50%', 
-                transform: `translateX(-50%) translateY(20%) scale(${scale})`, // Nudge down closer to score
-                transformOrigin: 'bottom center',
-                marginBottom: 'clamp(8rem, 25vh, 18rem)' // Push above the massive score
-            }}
-        >
-            <h2 
-                onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
-                className={`
-                    pointer-events-auto font-bold uppercase tracking-[0.2em] text-white/90 
-                    drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] 
-                    text-base md:text-xl lg:text-2xl 
-                    px-4 py-1 cursor-pointer hover:text-white transition-colors truncate max-w-full 
-                    flex items-center justify-center gap-2
-                    bg-black/20 rounded-full backdrop-blur-sm border border-white/5 hover:bg-black/40
-                `}
-            >
-                {/* Serving Icon inside the name badge */}
-                {isServing && <Volleyball size={18} className={`${theme.text} animate-bounce`} />}
-                {team?.name || ''}
-            </h2>
         </div>
 
       </div>

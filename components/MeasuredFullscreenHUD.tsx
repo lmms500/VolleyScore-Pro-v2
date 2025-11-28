@@ -1,9 +1,9 @@
 import React from 'react';
 import { Hand } from 'lucide-react';
-import { useLayoutManager } from '../contexts/LayoutContext';
+import { HudPlacement } from '../hooks/useHudMeasure';
 
 interface MeasuredFullscreenHUDProps {
-  placement?: any; // Deprecated, kept for interface compat if necessary
+  placement: HudPlacement;
   setsLeft: number;
   setsRight: number;
   timeoutsLeft: number;
@@ -15,11 +15,13 @@ interface MeasuredFullscreenHUDProps {
 }
 
 export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = ({
+  placement,
   setsLeft, setsRight, 
   timeoutsLeft, timeoutsRight, onTimeoutLeft, onTimeoutRight,
   colorLeft, colorRight
 }) => {
-  const { scale } = useLayoutManager();
+  // If fallback or invalid measurement, default to centered fixed
+  const isMeasured = placement.mode !== 'fallback' && placement.left > -9000;
 
   // Theme logic
   const getTheme = (color: 'indigo' | 'rose') => ({
@@ -32,18 +34,31 @@ export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = ({
   const themeLeft = getTheme(colorLeft);
   const themeRight = getTheme(colorRight);
 
-  // Position: Absolute Center (Because Scores are Absolute Center)
-  // We use the same layout logic: Fixed center of screen.
-  
+  const containerStyle: React.CSSProperties = isMeasured ? {
+      position: 'absolute',
+      left: placement.left,
+      top: placement.top,
+      width: placement.width,
+      height: placement.height,
+      transform: `scale(${placement.internalScale})`, // Scale down if gap is small
+      pointerEvents: 'none' // Allow click-through to background if needed, but buttons need events
+  } : {
+      position: 'fixed',
+      inset: 0,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      pointerEvents: 'none'
+  };
+
+  const contentClass = isMeasured 
+    ? "w-full h-full flex items-center justify-center gap-8 md:gap-16 pointer-events-auto"
+    : "flex items-center justify-center gap-12 sm:gap-24 md:gap-32 pointer-events-auto";
+
   return (
-    <div 
-      className="fixed inset-0 z-40 pointer-events-none flex items-center justify-center transition-all duration-300 ease-out"
-    >
+    <div style={containerStyle} className="z-40 transition-all duration-300 ease-out">
         {/* Sets & Timeouts Center Display */}
-        <div 
-            className="flex items-center justify-center gap-12 sm:gap-24 md:gap-32 pointer-events-auto"
-            style={{ transform: `scale(${scale})` }}
-        >
+        <div className={contentClass}>
               {/* Left Side Info */}
               <div className="flex items-center gap-4 text-center">
                 <button onClick={onTimeoutLeft} disabled={timeoutsLeft >= 2} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-colors hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent group active:scale-95">
@@ -57,8 +72,8 @@ export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = ({
                 </span>
               </div>
 
-              {/* Divider (Optional, mostly visual) */}
-              <div className="w-px h-24 bg-gradient-to-b from-transparent via-white/10 to-transparent"></div>
+              {/* Divider */}
+              <div className="w-px h-16 bg-gradient-to-b from-transparent via-white/10 to-transparent"></div>
 
               {/* Right Side Info */}
               <div className="flex items-center gap-4 text-center">

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 import { Team, TeamId } from '../types';
 import { Volleyball, Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
@@ -25,25 +25,36 @@ interface ScoreCardFullscreenProps {
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
   reverseLayout?: boolean;
-  scoreRef?: React.Ref<HTMLSpanElement>; // Kept for HUD compatibility if needed
-  nameRef?: React.Ref<HTMLHeadingElement>;
+  scoreRefCallback?: (node: HTMLElement | null) => void;
+  nameRefCallback?: (node: HTMLElement | null) => void;
 }
 
 export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
   teamId, team, score, isServing, onAdd, onSubtract, onToggleServe,
   isMatchPoint, isSetPoint, inSuddenDeath, colorTheme,
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
-  scoreRef, nameRef
+  scoreRefCallback, nameRefCallback
 }) => {
   const { t } = useTranslation();
   const { mode, scale, registerElement } = useLayoutManager();
   
-  // Measurement hooks
+  // Measurement hooks for layout context (dimensions only)
   const { ref: internalScoreRef, width: scoreW, height: scoreH } = useElementSize<HTMLSpanElement>();
   const { ref: internalNameRef, width: nameW, height: nameH } = useElementSize<HTMLDivElement>();
 
+  // Combine refs
+  const setScoreRef = (node: HTMLElement | null) => {
+    (internalScoreRef as any).current = node;
+    if (scoreRefCallback) scoreRefCallback(node);
+  };
+
+  const setNameRef = (node: HTMLElement | null) => {
+    (internalNameRef as any).current = node;
+    if (nameRefCallback) nameRefCallback(node);
+  };
+
   // Report sizes to Layout Manager
-  useEffect(() => {
+  React.useEffect(() => {
     registerElement(`score${teamId}`, scoreW, scoreH);
     registerElement(`name${teamId}`, nameW, nameH);
   }, [scoreW, scoreH, nameW, nameH, teamId, registerElement]);
@@ -72,22 +83,18 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
   }[colorTheme];
 
   // Logic: "HUD Central based ONLY on size of score"
-  // We use Flex to center the Score Container. 
-  // The Name is absolute positioned relative to the Score Container to avoid pushing it down.
-
   const isVisualLeft = reverseLayout ? teamId === 'B' : teamId === 'A';
-  const pushOutClass = isVisualLeft ? '-translate-x-4 md:-translate-x-8' : 'translate-x-4 md:translate-x-8';
+  // Reduced push out to keep scores closer to center but separate
+  const pushOutClass = isVisualLeft ? '-translate-x-2 md:-translate-x-6' : 'translate-x-2 md:translate-x-6';
   const orderClass = reverseLayout 
     ? (teamId === 'A' ? 'order-last' : 'order-first') 
     : (teamId === 'A' ? 'order-first' : 'order-last');
 
   const glowClass = (isMatchPoint || isSetPoint) ? theme.glowShadow : '';
 
-  // Dynamic Styles based on Mode
-  const nameBottom = mode === 'ultra' ? '100%' : (mode === 'compact' ? '110%' : '120%');
-  const nameScale = mode === 'ultra' ? 0.7 : (mode === 'compact' ? 0.85 : 1);
-  const badgeScale = mode === 'ultra' ? 0.8 : 1;
-  const badgeOffset = mode === 'ultra' ? 'top-[-2rem]' : 'top-[-3rem]';
+  // Dynamic Styles
+  const badgeScale = mode === 'ultra' ? 0.9 : 1.1;
+  const badgeOffset = mode === 'ultra' ? 'top-[-3rem]' : 'top-[-4rem]';
 
   return (
     <div 
@@ -112,20 +119,20 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
       >
         
         {/* SCORE (The Centerpiece) */}
-        <div className="relative z-10">
+        <div className="relative z-10 flex flex-col items-center">
              {/* Badge floating above score */}
             {(isMatchPoint || isSetPoint || inSuddenDeath) && (
-                <div className={`absolute left-0 right-0 flex justify-center ${badgeOffset} transition-all duration-300`}>
+                <div className={`absolute left-0 right-0 flex justify-center ${badgeOffset} transition-all duration-300 z-20`}>
                     <div 
                         className={`
-                            px-2 py-0.5 rounded-sm backdrop-blur-xl border border-white/20 shadow-2xl
-                            font-semibold uppercase tracking-[0.2em] text-center whitespace-nowrap
-                            text-xs shadow-[0_0_80px_rgba(0,0,0,0.9)] flex items-center gap-1.5
-                            ${inSuddenDeath ? 'bg-red-600 text-white shadow-red-500/60 ring-2 ring-red-500/20' : isMatchPoint ? 'bg-amber-500 text-black shadow-amber-500/60 ring-2 ring-amber-500/20' : isSetPoint ? `${theme.bg} text-white ring-2 ring-white/10` : 'bg-slate-200 text-slate-900'} 
+                            px-4 py-1.5 rounded-lg backdrop-blur-xl border border-white/20 shadow-2xl
+                            font-black uppercase tracking-[0.2em] text-center whitespace-nowrap
+                            text-sm shadow-[0_0_50px_rgba(0,0,0,0.8)] flex items-center gap-2
+                            ${inSuddenDeath ? 'bg-red-600 text-white shadow-red-500/60 ring-2 ring-red-500/30' : isMatchPoint ? 'bg-amber-500 text-black shadow-amber-500/60 ring-2 ring-amber-500/30' : isSetPoint ? `${theme.bg} text-white ring-2 ring-white/20` : 'bg-slate-200 text-slate-900'} 
                         `}
                         style={{ transform: `scale(${badgeScale})` }}
                     >
-                        {inSuddenDeath && <Zap className="w-3 h-3" fill="currentColor" />}
+                        {inSuddenDeath && <Zap className="w-4 h-4" fill="currentColor" />}
                         {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
                     </div>
                 </div>
@@ -133,15 +140,13 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
 
             {/* The Number */}
             <span 
-                ref={(node) => {
-                    internalScoreRef.current = node;
-                    if (typeof scoreRef === 'function') scoreRef(node);
-                    else if (scoreRef) (scoreRef as any).current = node;
-                }}
+                ref={setScoreRef}
                 className={`block font-black leading-none text-white tracking-tighter transition-all duration-300 ${glowClass}`}
                 style={{ 
-                    fontSize: 'clamp(8rem, 25vh, 16rem)',
-                    textShadow: '0 10px 30px rgba(0,0,0,0.5)'
+                    // Maximized Font Size
+                    fontSize: 'clamp(12rem, 42vh, 30rem)',
+                    textShadow: '0 20px 50px rgba(0,0,0,0.6)',
+                    lineHeight: 0.85
                  }}
             >
                 {score}
@@ -150,37 +155,31 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
 
         {/* NAME (Absolute positioned relative to Score to not affect center) */}
         <div 
-            ref={internalNameRef}
+            ref={setNameRef}
             className="absolute w-[300%] text-center flex flex-col items-center justify-end pointer-events-none"
             style={{ 
-                bottom: nameBottom, 
+                bottom: '100%', 
                 left: '50%', 
-                transform: `translateX(-50%) scale(${nameScale})`,
-                transformOrigin: 'bottom center'
+                transform: `translateX(-50%) translateY(20%) scale(${scale})`, // Nudge down closer to score
+                transformOrigin: 'bottom center',
+                marginBottom: 'clamp(8rem, 25vh, 18rem)' // Push above the massive score
             }}
         >
             <h2 
-                ref={nameRef}
-                className="pointer-events-auto font-black uppercase tracking-tighter text-white drop-shadow-[0_5px_5px_rgba(0,0,0,1)] text-3xl md:text-5xl lg:text-6xl px-4 py-2 cursor-pointer hover:scale-105 transition-transform truncate max-w-full flex items-center justify-center gap-2"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
-            >
-                {isServing && <Volleyball size={24} className={`${theme.text} animate-bounce`} />}
-                {team?.name || ''}
-            </h2>
-
-             {/* Manual Serve Toggle (Small Pill) */}
-             <button 
-                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
                 className={`
-                    pointer-events-auto mt-1 px-2 py-0.5 rounded-full bg-black/40 border border-white/10 hover:bg-white/10 transition-colors flex items-center gap-1.5 backdrop-blur-md
-                    ${isServing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 transition-opacity'}
+                    pointer-events-auto font-bold uppercase tracking-[0.2em] text-white/90 
+                    drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] 
+                    text-base md:text-xl lg:text-2xl 
+                    px-4 py-1 cursor-pointer hover:text-white transition-colors truncate max-w-full 
+                    flex items-center justify-center gap-2
+                    bg-black/20 rounded-full backdrop-blur-sm border border-white/5 hover:bg-black/40
                 `}
             >
-                <div className={`w-1.5 h-1.5 rounded-full ${isServing ? theme.bg : 'bg-slate-500'}`}></div>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-300">{t('game.serving')}</span>
-            </button>
+                {/* Serving Icon inside the name badge */}
+                {isServing && <Volleyball size={18} className={`${theme.text} animate-bounce`} />}
+                {team?.name || ''}
+            </h2>
         </div>
 
       </div>

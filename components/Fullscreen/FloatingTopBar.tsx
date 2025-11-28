@@ -36,21 +36,21 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
     ? { left: `${centeredLeft}px`, transform: `translateX(-50%) scale(${scale})` } 
     : { left: '50%', transform: `translateX(-50%) scale(${scale})` };
 
-  // Adjust padding/size based on mode
-  const paddingClass = mode === 'ultra' ? 'px-4 py-2' : 'px-6 py-3';
-  const textSize = mode === 'ultra' ? 'text-lg' : 'text-xl';
-  const iconSize = mode === 'ultra' ? 14 : 18;
+  // Compact layout
+  const paddingClass = 'px-4 py-2';
+  const textSize = 'text-lg';
+  const iconSize = 16;
 
   return (
     <div 
       ref={ref}
       style={style}
       className={`
-        fixed top-4 z-[55] 
+        fixed top-2 z-[55] 
         transition-all duration-500 ease-out origin-top
       `}
     >
-      <div className={`flex items-center gap-4 ${paddingClass} rounded-full bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] whitespace-nowrap ring-1 ring-white/5`}>
+      <div className={`flex items-center gap-3 ${paddingClass} rounded-full bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.5)] whitespace-nowrap ring-1 ring-white/5`}>
         
         {/* Timer */}
         <button 
@@ -64,17 +64,17 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
             <span className={`font-mono ${textSize} font-bold tabular-nums tracking-wide`}>{formatTime(time)}</span>
         </button>
 
-        <div className="w-px h-6 bg-white/10"></div>
+        <div className="w-px h-5 bg-white/10"></div>
 
         {/* Game Status */}
-        <div className="flex items-center gap-3">
-            <span className={`text-sm font-bold uppercase tracking-widest ${isTieBreak ? 'text-amber-400' : 'text-slate-200'}`}>
+        <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold uppercase tracking-widest ${isTieBreak ? 'text-amber-400' : 'text-slate-200'}`}>
                 {isTieBreak ? t('game.tieBreak') : t('history.setLabel', { setNumber: currentSet })}
             </span>
             
             {(isDeuce || inSuddenDeath) && (
                  <div className={`
-                    flex items-center gap-1.5 px-2 py-0.5 rounded-md
+                    flex items-center gap-1.5 px-1.5 py-0.5 rounded-md
                     ${inSuddenDeath ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'}
                  `}>
                      {inSuddenDeath && <Zap size={10} fill="currentColor" />}

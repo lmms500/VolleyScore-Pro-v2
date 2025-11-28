@@ -17,6 +17,7 @@ import { FloatingControlBar } from './components/Fullscreen/FloatingControlBar';
 import { FloatingTopBar } from './components/Fullscreen/FloatingTopBar';
 import { FullscreenMenuDrawer } from './components/Fullscreen/FullscreenMenuDrawer';
 import { LayoutProvider } from './contexts/LayoutContext';
+import { useHudMeasure } from './hooks/useHudMeasure';
 
 function App() {
   const game = useVolleyGame();
@@ -32,6 +33,27 @@ function App() {
   
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [interactingTeam, setInteractingTeam] = useState<TeamId | null>(null);
+
+  // Layout Measurement Refs (Callback refs to trigger re-renders on mount)
+  const [scoreElA, setScoreElA] = useState<HTMLElement | null>(null);
+  const [scoreElB, setScoreElB] = useState<HTMLElement | null>(null);
+  const [nameElA, setNameElA] = useState<HTMLElement | null>(null);
+  const [nameElB, setNameElB] = useState<HTMLElement | null>(null);
+
+  // Determine which visual element corresponds to which logic depending on swap
+  const isSwapped = state.swappedSides;
+  const visualLeftScoreEl = isSwapped ? scoreElB : scoreElA;
+  const visualRightScoreEl = isSwapped ? scoreElA : scoreElB;
+  const visualLeftNameEl = isSwapped ? nameElB : nameElA;
+  const visualRightNameEl = isSwapped ? nameElA : nameElB;
+
+  const hudPlacement = useHudMeasure({ 
+      leftScoreEl: visualLeftScoreEl, 
+      rightScoreEl: visualRightScoreEl,
+      leftNameEl: visualLeftNameEl,
+      rightNameEl: visualRightNameEl,
+      enabled: isFullscreen
+  });
 
   const enterFullscreenMode = async () => {
     const element = document.documentElement;
@@ -88,8 +110,6 @@ function App() {
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
-  const isSwapped = state.swappedSides;
-  
   // Visual Props Calculation for HUD (Swap Handling)
   const setsLeft = isSwapped ? state.setsB : state.setsA;
   const setsRight = isSwapped ? state.setsA : state.setsB;
@@ -139,9 +159,11 @@ function App() {
                   onToggleTimer={toggleTimer}
                   isTimerRunning={state.isTimerRunning}
                   inSuddenDeath={state.inSuddenDeath}
+                  centeredLeft={hudPlacement.topBarLeft}
               />
 
               <MeasuredFullscreenHUD
+                  placement={hudPlacement}
                   setsLeft={setsLeft}
                   setsRight={setsRight}
                   timeoutsLeft={timeoutsLeft}
@@ -180,6 +202,8 @@ function App() {
                   onInteractionStart={() => setInteractingTeam('A')}
                   onInteractionEnd={() => setInteractingTeam(null)}
                   reverseLayout={isSwapped}
+                  scoreRefCallback={setScoreElA}
+                  nameRefCallback={setNameElA}
               />
            ) : (
               <ScoreCardNormal
@@ -226,6 +250,8 @@ function App() {
                   onInteractionStart={() => setInteractingTeam('B')}
                   onInteractionEnd={() => setInteractingTeam(null)}
                   reverseLayout={isSwapped}
+                  scoreRefCallback={setScoreElB}
+                  nameRefCallback={setNameElB}
               />
            ) : (
               <ScoreCardNormal

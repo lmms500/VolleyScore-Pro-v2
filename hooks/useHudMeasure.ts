@@ -21,14 +21,14 @@ export interface HudPlacement {
   height: number;
   compact: boolean;
   internalScale: number;
-  topBarLeft?: number; // New property for TopBar positioning
+  topBarLeft?: number; 
 }
 
 interface UseHudMeasureProps {
   leftScoreEl: HTMLElement | null;
   rightScoreEl: HTMLElement | null;
-  leftNameEl: HTMLElement | null; // Added
-  rightNameEl: HTMLElement | null; // Added
+  leftNameEl: HTMLElement | null;
+  rightNameEl: HTMLElement | null;
   enabled?: boolean;
   debounceMs?: number;
 }
@@ -40,7 +40,7 @@ const MAX_HUD_WIDTH = 650;
 const MIN_HUD_HEIGHT = 160; 
 const MAX_HUD_HEIGHT = 480; 
 const COMPACT_THRESHOLD_LANDSCAPE = 300;
-const GAP_PADDING = 20;
+const GAP_PADDING = 10;
 
 const INITIAL_PLACEMENT: HudPlacement = {
   mode: 'portrait', left: -9999, top: -9999, width: 0, height: 0, compact: false, internalScale: 1
@@ -88,7 +88,7 @@ export function useHudMeasure({
                  height,
                  compact: availableHeight < 150,
                  internalScale: Math.min(1, height / MAX_HUD_HEIGHT),
-                 topBarLeft: window.innerWidth / 2 // Center TopBar on screen in portrait
+                 topBarLeft: window.innerWidth / 2 
              };
         }
 
@@ -108,15 +108,18 @@ export function useHudMeasure({
         if (leftNameEl && rightNameEl) {
             const rectNameA = leftNameEl.getBoundingClientRect();
             const rectNameB = rightNameEl.getBoundingClientRect();
+            // Use midpoint of inner edges for names too, to ensure centering in the gap
+            // If names overlap, this might be weird, but assumption is they don't in landscape
             const leftNameEdge = rectNameA.right;
             const rightNameEdge = rectNameB.left;
             topBarCenterX = (leftNameEdge + rightNameEdge) / 2;
         }
 
-        if (availableWidth < MIN_HUD_WIDTH / 2) {
+        if (availableWidth < MIN_HUD_WIDTH / 3) {
+            // Gap too small?
             newPlacement = { ...INITIAL_PLACEMENT, mode: 'fallback' };
         } else {
-            const width = Math.max(MIN_HUD_WIDTH, Math.min(availableWidth - GAP_PADDING * 2, MAX_HUD_WIDTH));
+            const width = Math.max(MIN_HUD_WIDTH, Math.min(availableWidth - GAP_PADDING, MAX_HUD_WIDTH));
             const height = Math.min(window.innerHeight * 0.8, MAX_HUD_HEIGHT);
             
             // Calculate Top based on screen center
@@ -155,20 +158,18 @@ export function useHudMeasure({
     const triggerCalc = debouncedCalculation();
     
     triggerCalc();
-    // Re-trigger during transitions
     setTimeout(calculateLayout, 350); 
     setTimeout(calculateLayout, 600); 
 
     const resizeObserver = new ResizeObserver(triggerCalc);
     if(leftScoreEl) resizeObserver.observe(leftScoreEl);
     if(rightScoreEl) resizeObserver.observe(rightScoreEl);
-    if(leftNameEl) resizeObserver.observe(leftNameEl); // Observe names too
+    if(leftNameEl) resizeObserver.observe(leftNameEl);
     if(rightNameEl) resizeObserver.observe(rightNameEl);
     
     window.addEventListener('resize', triggerCalc);
     window.addEventListener('orientationchange', triggerCalc);
     
-    // Observer content changes (scores/names length changing)
     const mutationObserver = new MutationObserver(triggerCalc);
     const obsConfig = { childList: true, subtree: true, characterData: true };
     if (leftScoreEl) mutationObserver.observe(leftScoreEl, obsConfig);

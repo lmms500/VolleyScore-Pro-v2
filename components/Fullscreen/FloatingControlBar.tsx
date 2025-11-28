@@ -17,7 +17,7 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(true);
-  const { mode, scale, registerElement } = useLayoutManager();
+  const { scale, registerElement } = useLayoutManager();
   const { ref, width, height } = useElementSize<HTMLDivElement>();
 
   useEffect(() => {
@@ -44,10 +44,10 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
 
   const buttonBase = "rounded-full transition-all duration-300 active:scale-90 flex items-center justify-center text-slate-200 hover:text-white bg-white/5 hover:bg-white/20 border border-white/5 hover:border-white/20 backdrop-blur-md";
   
-  // Compact adjustments
-  const pClass = mode === 'ultra' ? 'p-3' : 'p-4';
-  const iconSize = mode === 'ultra' ? 20 : 24;
-  const bottomPos = mode === 'ultra' ? 'bottom-4' : 'bottom-10';
+  // Minimal compact styling
+  const pClass = 'p-3';
+  const iconSize = 20;
+  const bottomPos = 'bottom-6';
 
   return (
     <div 
@@ -59,7 +59,7 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
         ${isVisible ? 'opacity-100 pointer-events-auto' : 'opacity-30 hover:opacity-100 pointer-events-auto'}
       `}
     >
-      <div className={`flex items-center gap-4 ${mode === 'ultra' ? 'p-2' : 'p-2.5'} rounded-full bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] ring-1 ring-white/5`}>
+      <div className={`flex items-center gap-3 p-2 rounded-full bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] ring-1 ring-white/5`}>
         
         <button 
           onClick={onUndo} 
@@ -74,7 +74,7 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
           <ArrowLeftRight size={iconSize} />
         </button>
 
-        <div className="w-px h-8 bg-white/10 mx-1"></div>
+        <div className="w-px h-6 bg-white/10 mx-0.5"></div>
 
         <button onClick={onReset} className={`${buttonBase} ${pClass} text-rose-400 hover:text-rose-200 hover:bg-rose-500/20 hover:border-rose-500/30`} title={t('controls.reset')}>
           <RotateCcw size={iconSize} />

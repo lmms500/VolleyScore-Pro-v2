@@ -29,10 +29,14 @@ function App() {
   // Adaptive Layout Refs & Hook
   const leftScoreRef = useRef<HTMLDivElement>(null);
   const rightScoreRef = useRef<HTMLDivElement>(null);
+  const leftNameRef = useRef<HTMLHeadingElement>(null);
+  const rightNameRef = useRef<HTMLHeadingElement>(null);
 
-  const { styles: adaptiveStyles, compactMode } = useAdaptiveLayout({
-    leftScoreRef: leftScoreRef,
-    rightScoreRef: rightScoreRef,
+  const { styles: adaptiveStyles } = useAdaptiveLayout({
+    leftScoreRef,
+    rightScoreRef,
+    leftNameRef,
+    rightNameRef,
     scoreA: state.scoreA,
     scoreB: state.scoreB,
     isFullscreen,
@@ -106,7 +110,6 @@ function App() {
             timeoutsB={state.timeoutsB}
             onTimeoutA={() => game.useTimeout('A')}
             onTimeoutB={() => game.useTimeout('B')}
-            compactMode={compactMode}
           />
       )}
 
@@ -119,7 +122,8 @@ function App() {
          {isFullscreen ? (
             <ScoreCardFullscreen 
                 teamId="A"
-                ref={state.swappedSides ? rightScoreRef : leftScoreRef}
+                ref={isSwapped ? rightScoreRef : leftScoreRef}
+                nameRef={isSwapped ? rightNameRef : leftNameRef}
                 team={state.teamARoster}
                 score={state.scoreA}
                 isServing={state.servingTeam === 'A'}
@@ -131,12 +135,12 @@ function App() {
                 isMatchPoint={game.isMatchPointA}
                 isSetPoint={game.isSetPointA}
                 isDeuce={game.isDeuce}
-                inSuddenDeath={game.state.inSuddenDeath}
+                inSuddenDeath={state.inSuddenDeath}
                 colorTheme="indigo"
                 isLocked={interactingTeam !== null && interactingTeam !== 'A'}
                 onInteractionStart={() => setInteractingTeam('A')}
                 onInteractionEnd={() => setInteractingTeam(null)}
-                reverseLayout={state.swappedSides}
+                reverseLayout={isSwapped}
             />
          ) : (
             <ScoreCardNormal
@@ -153,8 +157,8 @@ function App() {
                 isMatchPoint={game.isMatchPointA}
                 isSetPoint={game.isSetPointA}
                 isDeuce={game.isDeuce}
-                inSuddenDeath={game.state.inSuddenDeath}
-                reverseLayout={state.swappedSides}
+                inSuddenDeath={state.inSuddenDeath}
+                reverseLayout={isSwapped}
                 setsNeededToWin={game.setsNeededToWin}
                 colorTheme="indigo"
                 isLocked={interactingTeam !== null && interactingTeam !== 'A'}
@@ -173,7 +177,8 @@ function App() {
          {isFullscreen ? (
             <ScoreCardFullscreen
                 teamId="B"
-                ref={state.swappedSides ? leftScoreRef : rightScoreRef}
+                ref={isSwapped ? leftScoreRef : rightScoreRef}
+                nameRef={isSwapped ? leftNameRef : rightNameRef}
                 team={state.teamBRoster}
                 score={state.scoreB}
                 isServing={state.servingTeam === 'B'}
@@ -185,12 +190,12 @@ function App() {
                 isMatchPoint={game.isMatchPointB}
                 isSetPoint={game.isSetPointB}
                 isDeuce={game.isDeuce}
-                inSuddenDeath={game.state.inSuddenDeath}
+                inSuddenDeath={state.inSuddenDeath}
                 colorTheme="rose"
                 isLocked={interactingTeam !== null && interactingTeam !== 'B'}
                 onInteractionStart={() => setInteractingTeam('B')}
                 onInteractionEnd={() => setInteractingTeam(null)}
-                reverseLayout={state.swappedSides}
+                reverseLayout={isSwapped}
             />
          ) : (
             <ScoreCardNormal
@@ -207,8 +212,8 @@ function App() {
                 isMatchPoint={game.isMatchPointB}
                 isSetPoint={game.isSetPointB}
                 isDeuce={game.isDeuce}
-                inSuddenDeath={game.state.inSuddenDeath}
-                reverseLayout={state.swappedSides}
+                inSuddenDeath={state.inSuddenDeath}
+                reverseLayout={isSwapped}
                 setsNeededToWin={game.setsNeededToWin}
                 colorTheme="rose"
                 isLocked={interactingTeam !== null && interactingTeam !== 'B'}

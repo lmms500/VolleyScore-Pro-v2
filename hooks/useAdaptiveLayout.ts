@@ -3,6 +3,8 @@ import { useState, useLayoutEffect, RefObject } from 'react';
 interface AdaptiveLayoutParams {
   leftScoreRef: RefObject<HTMLElement>;
   rightScoreRef: RefObject<HTMLElement>;
+  leftNameRef: RefObject<HTMLElement>;
+  rightNameRef: RefObject<HTMLElement>;
   scoreA: number;
   scoreB: number;
   isFullscreen: boolean;
@@ -13,62 +15,86 @@ const clamp = (num: number, min: number, max: number) => Math.min(Math.max(num, 
 export const useAdaptiveLayout = ({
   leftScoreRef,
   rightScoreRef,
+  leftNameRef,
+  rightNameRef,
   scoreA,
   scoreB,
   isFullscreen,
 }: AdaptiveLayoutParams) => {
   const [styles, setStyles] = useState({});
-  const [compactMode, setCompactMode] = useState(false);
 
   useLayoutEffect(() => {
     if (!isFullscreen) {
-      // Reset when not in fullscreen to avoid lingering styles
       setStyles({});
-      setCompactMode(false);
       return;
     }
 
     const calculateLayout = () => {
-      const leftEl = leftScoreRef.current;
-      const rightEl = rightScoreRef.current;
+      const leftScoreEl = leftScoreRef.current;
+      const rightScoreEl = rightScoreRef.current;
+      const leftNameEl = leftNameRef.current;
+      const rightNameEl = rightNameRef.current;
       
-      if (!leftEl || !rightEl) return;
+      if (!leftScoreEl || !rightScoreEl || !leftNameEl || !rightNameEl) return;
 
-      const leftRect = leftEl.getBoundingClientRect();
-      const rightRect = rightEl.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const vw = window.innerWidth;
+      const isPortrait = vh > vw;
+
+      const leftScoreRect = leftScoreEl.getBoundingClientRect();
+      const rightScoreRect = rightScoreEl.getBoundingClientRect();
+      const leftNameRect = leftNameEl.getBoundingClientRect();
+
+      // --- Calculations based on user rules ---
+
+      // 1. HUD Dimensions
+      const availableWidth = rightScoreRect.left - leftScoreRect.right;
+      const availableHeight = leftScoreRect.top - leftNameRect.bottom;
+      const hudMaxWidth = availableWidth * 0.62;
+      const hudMaxHeight = availableHeight * 0.28;
+      const aspectRatio = isPortrait ? 2.7 : 2.1;
+
+      let finalHudWidth = hudMaxWidth;
+      let finalHudHeight = finalHudWidth / aspectRatio;
+
+      if (finalHudHeight > hudMaxHeight) {
+        finalHudHeight = hudMaxHeight;
+        finalHudWidth = finalHudHeight * aspectRatio;
+      }
       
-      // 1. HUD Width Calculation
-      const minGap = 24; // px
-      const availableSpace = rightRect.left - leftRect.right;
-      const hudMaxWidth = availableSpace - (2 * minGap);
-
-      const minHudWidth = 260;
-      const maxHudWidth = 720;
-      const hudWidth = clamp(hudMaxWidth, minHudWidth, maxHudWidth);
-
-      // 2. Compact Mode Calculation
-      const isCompact = hudWidth <= (minHudWidth + 60) || window.innerWidth < 420;
-      setCompactMode(isCompact);
-
-      // 3. Score Font Size Calculation
-      const reservedTop = 80; // Estimated space for header/badges
-      const reservedBottom = 40; // Estimated space at the bottom
-      const availableHeightForScore = window.innerHeight - reservedTop - reservedBottom;
+      // 2. Score Font Size
+      const minScoreFont = vh * 0.06;
+      const maxScoreFont = vh * 0.11;
+      let scoreFontSize = clamp(availableHeight * 0.8, 72, 300); // Fallback for landscape
       
-      const factor = isCompact ? 0.4 : 0.55;
-      const minFontSize = 72;
-      const maxFontSize = 240;
-      const scoreFontSize = clamp(availableHeightForScore * factor, minFontSize, maxFontSize);
+      if (isPortrait) {
+        scoreFontSize = clamp(scoreFontSize, minScoreFont, maxScoreFont);
+      }
       
-      // 4. Set CSS Variables
+      // 3. HUD Vertical Position (for landscape)
+      let hudTop = vh / 2; // Default to vertical center
+      if (!isPortrait) {
+        hudTop = leftScoreRect.top + leftScoreRect.height / 2;
+      }
+
+      // 4. Badge Scaling
+      const badgeTargetWidth = availableWidth * (isPortrait ? 0.07 : 0.05);
+      const badgeBaseWidth = 150; // An estimated base width for a typical badge in pixels
+      const badgeScale = clamp(badgeTargetWidth / badgeBaseWidth, 0.5, 1.2);
+
+      // 5. Set CSS Variables
       setStyles({
-        '--hud-w': `${hudWidth}px`,
+        '--hud-w': `${clamp(finalHudWidth, 200, 720)}px`,
+        '--hud-h': `${clamp(finalHudHeight, 80, 250)}px`,
+        '--hud-top': `${hudTop}px`,
         '--score-font': `${scoreFontSize}px`,
+        '--badge-scale': `${badgeScale}`,
       });
     };
 
     calculateLayout();
 
+    // Use ResizeObserver for better performance than 'resize' event listener
     const observer = new ResizeObserver(calculateLayout);
     observer.observe(document.documentElement);
 
@@ -76,7 +102,8 @@ export const useAdaptiveLayout = ({
       observer.disconnect();
     };
 
-  }, [isFullscreen, leftScoreRef, rightScoreRef, scoreA, scoreB]);
+  }, [isFullscreen, leftScoreRef, rightScoreRef, leftNameRef, rightNameRef, scoreA, scoreB]);
 
-  return { styles, compactMode };
+  // The hook no longer needs to return compactMode
+  return { styles };
 };

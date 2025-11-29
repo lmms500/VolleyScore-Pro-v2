@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -141,7 +142,7 @@ function App() {
             z-30 transition-all duration-500 flex-none
             ${isFullscreen 
               ? '-translate-y-24 opacity-0 pointer-events-none absolute w-full' 
-              : 'relative pt-[env(safe-area-inset-top)] px-4 pb-2 mt-2'}
+              : 'relative pt-[env(safe-area-inset-top)] pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] pb-2 mt-2'}
         `}>
           <HistoryBar 
             history={state.history} 
@@ -190,100 +191,99 @@ function App() {
         )}
 
         {/* Main Content Area */}
-        {/* In Fullscreen: Fixed position to ignore body safe-area padding and center perfectly relative to viewport */}
+        {/* In Fullscreen, we use fixed positioning for children, so container is just a passthrough */}
         <main className={`
-            flex transition-all duration-500 min-h-0 overflow-visible
-            flex-col landscape:flex-row md:flex-row
+            transition-all duration-500 min-h-0 overflow-visible
             ${isFullscreen 
-               ? 'fixed inset-0 z-10 w-screen h-screen p-0' 
-               : 'relative flex-1 z-10 pb-28 landscape:pb-20 pt-2 md:pb-32'
+               ? 'fixed inset-0 z-10 w-screen h-screen p-0 border-none m-0 block' 
+               : 'relative flex-1 z-10 flex flex-col landscape:flex-row md:flex-row pb-28 landscape:pb-20 pt-2 md:pb-32 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]'
             }
         `}>
            
            {isFullscreen ? (
-              <ScoreCardFullscreen 
-                  teamId="A"
-                  score={state.scoreA}
-                  isServing={state.servingTeam === 'A'}
-                  onAdd={() => game.addPoint('A')}
-                  onSubtract={() => game.subtractPoint('A')} 
-                  isMatchPoint={game.isMatchPointA}
-                  isSetPoint={game.isSetPointA}
-                  isDeuce={game.isDeuce}
-                  inSuddenDeath={state.inSuddenDeath}
-                  colorTheme="indigo"
-                  isLocked={interactingTeam !== null && interactingTeam !== 'A'}
-                  onInteractionStart={() => setInteractingTeam('A')}
-                  onInteractionEnd={() => setInteractingTeam(null)}
-                  reverseLayout={isSwapped}
-                  scoreRefCallback={setScoreElA}
-              />
+              <>
+                <ScoreCardFullscreen 
+                    teamId="A"
+                    score={state.scoreA}
+                    isServing={state.servingTeam === 'A'}
+                    onAdd={() => game.addPoint('A')}
+                    onSubtract={() => game.subtractPoint('A')} 
+                    isMatchPoint={game.isMatchPointA}
+                    isSetPoint={game.isSetPointA}
+                    isDeuce={game.isDeuce}
+                    inSuddenDeath={state.inSuddenDeath}
+                    colorTheme="indigo"
+                    isLocked={interactingTeam !== null && interactingTeam !== 'A'}
+                    onInteractionStart={() => setInteractingTeam('A')}
+                    onInteractionEnd={() => setInteractingTeam(null)}
+                    reverseLayout={isSwapped}
+                    scoreRefCallback={setScoreElA}
+                />
+                <ScoreCardFullscreen
+                    teamId="B"
+                    score={state.scoreB}
+                    isServing={state.servingTeam === 'B'}
+                    onAdd={() => game.addPoint('B')}
+                    onSubtract={() => game.subtractPoint('B')} 
+                    isMatchPoint={game.isMatchPointB}
+                    isSetPoint={game.isSetPointB}
+                    isDeuce={game.isDeuce}
+                    inSuddenDeath={state.inSuddenDeath}
+                    colorTheme="rose"
+                    isLocked={interactingTeam !== null && interactingTeam !== 'B'}
+                    onInteractionStart={() => setInteractingTeam('B')}
+                    onInteractionEnd={() => setInteractingTeam(null)}
+                    reverseLayout={isSwapped}
+                    scoreRefCallback={setScoreElB}
+                />
+              </>
            ) : (
-              <ScoreCardNormal
-                  teamId="A"
-                  team={state.teamARoster}
-                  score={state.scoreA}
-                  setsWon={state.setsA}
-                  isServing={state.servingTeam === 'A'}
-                  onAdd={() => game.addPoint('A')}
-                  onSubtract={() => game.subtractPoint('A')}
-                  onToggleServe={() => game.toggleService()}
-                  timeouts={state.timeoutsA}
-                  onTimeout={() => game.useTimeout('A')}
-                  isMatchPoint={game.isMatchPointA}
-                  isSetPoint={game.isSetPointA}
-                  isDeuce={game.isDeuce}
-                  inSuddenDeath={state.inSuddenDeath}
-                  reverseLayout={isSwapped}
-                  setsNeededToWin={game.setsNeededToWin}
-                  colorTheme="indigo"
-                  isLocked={interactingTeam !== null && interactingTeam !== 'A'}
-                  onInteractionStart={() => setInteractingTeam('A')}
-                  onInteractionEnd={() => setInteractingTeam(null)}
-              />
-           )}
-
-           {isFullscreen ? (
-              <ScoreCardFullscreen
-                  teamId="B"
-                  score={state.scoreB}
-                  isServing={state.servingTeam === 'B'}
-                  onAdd={() => game.addPoint('B')}
-                  onSubtract={() => game.subtractPoint('B')} 
-                  isMatchPoint={game.isMatchPointB}
-                  isSetPoint={game.isSetPointB}
-                  isDeuce={game.isDeuce}
-                  inSuddenDeath={state.inSuddenDeath}
-                  colorTheme="rose"
-                  isLocked={interactingTeam !== null && interactingTeam !== 'B'}
-                  onInteractionStart={() => setInteractingTeam('B')}
-                  onInteractionEnd={() => setInteractingTeam(null)}
-                  reverseLayout={isSwapped}
-                  scoreRefCallback={setScoreElB}
-              />
-           ) : (
-              <ScoreCardNormal
-                  teamId="B"
-                  team={state.teamBRoster}
-                  score={state.scoreB}
-                  setsWon={state.setsB}
-                  isServing={state.servingTeam === 'B'}
-                  onAdd={() => game.addPoint('B')}
-                  onSubtract={() => game.subtractPoint('B')}
-                  onToggleServe={() => game.toggleService()}
-                  timeouts={state.timeoutsB}
-                  onTimeout={() => game.useTimeout('B')}
-                  isMatchPoint={game.isMatchPointB}
-                  isSetPoint={game.isSetPointB}
-                  isDeuce={game.isDeuce}
-                  inSuddenDeath={state.inSuddenDeath}
-                  reverseLayout={isSwapped}
-                  setsNeededToWin={game.setsNeededToWin}
-                  colorTheme="rose"
-                  isLocked={interactingTeam !== null && interactingTeam !== 'B'}
-                  onInteractionStart={() => setInteractingTeam('B')}
-                  onInteractionEnd={() => setInteractingTeam(null)}
-              />
+              <>
+                <ScoreCardNormal
+                    teamId="A"
+                    team={state.teamARoster}
+                    score={state.scoreA}
+                    setsWon={state.setsA}
+                    isServing={state.servingTeam === 'A'}
+                    onAdd={() => game.addPoint('A')}
+                    onSubtract={() => game.subtractPoint('A')}
+                    onToggleServe={() => game.toggleService()}
+                    timeouts={state.timeoutsA}
+                    onTimeout={() => game.useTimeout('A')}
+                    isMatchPoint={game.isMatchPointA}
+                    isSetPoint={game.isSetPointA}
+                    isDeuce={game.isDeuce}
+                    inSuddenDeath={state.inSuddenDeath}
+                    reverseLayout={isSwapped}
+                    setsNeededToWin={game.setsNeededToWin}
+                    colorTheme="indigo"
+                    isLocked={interactingTeam !== null && interactingTeam !== 'A'}
+                    onInteractionStart={() => setInteractingTeam('A')}
+                    onInteractionEnd={() => setInteractingTeam(null)}
+                />
+                <ScoreCardNormal
+                    teamId="B"
+                    team={state.teamBRoster}
+                    score={state.scoreB}
+                    setsWon={state.setsB}
+                    isServing={state.servingTeam === 'B'}
+                    onAdd={() => game.addPoint('B')}
+                    onSubtract={() => game.subtractPoint('B')}
+                    onToggleServe={() => game.toggleService()}
+                    timeouts={state.timeoutsB}
+                    onTimeout={() => game.useTimeout('B')}
+                    isMatchPoint={game.isMatchPointB}
+                    isSetPoint={game.isSetPointB}
+                    isDeuce={game.isDeuce}
+                    inSuddenDeath={state.inSuddenDeath}
+                    reverseLayout={isSwapped}
+                    setsNeededToWin={game.setsNeededToWin}
+                    colorTheme="rose"
+                    isLocked={interactingTeam !== null && interactingTeam !== 'B'}
+                    onInteractionStart={() => setInteractingTeam('B')}
+                    onInteractionEnd={() => setInteractingTeam(null)}
+                />
+              </>
            )}
 
            {isFullscreen && (
@@ -302,6 +302,7 @@ function App() {
               fixed bottom-0 left-0 w-full z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+1.5rem)] 
               transition-all duration-500
               ${isFullscreen ? 'translate-y-32 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'}
+              pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
           `}
         >
             <Controls 
@@ -344,6 +345,7 @@ function App() {
           canInstall={pwa.isInstallable}
           isIOS={pwa.isIOS}
           isStandalone={pwa.isStandalone}
+          isMatchActive={game.isMatchActive}
         />
 
         <TeamManagerModal 

@@ -53,7 +53,10 @@
       "deuceStandard": "Ventaja de 2",
       "deuceSuddenDeath": "Muerte Súbita (3pts)"
     },
-    "applyChanges": "Aplicar Cambios"
+    "applyChanges": "Aplicar Cambios",
+    "applyAndReset": "Aplicar y Reiniciar Partido",
+    "warningTitle": "Partido en Progreso",
+    "warningMessage": "Cambiar las reglas ahora reiniciará el marcador actual."
   },
   "presets": {
     "fivb": {

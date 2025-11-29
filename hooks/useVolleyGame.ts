@@ -1,4 +1,5 @@
 
+
 import { useState, useCallback, useEffect } from 'react';
 import { GameState, TeamId, SetHistory, GameConfig, Team, Player, RotationReport } from '../types';
 import { DEFAULT_CONFIG, MIN_LEAD_TO_WIN, SETS_TO_WIN_MATCH } from '../constants';
@@ -118,6 +119,10 @@ export const useVolleyGame = () => {
   const statusB = getGameStatus(state.scoreB, state.scoreA, state.setsB);
 
   const isDeuce = state.scoreA === state.scoreB && state.scoreA >= pointsToWinCurrentSet - 1;
+
+  // Derivação para saber se o jogo está "ativo" (já começou)
+  // Útil para impedir mudanças de configuração sem resetar.
+  const isMatchActive = state.scoreA > 0 || state.scoreB > 0 || state.setsA > 0 || state.setsB > 0 || state.currentSet > 1;
 
   const addPoint = useCallback((team: TeamId) => {
     if (state.isMatchOver) return;
@@ -289,8 +294,22 @@ export const useVolleyGame = () => {
       });
   }, []);
 
-  const applySettings = useCallback((newConfig: GameConfig) => {
-      setState(prev => ({ ...prev, config: newConfig }));
+  // Safe Apply Settings: Can optionally enforce a reset
+  const applySettings = useCallback((newConfig: GameConfig, shouldReset: boolean = false) => {
+      setState(prev => {
+          if (shouldReset) {
+              return {
+                ...INITIAL_STATE,
+                teamAName: prev.teamAName,
+                teamBName: prev.teamBName,
+                teamARoster: prev.teamARoster,
+                teamBRoster: prev.teamBRoster,
+                queue: prev.queue,
+                config: newConfig
+              };
+          }
+          return { ...prev, config: newConfig };
+      });
   }, []);
 
   const rotateTeams = useCallback(() => {
@@ -304,6 +323,7 @@ export const useVolleyGame = () => {
   return {
     state, setState, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, toggleService, useTimeout, applySettings, 
     canUndo: state.actionLog.length > 0, 
+    isMatchActive,
     generateTeams: queueManager.generateTeams,
     updateRosters: queueManager.updateRosters,
     rotateTeams,

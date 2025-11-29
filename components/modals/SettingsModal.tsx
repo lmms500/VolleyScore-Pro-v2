@@ -1,8 +1,10 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameConfig } from '../../types';
-import { Check, Trophy, Sun, Zap, Download, Share, Smartphone, Menu, Moon } from 'lucide-react';
+import { Check, Trophy, Sun, Zap, Download, Share, Smartphone, Menu, Moon, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -10,16 +12,17 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   config: GameConfig;
-  onSave: (config: GameConfig) => void;
+  onSave: (config: GameConfig, reset: boolean) => void;
   onInstall?: () => void;
   canInstall?: boolean;
   isIOS?: boolean;
   isStandalone?: boolean;
+  isMatchActive: boolean;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
     isOpen, onClose, config, onSave, 
-    onInstall, canInstall, isIOS, isStandalone 
+    onInstall, canInstall, isIOS, isStandalone, isMatchActive
 }) => {
   const [localConfig, setLocalConfig] = useState<GameConfig>(config);
   const { t, language, setLanguage } = useTranslation();
@@ -31,8 +34,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [isOpen, config]);
 
+  const hasConfigChanged = JSON.stringify(localConfig) !== JSON.stringify(config);
+  const requiresReset = hasConfigChanged && isMatchActive;
+
   const handleSave = () => {
-    onSave(localConfig);
+    onSave(localConfig, requiresReset);
     onClose();
   };
 
@@ -193,8 +199,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
              </div>
         )}
 
-        <Button onClick={handleSave} className="w-full" size="lg">
-            {t('settings.applyChanges')}
+        {requiresReset && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                <div className="p-2 bg-rose-500/20 rounded-full text-rose-500">
+                    <AlertTriangle size={18} />
+                </div>
+                <div>
+                    <h4 className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wide">{t('settings.warningTitle')}</h4>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-tight">{t('settings.warningMessage')}</p>
+                </div>
+            </div>
+        )}
+
+        <Button onClick={handleSave} className={`w-full ${requiresReset ? 'bg-rose-600 hover:bg-rose-500 border-rose-400 shadow-rose-500/20' : ''}`} size="lg">
+            {requiresReset ? t('settings.applyAndReset') : t('settings.applyChanges')}
         </Button>
       </div>
     </Modal>

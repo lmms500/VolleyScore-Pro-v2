@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { TeamId } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
@@ -47,59 +48,57 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
     }
   }[colorTheme];
 
-  const orderClass = reverseLayout 
-    ? (teamId === 'A' ? 'order-last' : 'order-first') 
-    : (teamId === 'A' ? 'order-first' : 'order-last');
+  // Logic to determine position on screen (Left/Top vs Right/Bottom)
+  // Standard (No Swap): A is Left/Top, B is Right/Bottom
+  // Swapped: A is Right/Bottom, B is Left/Top
+  const isFirstPosition = reverseLayout 
+    ? teamId === 'B' 
+    : teamId === 'A';
+
+  const positionClasses = isFirstPosition
+    ? 'landscape:left-0 landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-0 left-0 w-[100vw] h-[50dvh]' // Left (Landscape) / Top (Portrait)
+    : 'landscape:left-[50vw] landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-[50dvh] left-0 w-[100vw] h-[50dvh]'; // Right (Landscape) / Bottom (Portrait)
 
   const glowClass = (isMatchPoint || isSetPoint) ? theme.glowShadow : '';
 
   return (
     <div 
         className={`
-            flex-1 relative h-full flex flex-col justify-center select-none overflow-visible
-            ${orderClass}
+            fixed z-10 flex flex-col justify-center items-center select-none overflow-visible
+            ${positionClasses}
             ${isLocked ? 'opacity-50 grayscale' : ''}
             transition-all duration-300
         `}
         style={{ touchAction: 'none' }}
         {...gestureHandlers}
     >
-      
-      {/* 
-         Content Container:
-         1. Uses w-full to fill the 50% split.
-         2. Uses flex/items-center to mathematically center the content within this 50% block.
-         3. Ignores safe-area-insets for horizontal positioning to ensure perfect symmetry relative to screen center.
-      */}
-      <div className="w-full h-full flex items-center justify-center relative z-10 overflow-visible">
             
-            {/* The Number Wrapper - Constrained Max Width to ensure HUD Gap */}
-            <div className="relative inline-flex items-center justify-center overflow-visible max-w-[40vw]">
-                
-                {/* DYNAMIC GLOW */}
-                <div 
-                    className={`
-                        absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                        w-[160%] h-[160%] rounded-full transition-opacity duration-700 ease-out 
-                        ${theme.glowRadial} pointer-events-none mix-blend-screen blur-[80px]
-                        ${isServing ? 'opacity-100' : 'opacity-0'}
-                    `} 
-                />
+        {/* The Number Wrapper */}
+        <div className="relative inline-flex items-center justify-center overflow-visible">
+            
+            {/* DYNAMIC GLOW */}
+            <div 
+                className={`
+                    absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                    w-[160%] h-[160%] rounded-full transition-opacity duration-700 ease-out 
+                    ${theme.glowRadial} pointer-events-none mix-blend-screen blur-[80px]
+                    ${isServing ? 'opacity-100' : 'opacity-0'}
+                `} 
+            />
 
-                <span 
-                    ref={scoreRefCallback}
-                    className={`block font-black leading-none text-white tracking-tighter transition-all duration-300 relative z-10 ${glowClass}`}
-                    style={{ 
-                        // Adjusted clamp for elegance and safety gap
-                        fontSize: 'clamp(4rem, 18vw, 13rem)',
-                        textShadow: '0 20px 60px rgba(0,0,0,0.5)',
-                        lineHeight: 0.8
-                    }}
-                >
-                    {score}
-                </span>
-            </div>
-      </div>
+            <span 
+                ref={scoreRefCallback}
+                className={`block font-black leading-none text-white tracking-tighter transition-all duration-300 relative z-10 ${glowClass}`}
+                style={{ 
+                    // Using vw/vh based on orientation to ensure consistency
+                    fontSize: 'clamp(4rem, 18vmax, 13rem)',
+                    textShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                    lineHeight: 0.8
+                }}
+            >
+                {score}
+            </span>
+        </div>
     </div>
   );
 };

@@ -53,7 +53,10 @@
       "deuceStandard": "Vantagem de 2",
       "deuceSuddenDeath": "Morte Súbita (3pts)"
     },
-    "applyChanges": "Aplicar Alterações"
+    "applyChanges": "Aplicar Alterações",
+    "applyAndReset": "Aplicar e Reiniciar Jogo",
+    "warningTitle": "Partida em Andamento",
+    "warningMessage": "Alterar as regras agora irá zerar o placar atual."
   },
   "presets": {
     "fivb": {

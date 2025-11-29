@@ -53,7 +53,10 @@
       "deuceStandard": "Advantage of 2",
       "deuceSuddenDeath": "Sudden Death (3pts)"
     },
-    "applyChanges": "Apply Changes"
+    "applyChanges": "Apply Changes",
+    "applyAndReset": "Apply & Restart Match",
+    "warningTitle": "Match in Progress",
+    "warningMessage": "Changing rules now will reset the current match score."
   },
   "presets": {
     "fivb": {

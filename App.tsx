@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -238,112 +239,114 @@ function App() {
           )}
 
           {/* Main Content Area */}
-          <main className={`
-              transition-all duration-500 min-h-0 overflow-visible
-              ${isFullscreen 
-                 ? 'fixed inset-0 z-10 w-screen h-screen p-0 border-none m-0 block' 
-                 : 'relative flex-1 z-10 flex flex-col landscape:flex-row md:flex-row pt-2 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]'
-              }
-          `}>
-             
-             {isFullscreen ? (
-                <>
-                  <ScoreCardFullscreen 
-                      teamId="A"
-                      score={state.scoreA}
-                      isServing={state.servingTeam === 'A'}
-                      onAdd={handleAddA}
-                      onSubtract={handleSubA} 
-                      isMatchPoint={game.isMatchPointA}
-                      isSetPoint={game.isSetPointA}
-                      isDeuce={game.isDeuce}
-                      inSuddenDeath={state.inSuddenDeath}
-                      colorTheme="indigo"
-                      isLocked={interactingTeam !== null && interactingTeam !== 'A'}
-                      onInteractionStart={handleInteractionStartA}
-                      onInteractionEnd={handleInteractionEnd}
-                      reverseLayout={isSwapped}
-                      scoreRefCallback={setScoreElA}
-                      // Alignment logic based on swapping to keep center clean
-                      alignment={isSwapped ? 'right' : 'left'}
-                  />
-                  <ScoreCardFullscreen
-                      teamId="B"
-                      score={state.scoreB}
-                      isServing={state.servingTeam === 'B'}
-                      onAdd={handleAddB}
-                      onSubtract={handleSubB} 
-                      isMatchPoint={game.isMatchPointB}
-                      isSetPoint={game.isSetPointB}
-                      isDeuce={game.isDeuce}
-                      inSuddenDeath={state.inSuddenDeath}
-                      colorTheme="rose"
-                      isLocked={interactingTeam !== null && interactingTeam !== 'B'}
-                      onInteractionStart={handleInteractionStartB}
-                      onInteractionEnd={handleInteractionEnd}
-                      reverseLayout={isSwapped}
-                      scoreRefCallback={setScoreElB}
-                      // Alignment logic based on swapping to keep center clean
-                      alignment={isSwapped ? 'left' : 'right'}
-                  />
-                </>
-             ) : (
-                <>
-                  <ScoreCardNormal
-                      teamId="A"
-                      team={state.teamARoster}
-                      score={state.scoreA}
-                      setsWon={state.setsA}
-                      isServing={state.servingTeam === 'A'}
-                      onAdd={handleAddA}
-                      onSubtract={handleSubA}
-                      onSetServer={handleSetServerA}
-                      timeouts={state.timeoutsA}
-                      onTimeout={handleTimeoutA}
-                      isMatchPoint={game.isMatchPointA}
-                      isSetPoint={game.isSetPointA}
-                      isDeuce={game.isDeuce}
-                      inSuddenDeath={state.inSuddenDeath}
-                      reverseLayout={isSwapped}
-                      setsNeededToWin={game.setsNeededToWin}
-                      colorTheme="indigo"
-                      isLocked={interactingTeam !== null && interactingTeam !== 'A'}
-                      onInteractionStart={handleInteractionStartA}
-                      onInteractionEnd={handleInteractionEnd}
-                  />
-                  <ScoreCardNormal
-                      teamId="B"
-                      team={state.teamBRoster}
-                      score={state.scoreB}
-                      setsWon={state.setsB}
-                      isServing={state.servingTeam === 'B'}
-                      onAdd={handleAddB}
-                      onSubtract={handleSubB}
-                      onSetServer={handleSetServerB}
-                      timeouts={state.timeoutsB}
-                      onTimeout={handleTimeoutB}
-                      isMatchPoint={game.isMatchPointB}
-                      isSetPoint={game.isSetPointB}
-                      isDeuce={game.isDeuce}
-                      inSuddenDeath={state.inSuddenDeath}
-                      reverseLayout={isSwapped}
-                      setsNeededToWin={game.setsNeededToWin}
-                      colorTheme="rose"
-                      isLocked={interactingTeam !== null && interactingTeam !== 'B'}
-                      onInteractionStart={handleInteractionStartB}
-                      onInteractionEnd={handleInteractionEnd}
-                  />
-                </>
-             )}
-
-             {isFullscreen && (
-                 <button 
-                    onClick={toggleFullscreen}
-                    className="absolute top-[calc(env(safe-area-inset-top)+1rem)] right-[calc(env(safe-area-inset-right)+1rem)] z-[60] p-3 rounded-full bg-black/20 text-white/30 hover:text-white hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all active:scale-95"
-                 >
-                     <Minimize2 size={24} />
-                 </button>
-             )}
+          <main className="relative flex-1 z-10 flex flex-col justify-center items-center min-h-0 p-4">
+              <div className={`
+                  transition-all duration-500 overflow-visible w-full
+                  ${isFullscreen 
+                     ? 'fixed inset-0 z-10 p-0 border-none m-0 block' 
+                     : 'flex flex-col landscape:flex-row md:flex-row gap-4'
+                  }
+              `}>
+                 
+                 {isFullscreen ? (
+                    <>
+                      <ScoreCardFullscreen 
+                          teamId="A"
+                          score={state.scoreA}
+                          isServing={state.servingTeam === 'A'}
+                          onAdd={handleAddA}
+                          onSubtract={handleSubA} 
+                          isMatchPoint={game.isMatchPointA}
+                          isSetPoint={game.isSetPointA}
+                          isDeuce={game.isDeuce}
+                          inSuddenDeath={state.inSuddenDeath}
+                          colorTheme="indigo"
+                          isLocked={interactingTeam !== null && interactingTeam !== 'A'}
+                          onInteractionStart={handleInteractionStartA}
+                          onInteractionEnd={handleInteractionEnd}
+                          reverseLayout={isSwapped}
+                          scoreRefCallback={setScoreElA}
+                          // Alignment logic based on swapping to keep center clean
+                          alignment={isSwapped ? 'right' : 'left'}
+                      />
+                      <ScoreCardFullscreen
+                          teamId="B"
+                          score={state.scoreB}
+                          isServing={state.servingTeam === 'B'}
+                          onAdd={handleAddB}
+                          onSubtract={handleSubB} 
+                          isMatchPoint={game.isMatchPointB}
+                          isSetPoint={game.isSetPointB}
+                          isDeuce={game.isDeuce}
+                          inSuddenDeath={state.inSuddenDeath}
+                          colorTheme="rose"
+                          isLocked={interactingTeam !== null && interactingTeam !== 'B'}
+                          onInteractionStart={handleInteractionStartB}
+                          onInteractionEnd={handleInteractionEnd}
+                          reverseLayout={isSwapped}
+                          scoreRefCallback={setScoreElB}
+                          // Alignment logic based on swapping to keep center clean
+                          alignment={isSwapped ? 'left' : 'right'}
+                      />
+                    </>
+                 ) : (
+                    <>
+                      <ScoreCardNormal
+                          teamId="A"
+                          team={state.teamARoster}
+                          score={state.scoreA}
+                          setsWon={state.setsA}
+                          isServing={state.servingTeam === 'A'}
+                          onAdd={handleAddA}
+                          onSubtract={handleSubA}
+                          onSetServer={handleSetServerA}
+                          timeouts={state.timeoutsA}
+                          onTimeout={handleTimeoutA}
+                          isMatchPoint={game.isMatchPointA}
+                          isSetPoint={game.isSetPointA}
+                          isDeuce={game.isDeuce}
+                          inSuddenDeath={state.inSuddenDeath}
+                          reverseLayout={isSwapped}
+                          setsNeededToWin={game.setsNeededToWin}
+                          colorTheme="indigo"
+                          isLocked={interactingTeam !== null && interactingTeam !== 'A'}
+                          onInteractionStart={handleInteractionStartA}
+                          onInteractionEnd={handleInteractionEnd}
+                      />
+                      <ScoreCardNormal
+                          teamId="B"
+                          team={state.teamBRoster}
+                          score={state.scoreB}
+                          setsWon={state.setsB}
+                          isServing={state.servingTeam === 'B'}
+                          onAdd={handleAddB}
+                          onSubtract={handleSubB}
+                          onSetServer={handleSetServerB}
+                          timeouts={state.timeoutsB}
+                          onTimeout={handleTimeoutB}
+                          isMatchPoint={game.isMatchPointB}
+                          isSetPoint={game.isSetPointB}
+                          isDeuce={game.isDeuce}
+                          inSuddenDeath={state.inSuddenDeath}
+                          reverseLayout={isSwapped}
+                          setsNeededToWin={game.setsNeededToWin}
+                          colorTheme="rose"
+                          isLocked={interactingTeam !== null && interactingTeam !== 'B'}
+                          onInteractionStart={handleInteractionStartB}
+                          onInteractionEnd={handleInteractionEnd}
+                      />
+                    </>
+                 )}
+    
+                 {isFullscreen && (
+                     <button 
+                        onClick={toggleFullscreen}
+                        className="absolute top-[calc(env(safe-area-inset-top)+1rem)] right-[calc(env(safe-area-inset-right)+1rem)] z-[60] p-3 rounded-full bg-black/20 text-white/30 hover:text-white hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all active:scale-95"
+                     >
+                         <Minimize2 size={24} />
+                     </button>
+                 )}
+              </div>
           </main>
 
           {/* Standard Bottom Controls */}

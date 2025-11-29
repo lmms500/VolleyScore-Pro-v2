@@ -1,7 +1,6 @@
 import React from 'react';
-import { Clock, Volleyball, Timer, Zap, AlertCircle } from 'lucide-react';
+import { Clock, Volleyball, Timer, Zap } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
-import { TeamId } from '../../types';
 
 interface FloatingTopBarProps {
   time: number;
@@ -13,7 +12,8 @@ interface FloatingTopBarProps {
   teamNameB: string;
   colorA: 'indigo' | 'rose';
   colorB: 'indigo' | 'rose';
-  server: TeamId | null;
+  isServingLeft: boolean;
+  isServingRight: boolean;
   timeoutsA: number;
   timeoutsB: number;
   onTimeoutA: () => void;
@@ -48,6 +48,7 @@ const TeamSection: React.FC<{
     isMatchPoint: boolean;
     isSetPoint: boolean;
 }> = ({ name, color, isServing, align, timeouts, onTimeout, isMatchPoint, isSetPoint }) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { t } = useTranslation();
     const colorClass = color === 'indigo' ? 'text-indigo-400' : 'text-rose-400';
     const dotColorClass = color === 'indigo' ? 'bg-indigo-500' : 'bg-rose-500';
@@ -129,11 +130,11 @@ const TeamSection: React.FC<{
 
 export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
   time, currentSet, isTieBreak, onToggleTimer, isTimerRunning,
-  teamNameA, teamNameB, colorA, colorB, server, timeoutsA, timeoutsB, onTimeoutA, onTimeoutB,
+  teamNameA, teamNameB, colorA, colorB, 
+  isServingLeft, isServingRight,
+  timeoutsA, timeoutsB, onTimeoutA, onTimeoutB,
   isMatchPointA, isSetPointA, isMatchPointB, isSetPointB, isDeuce, inSuddenDeath
 }) => {
-  const { t } = useTranslation();
-
   return (
     <div 
       className={`
@@ -145,7 +146,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
       <div className="flex items-center gap-2 md:gap-6 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-2xl border border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.6)] ring-1 ring-white/5">
         
         <TeamSection 
-            name={teamNameA} color={colorA} isServing={server === 'A'} align="left"
+            name={teamNameA} color={colorA} isServing={isServingLeft} align="left"
             timeouts={timeoutsA} onTimeout={onTimeoutA}
             isMatchPoint={isMatchPointA} isSetPoint={isSetPointA}
         />
@@ -192,7 +193,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
         <div className="w-px h-6 bg-white/10"></div>
 
         <TeamSection 
-            name={teamNameB} color={colorB} isServing={server === 'B'} align="right"
+            name={teamNameB} color={colorB} isServing={isServingRight} align="right"
             timeouts={timeoutsB} onTimeout={onTimeoutB}
             isMatchPoint={isMatchPointB} isSetPoint={isSetPointB}
         />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
 import { ScoreCardNormal } from './components/ScoreCardNormal';
@@ -123,7 +123,9 @@ function App() {
   return (
     <LayoutProvider>
       <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative">
-        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        
+        {/* Background - Fixed to cover entire viewport including safe areas */}
+        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
           <div className={`
               absolute -top-[20%] -left-[20%] w-[80vw] h-[80vw] blur-[120px] rounded-full mix-blend-screen opacity-60 animate-pulse duration-[4000ms] transition-colors duration-1000
               ${isSwapped ? 'bg-rose-600/20' : 'bg-indigo-600/20'}
@@ -162,7 +164,8 @@ function App() {
                   teamNameB={isSwapped ? state.teamAName : state.teamBName}
                   colorA={colorLeft}
                   colorB={colorRight}
-                  server={state.servingTeam}
+                  isServingLeft={isSwapped ? state.servingTeam === 'B' : state.servingTeam === 'A'}
+                  isServingRight={isSwapped ? state.servingTeam === 'A' : state.servingTeam === 'B'}
                   timeoutsA={isSwapped ? state.timeoutsB : state.timeoutsA}
                   timeoutsB={isSwapped ? state.timeoutsA : state.timeoutsB}
                   onTimeoutA={isSwapped ? () => game.useTimeout('B') : () => game.useTimeout('A')}
@@ -187,10 +190,14 @@ function App() {
         )}
 
         {/* Main Content Area */}
+        {/* In Fullscreen: Fixed position to ignore body safe-area padding and center perfectly relative to viewport */}
         <main className={`
-            flex-1 flex relative z-10 transition-all duration-500 min-h-0 overflow-visible
+            flex transition-all duration-500 min-h-0 overflow-visible
             flex-col landscape:flex-row md:flex-row
-            ${isFullscreen ? 'p-0' : 'pb-28 landscape:pb-20 pt-2 md:pb-32'}
+            ${isFullscreen 
+               ? 'fixed inset-0 z-10 w-screen h-screen p-0' 
+               : 'relative flex-1 z-10 pb-28 landscape:pb-20 pt-2 md:pb-32'
+            }
         `}>
            
            {isFullscreen ? (

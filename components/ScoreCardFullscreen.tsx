@@ -38,23 +38,21 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
     indigo: {
       text: 'text-indigo-400',
       bg: 'bg-indigo-500',
-      // Enhanced gradient from src version
-      glowRadial: 'bg-[radial-gradient(circle,rgba(99,102,241,0.6)_0%,rgba(99,102,241,0)_70%)]',
+      // Gradient mais suave e focado no centro
+      glowRadial: 'bg-[radial-gradient(circle,rgba(99,102,241,0.5)_0%,rgba(99,102,241,0)_70%)]',
       glowShadow: 'drop-shadow-[0_0_30px_rgba(99,102,241,0.7)]'
     },
     rose: {
       text: 'text-rose-400',
       bg: 'bg-rose-500',
-      // Enhanced gradient from src version
-      glowRadial: 'bg-[radial-gradient(circle,rgba(244,63,94,0.6)_0%,rgba(244,63,94,0)_70%)]',
+      // Gradient mais suave e focado no centro
+      glowRadial: 'bg-[radial-gradient(circle,rgba(244,63,94,0.5)_0%,rgba(244,63,94,0)_70%)]',
       glowShadow: 'drop-shadow-[0_0_30px_rgba(244,63,94,0.7)]'
     }
   }[colorTheme];
 
-  // Logic to determine visual side (Left or Right)
   const isVisualLeft = reverseLayout ? teamId === 'B' : teamId === 'A';
   
-  // Push content towards safe edges to make room for center HUD
   const alignClass = isVisualLeft 
     ? 'items-center md:items-start pl-[env(safe-area-inset-left)] md:pl-[5vw]' 
     : 'items-center md:items-end pr-[env(safe-area-inset-right)] md:pr-[5vw]';
@@ -77,22 +75,12 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
         {...gestureHandlers}
     >
       
-      {/* Content Container (Number + Badge + Glow) */}
+      {/* Content Container */}
       <div className="relative z-10 p-4 md:p-10 flex flex-col items-center overflow-visible">
         
-            {/* Background Glow (Centered strictly on this container, huge size to avoid clipping) */}
-            <div 
-                className={`
-                    absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                    w-[250%] h-[250%] rounded-full transition-opacity duration-1000 ease-in-out 
-                    ${theme.glowRadial} pointer-events-none mix-blend-screen 
-                    ${isServing ? 'opacity-100' : 'opacity-0'}
-                `} 
-            />
-
             {/* Badge - Always above the number */}
             {(isMatchPoint || isSetPoint || inSuddenDeath || isDeuce) && (
-                <div className="absolute top-[-2rem] md:top-[-3rem] z-20 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="absolute top-[-2rem] md:top-[-3rem] z-20 animate-in fade-in slide-in-from-bottom-2 duration-300 pointer-events-none">
                     <div 
                         className={`
                             px-4 py-1.5 rounded-lg backdrop-blur-xl border border-white/20 shadow-2xl
@@ -113,13 +101,23 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
                 </div>
             )}
 
-            {/* The Number - Wrapped for strict ref measurement and glow alignment */}
-            <div className="relative">
+            {/* The Number Wrapper - Inline Block to hug the text width for perfect glow centering */}
+            <div className="relative inline-flex items-center justify-center overflow-visible">
+                
+                {/* DYNAMIC GLOW: Sits inside the inline wrapper, centered on the glyph */}
+                <div 
+                    className={`
+                        absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                        w-[160%] h-[160%] rounded-full transition-opacity duration-700 ease-out 
+                        ${theme.glowRadial} pointer-events-none mix-blend-screen blur-[80px]
+                        ${isServing ? 'opacity-100' : 'opacity-0'}
+                    `} 
+                />
+
                 <span 
                     ref={scoreRefCallback}
-                    className={`block font-black leading-none text-white tracking-tighter transition-all duration-300 ${glowClass}`}
+                    className={`block font-black leading-none text-white tracking-tighter transition-all duration-300 relative z-10 ${glowClass}`}
                     style={{ 
-                        // Massive responsive font
                         fontSize: 'clamp(10rem, 35vw, 26rem)',
                         textShadow: '0 20px 60px rgba(0,0,0,0.5)',
                         lineHeight: 0.8

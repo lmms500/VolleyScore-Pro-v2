@@ -27,8 +27,9 @@ const GameTimer = memo(({ duration }: { duration: number }) => {
       {formattedTime}
     </span>
   );
-});
+}, (prev, next) => prev.duration === next.duration);
 
+// Fully memoized list that ignores parent re-renders unless history actually changes
 const SetHistoryList = memo(({ history }: { history: SetHistory[] }) => {
     const { t } = useTranslation();
     return (
@@ -67,6 +68,12 @@ const SetHistoryList = memo(({ history }: { history: SetHistory[] }) => {
             </AnimatePresence>
         </div>
     );
+}, (prev, next) => {
+    // Custom comparison to be absolutely sure we don't re-render on timer ticks
+    if (prev.history.length !== next.history.length) return false;
+    // Simple check: if length is same, check last item to see if score updated (though usually history is append-only)
+    // For volleyball history, shallow eq on array + length check is usually enough as sets are immutable once pushed
+    return prev.history === next.history;
 });
 
 export const HistoryBar: React.FC<HistoryBarProps> = memo(({ history, duration, setsA, setsB }) => {
@@ -78,7 +85,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = memo(({ history, duration, 
       className="max-w-4xl mx-auto h-16 bg-white/50 dark:bg-slate-900/40 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-full flex items-center justify-between px-6 shadow-lg"
     >
       
-      {/* Set Scores - Memoized */}
+      {/* Set Scores - Memoized & Isolated */}
       <SetHistoryList history={history} />
 
       {/* Timer & Global Score */}
@@ -100,7 +107,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = memo(({ history, duration, 
 });
 
 // Simple ticker for the set count in history bar
-const ScoreTickerSimple = ({ value, color }: { value: number, color: string }) => (
+const ScoreTickerSimple = memo(({ value, color }: { value: number, color: string }) => (
   <AnimatePresence mode="popLayout" initial={false}>
     <motion.span 
       key={value}
@@ -112,4 +119,4 @@ const ScoreTickerSimple = ({ value, color }: { value: number, color: string }) =
       {value}
     </motion.span>
   </AnimatePresence>
-);
+));

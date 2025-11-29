@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -74,7 +72,6 @@ function App() {
   // Force re-measure trigger on swap
   const [layoutVersion, setLayoutVersion] = useState(0);
   useEffect(() => {
-    // Small delay to allow DOM transition to settle
     const t = setTimeout(() => setLayoutVersion(v => v + 1), 50);
     return () => clearTimeout(t);
   }, [isSwapped, isFullscreen]);
@@ -158,7 +155,6 @@ function App() {
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
-  // Prop Calculation for Display
   const setsLeft = isSwapped ? state.setsB : state.setsA;
   const setsRight = isSwapped ? state.setsA : state.setsB;
   const colorLeft = isSwapped ? 'rose' : 'indigo';
@@ -169,7 +165,6 @@ function App() {
       <LayoutProvider>
         <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative">
           
-          {/* Background - Fixed to cover entire viewport including safe areas */}
           <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden will-change-transform">
             <div className={`
                 absolute -top-[20%] -left-[20%] w-[80vw] h-[80vw] blur-[120px] rounded-full mix-blend-screen opacity-60 animate-pulse duration-[4000ms] transition-colors duration-1000
@@ -181,10 +176,9 @@ function App() {
             `}></div>
           </div>
 
-          {/* Global Sudden Death Overlay - Applied to both Normal and Fullscreen */}
           <SuddenDeathOverlay active={state.inSuddenDeath} />
 
-          {/* Normal Mode History Bar */}
+          {/* History Bar - Hidden in Fullscreen, Sticky in Normal */}
           <div className={`
               z-30 transition-all duration-500 flex-none
               ${isFullscreen 
@@ -199,7 +193,6 @@ function App() {
             />
           </div>
           
-          {/* Fullscreen Floating Elements */}
           {isFullscreen && (
               <>
                 <FloatingTopBar
@@ -220,7 +213,6 @@ function App() {
                     timeoutsB={isSwapped ? state.timeoutsA : state.timeoutsB}
                     onTimeoutA={isSwapped ? handleTimeoutB : handleTimeoutA}
                     onTimeoutB={isSwapped ? handleTimeoutA : handleTimeoutB}
-                    // Status Passing
                     isMatchPointA={isSwapped ? game.isMatchPointB : game.isMatchPointA}
                     isSetPointA={isSwapped ? game.isSetPointB : game.isSetPointA}
                     isMatchPointB={isSwapped ? game.isMatchPointA : game.isMatchPointB}
@@ -239,7 +231,6 @@ function App() {
               </>
           )}
 
-          {/* Main Content Area */}
           <main className="relative flex-1 z-10 flex flex-col justify-center items-center min-h-0 p-4">
               <div className={`
                   transition-all duration-500 overflow-visible w-full
@@ -267,7 +258,6 @@ function App() {
                           onInteractionEnd={handleInteractionEnd}
                           reverseLayout={isSwapped}
                           scoreRefCallback={setScoreElA}
-                          // Alignment logic based on swapping to keep center clean
                           alignment={isSwapped ? 'right' : 'left'}
                       />
                       <ScoreCardFullscreen
@@ -286,7 +276,6 @@ function App() {
                           onInteractionEnd={handleInteractionEnd}
                           reverseLayout={isSwapped}
                           scoreRefCallback={setScoreElB}
-                          // Alignment logic based on swapping to keep center clean
                           alignment={isSwapped ? 'left' : 'right'}
                       />
                     </>
@@ -350,7 +339,6 @@ function App() {
               </div>
           </main>
 
-          {/* Standard Bottom Controls */}
           <div 
             className={`
                 flex-none w-full z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4
@@ -370,7 +358,6 @@ function App() {
               />
           </div>
 
-          {/* Floating Control Bar */}
           {isFullscreen && (
             <FloatingControlBar 
                 onUndo={undo}
@@ -389,7 +376,6 @@ function App() {
              onExitFullscreen={exitFullscreenMode}
           />
 
-          {/* Lazy Loaded Modals wrapped in Suspense */}
           <Suspense fallback={null}>
             {showSettings && (
               <SettingsModal 

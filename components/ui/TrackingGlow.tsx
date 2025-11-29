@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState, memo } from 'react';
+import React, { useLayoutEffect, useRef, memo } from 'react';
 import { motion } from 'framer-motion';
 
 interface TrackingGlowProps {
@@ -19,41 +19,50 @@ export const TrackingGlow: React.FC<TrackingGlowProps> = memo(({
   isPressed
 }) => {
   const glowRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState(0);
+  // We use a ref to track the last applied size to avoid DOM thrashing if it hasn't changed
+  const lastSizeRef = useRef(0);
 
   // High-performance loop to track the target element
+  // Completely detached from React State to prevent re-renders per frame
   useLayoutEffect(() => {
     let rAFId: number;
+    let isRunning = true;
 
     const updatePosition = () => {
+      if (!isRunning) return;
+
       if (targetRef.current && glowRef.current) {
-        const rect = targetRef.current.getBoundingClientRect();
+        const targetRect = targetRef.current.getBoundingClientRect();
         
         // Calculate absolute center
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
+        const centerX = targetRect.left + targetRect.width / 2;
+        const centerY = targetRect.top + targetRect.height / 2;
         
         // Determine size based on the height of the number (proportional scaling)
-        // We use height because width varies drastically between "1" and "10"
-        const calculatedSize = rect.height * 1.5; 
+        // Using height is more stable for variable width fonts/numbers
+        const calculatedSize = targetRect.height * 1.5; 
         
-        if (Math.abs(calculatedSize - size) > 5) {
-            setSize(calculatedSize);
-        }
-
-        // Apply hardware-accelerated transform directly to DOM for 0 lag during layout shifts
+        // Direct DOM manipulation (GPU friendly composite properties)
         glowRef.current.style.transform = `translate3d(${centerX}px, ${centerY}px, 0) translate(-50%, -50%)`;
-        glowRef.current.style.width = `${calculatedSize}px`;
-        glowRef.current.style.height = `${calculatedSize}px`;
+        
+        // Only touch width/height if significantly changed to reduce layout trashing
+        if (Math.abs(calculatedSize - lastSizeRef.current) > 2) {
+            glowRef.current.style.width = `${calculatedSize}px`;
+            glowRef.current.style.height = `${calculatedSize}px`;
+            lastSizeRef.current = calculatedSize;
+        }
       }
       rAFId = requestAnimationFrame(updatePosition);
     };
 
     // Start loop
-    updatePosition();
+    rAFId = requestAnimationFrame(updatePosition);
 
-    return () => cancelAnimationFrame(rAFId);
-  }, [targetRef, size]); 
+    return () => {
+      isRunning = false;
+      cancelAnimationFrame(rAFId);
+    };
+  }, [targetRef]); // Dependency on targetRef ensures we re-bind if the target changes
 
   const theme = {
     indigo: { haloColor: 'bg-indigo-500' },
@@ -70,13 +79,13 @@ export const TrackingGlow: React.FC<TrackingGlowProps> = memo(({
         mix-blend-screen blur-[60px] md:blur-[100px] will-change-transform
         ${haloColorClass}
       `}
+      // Framer Motion handles the opacity/scale tweening efficiently
       animate={
         isPressed 
           ? { scale: 1.1, opacity: 0.8 } 
           : isCritical 
             ? { 
                 scale: [1, 1.35, 1],
-                // Increased opacity range for critical moments
                 opacity: isMatchPoint ? [0.6, 1, 0.6] : [0.4, 0.8, 0.4],
               }
             : { 

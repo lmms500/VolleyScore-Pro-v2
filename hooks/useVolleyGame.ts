@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { GameState, TeamId, SetHistory, GameConfig, Team, Player, RotationReport } from '../types';
 import { DEFAULT_CONFIG, MIN_LEAD_TO_WIN, SETS_TO_WIN_MATCH } from '../constants';
@@ -6,7 +5,7 @@ import { usePlayerQueue } from './usePlayerQueue';
 import { SecureStorage } from '../services/SecureStorage';
 import { sanitizeInput, isValidScoreOperation, isValidTimeoutRequest } from '../utils/security';
 
-const STORAGE_KEY = 'action_log'; // Prefix added by SecureStorage
+const STORAGE_KEY = 'action_log';
 
 const INITIAL_STATE: GameState = {
   teamAName: 'Home',
@@ -58,7 +57,6 @@ export const useVolleyGame = () => {
       const { courtA, courtB, queue, lastReport } = queueManager.queueState;
       setState(prev => {
           const reportToUse = lastReport || prev.rotationReport;
-          
           // Identity check to avoid render loops
           if (prev.teamARoster === courtA && prev.teamBRoster === courtB && prev.queue === queue && prev.rotationReport === reportToUse) return prev;
           
@@ -74,22 +72,19 @@ export const useVolleyGame = () => {
       });
   }, [queueManager.queueState]);
 
-  // Persistence: LOAD (Secure)
+  // Persistence: LOAD
   useEffect(() => {
     const loadGame = async () => {
       const savedState = await SecureStorage.load<GameState>(STORAGE_KEY);
       
       if (savedState) { 
-        // Validation: Ensure config exists even if save is old
         if(!savedState.config) savedState.config = DEFAULT_CONFIG;
         if(!Array.isArray(savedState.queue)) savedState.queue = [];
         if(!savedState.actionLog) savedState.actionLog = [];
 
-        // Deep Sanitization of loaded names to ensure no stored XSS payload executes
         savedState.teamAName = sanitizeInput(savedState.teamAName);
         savedState.teamBName = sanitizeInput(savedState.teamBName);
         
-        // Clean obsolete actions
         savedState.actionLog = savedState.actionLog.filter((action: any) => action.type !== 'TOGGLE_SERVE');
         
         setState(savedState); 
@@ -99,24 +94,26 @@ export const useVolleyGame = () => {
     loadGame();
   }, []);
 
-  // Persistence: SAVE (Secure)
+  // Persistence: SAVE
   useEffect(() => {
     if (isLoaded) {
         SecureStorage.save(STORAGE_KEY, state);
     }
   }, [state, isLoaded]);
 
-  // Timer
+  // Timer: Optimized to use functional update to avoid dependency on 'state' in effects
   useEffect(() => {
     let interval: any;
     if (state.isTimerRunning && !state.isMatchOver) {
-      interval = setInterval(() => setState(prev => ({ ...prev, matchDurationSeconds: prev.matchDurationSeconds + 1 })), 1000);
+      interval = setInterval(() => {
+        setState(prev => ({ ...prev, matchDurationSeconds: prev.matchDurationSeconds + 1 }));
+      }, 1000);
     }
     return () => clearInterval(interval);
   }, [state.isTimerRunning, state.isMatchOver]);
 
   // --- SCORE LOGIC ---
-
+  // Calculated derived state for UI consumption
   const isTieBreak = state.config.hasTieBreak && state.currentSet === state.config.maxSets;
   const pointsToWinCurrentSet = isTieBreak ? state.config.tieBreakPoints : state.config.pointsPerSet;
   const setsNeededToWin = SETS_TO_WIN_MATCH(state.config.maxSets);
@@ -133,12 +130,13 @@ export const useVolleyGame = () => {
   const isDeuce = state.scoreA === state.scoreB && state.scoreA >= pointsToWinCurrentSet - 1;
   const isMatchActive = state.scoreA > 0 || state.scoreB > 0 || state.setsA > 0 || state.setsB > 0 || state.currentSet > 1;
 
+  // Optimized Actions: Using functional updates to keep callbacks stable
+  // This allows passing these functions to memoized components without breaking memoization
+  
   const addPoint = useCallback((team: TeamId) => {
-    // GUARD: Match Over
-    if (state.isMatchOver) return;
-
     setState(prev => {
-      // GUARD: Max Score sanity check
+      // GUARD: Match Over or Score Limit
+      if (prev.isMatchOver) return prev;
       if (prev.scoreA > 200 || prev.scoreB > 200) return prev;
 
       let newScoreA = team === 'A' ? prev.scoreA + 1 : prev.scoreA;
@@ -174,6 +172,7 @@ export const useVolleyGame = () => {
           const matchWinner = newSetsA === setsNeeded ? 'A' : (newSetsB === setsNeeded ? 'B' : null);
           
           let previewReport = null;
+          // Note: accessing external ref/hook inside setState callback is safe for stable hooks
           if (matchWinner) {
               previewReport = queueManager.getRotationPreview(matchWinner);
           }
@@ -203,20 +202,18 @@ export const useVolleyGame = () => {
           actionLog: [...prev.actionLog, { type: 'POINT', team }] 
       };
     });
-  }, [state.isMatchOver, queueManager]);
+  }, [queueManager]); // queueManager dependency is unavoidable but stable enough
 
   const subtractPoint = useCallback((team: TeamId) => {
-    if (state.isMatchOver) return;
     setState(prev => {
-        // GUARD: No Negative Scores
+        if (prev.isMatchOver) return prev;
         if (!isValidScoreOperation(team === 'A' ? prev.scoreA : prev.scoreB, -1)) return prev;
-
         return { ...prev, scoreA: team === 'A' ? prev.scoreA - 1 : prev.scoreA, scoreB: team === 'B' ? prev.scoreB - 1 : prev.scoreB };
     });
-  }, [state.isMatchOver]);
+  }, []);
   
-  const useTimeout = useCallback((team: TeamId) => setState(prev => {
-      // GUARD: Validate Timeout Request
+  const useTimeout = useCallback((team: TeamId) => {
+    setState(prev => {
       if (team === 'A' && !isValidTimeoutRequest(prev.timeoutsA)) return prev;
       if (team === 'B' && !isValidTimeoutRequest(prev.timeoutsB)) return prev;
 
@@ -232,12 +229,12 @@ export const useVolleyGame = () => {
           timeoutsB: newTimeoutsB,
           actionLog: [...prev.actionLog, { type: 'TIMEOUT', team }]
       };
-  }), []);
+    });
+  }, []);
 
   const undo = useCallback(() => { 
-    if (state.isMatchOver) return; 
-
     setState(prev => {
+        if (prev.isMatchOver) return prev; 
         if (prev.actionLog.length === 0) return prev;
 
         const newLog = [...prev.actionLog];
@@ -264,7 +261,7 @@ export const useVolleyGame = () => {
 
         return prev;
     });
-  }, [state.isMatchOver]); 
+  }, []); 
 
   const resetMatch = useCallback(() => {
       setState(prev => ({ 
@@ -302,6 +299,11 @@ export const useVolleyGame = () => {
   }, []);
 
   const rotateTeams = useCallback(() => {
+    // Note: matchWinner needs to be read from state current value during execution
+    // Since we are outside setState, we need 'state' dependency, OR refactor logic.
+    // However, rotateTeams is called ONCE at match end, so stability is less critical than addPoint.
+    // To make it purely stable, we can move logic inside setState, but side effects (queueManager.rotateTeams) need care.
+    // Better approach for this one: allow state read, it triggers rarely.
     if (!state.matchWinner) return;
     queueManager.rotateTeams(state.matchWinner);
     setState(prev => ({

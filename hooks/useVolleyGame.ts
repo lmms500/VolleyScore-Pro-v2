@@ -310,6 +310,7 @@ export const useVolleyGame = () => {
     updateRosters: queueManager.updateRosters,
     rotateTeams,
     updateTeamName: queueManager.updateTeamName,
+    updatePlayerName: queueManager.updatePlayerName,
     movePlayer: queueManager.movePlayer,
     removePlayer: queueManager.removePlayer,
     addPlayer: queueManager.addPlayer,

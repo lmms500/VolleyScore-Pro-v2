@@ -40,50 +40,44 @@ const TeamSection: React.FC<{
     onTimeout: () => void;
 }> = ({ name, color, isServing, align, timeouts, onTimeout }) => {
     const colorClass = color === 'indigo' ? 'text-indigo-400' : 'text-rose-400';
-    const bgClass = color === 'indigo' ? 'bg-indigo-500' : 'bg-rose-500';
     
     // Timeouts >= 2 means both used (assuming max 2 per set)
     const isExhausted = timeouts >= 2;
 
     return (
         <div className={`flex items-center gap-4 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
-            {/* Timeout Section: Dots outside/next to button */}
-            <div className={`flex items-center gap-3 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
+            {/* Timeout Button (Larger & Accessible with vertical indicators) */}
+            <button 
+                onClick={(e) => { e.stopPropagation(); if(!isExhausted) onTimeout(); }}
+                disabled={isExhausted}
+                className={`
+                    flex items-center justify-center gap-2 h-10 px-3.5 rounded-full border border-white/10 
+                    transition-all active:scale-95
+                    ${isExhausted 
+                        ? 'bg-white/5 opacity-40 cursor-not-allowed' 
+                        : 'bg-white/10 hover:bg-white/20 hover:border-white/30 text-white shadow-lg'}
+                `}
+                aria-label="Timeout"
+            >
+                <Timer size={20} />
                 
-                {/* Button */}
-                <button 
-                    onClick={(e) => { e.stopPropagation(); if(!isExhausted) onTimeout(); }}
-                    disabled={isExhausted}
-                    className={`
-                        flex items-center justify-center w-[44px] h-[44px] rounded-full border border-white/10 
-                        transition-all active:scale-95 touch-manipulation
-                        ${isExhausted 
-                            ? 'bg-white/5 opacity-40 cursor-not-allowed' 
-                            : 'bg-white/10 hover:bg-white/20 hover:border-white/30 text-white shadow-lg'}
-                    `}
-                    aria-label="Timeout"
-                >
-                    <Timer size={22} />
-                </button>
-
-                {/* Vertical Dots */}
+                {/* Vertical Dots Indicator */}
                 <div className="flex flex-col gap-[3px]">
                      {[1, 2].map(i => {
-                         // Logic: i=1 (first dot), i=2 (second dot)
-                         // If timeouts=0, both available (colored)
-                         // If timeouts=1, dot 1 used (gray/hollow), dot 2 available (colored)
-                         // If timeouts=2, both used
+                         // Logic: If i is greater than timeouts used, it is available.
+                         // timeouts=0 -> 1>0(Avail), 2>0(Avail)
+                         // timeouts=1 -> 1>1(Used), 2>1(Avail)
+                         // timeouts=2 -> 1>2(Used), 2>2(Used)
                          const isAvailable = i > timeouts;
-                         
                          return (
                              <div 
                                 key={i} 
-                                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isAvailable ? `${bgClass} shadow-[0_0_6px_currentColor]` : 'bg-white/10'}`} 
+                                className={`w-2 h-2 rounded-full transition-all duration-300 ${isAvailable ? 'bg-white shadow-[0_0_6px_rgba(255,255,255,0.8)]' : 'bg-white/20'}`} 
                              />
                          );
                      })}
                 </div>
-            </div>
+            </button>
 
             {/* Name & Serve */}
             <div className={`flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>

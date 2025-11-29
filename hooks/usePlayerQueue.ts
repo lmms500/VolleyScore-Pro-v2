@@ -52,12 +52,9 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
       .filter(n => n.trim().length > 0)
       .map(name => createPlayer(name));
 
-    // 2. Shuffle
-    for (let i = allPlayers.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [allPlayers[i], allPlayers[j]] = [allPlayers[j], allPlayers[i]];
-    }
-
+    // 2. Sequential Distribution (No Shuffle)
+    // The list is processed in the exact order provided by the user.
+    
     // 3. Distribute to Courts
     const teamA_Players = allPlayers.slice(0, PLAYER_LIMIT_ON_COURT);
     const teamB_Players = allPlayers.slice(PLAYER_LIMIT_ON_COURT, PLAYER_LIMIT_ON_COURT * 2);
@@ -103,6 +100,29 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
       }
       
       return newState;
+    });
+  }, []);
+
+  const updatePlayerName = useCallback((playerId: string, newName: string) => {
+    setQueueState(prev => {
+        const updatePlayerInList = (players: Player[]) => 
+            players.map(p => p.id === playerId ? { ...p, name: newName.trim() } : p);
+
+        // Try Court A
+        if (prev.courtA.players.some(p => p.id === playerId)) {
+            return { ...prev, courtA: { ...prev.courtA, players: updatePlayerInList(prev.courtA.players) }};
+        }
+        // Try Court B
+        if (prev.courtB.players.some(p => p.id === playerId)) {
+            return { ...prev, courtB: { ...prev.courtB, players: updatePlayerInList(prev.courtB.players) }};
+        }
+        // Try Queue
+        const newQueue = prev.queue.map(team => ({
+            ...team,
+            players: updatePlayerInList(team.players)
+        }));
+        
+        return { ...prev, queue: newQueue };
     });
   }, []);
 
@@ -487,6 +507,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     queueState,
     generateTeams,
     updateTeamName,
+    updatePlayerName,
     rotateTeams,
     getRotationPreview,
     togglePlayerFixed,

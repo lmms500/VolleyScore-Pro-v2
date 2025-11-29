@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
 import { ScoreCardNormal } from './components/ScoreCardNormal';
@@ -35,25 +34,29 @@ function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [interactingTeam, setInteractingTeam] = useState<TeamId | null>(null);
 
-  // Layout Measurement Refs (Callback refs to trigger re-renders on mount)
+  // Refs for HUD Measurement (Passed down to ScoreCards)
   const [scoreElA, setScoreElA] = useState<HTMLElement | null>(null);
   const [scoreElB, setScoreElB] = useState<HTMLElement | null>(null);
-  const [nameElA, setNameElA] = useState<HTMLElement | null>(null);
-  const [nameElB, setNameElB] = useState<HTMLElement | null>(null);
 
-  // Determine which visual element corresponds to which logic depending on swap
+  // Determine which visual element corresponds to which logic based on swap
   const isSwapped = state.swappedSides;
   const visualLeftScoreEl = isSwapped ? scoreElB : scoreElA;
   const visualRightScoreEl = isSwapped ? scoreElA : scoreElB;
-  const visualLeftNameEl = isSwapped ? nameElB : nameElA;
-  const visualRightNameEl = isSwapped ? nameElA : nameElB;
+
+  // Force re-measure trigger on swap
+  const [layoutVersion, setLayoutVersion] = useState(0);
+  useEffect(() => {
+    // Small delay to allow DOM transition to settle
+    const t = setTimeout(() => setLayoutVersion(v => v + 1), 50);
+    return () => clearTimeout(t);
+  }, [isSwapped, isFullscreen]);
 
   const hudPlacement = useHudMeasure({ 
       leftScoreEl: visualLeftScoreEl, 
       rightScoreEl: visualRightScoreEl,
-      leftNameEl: visualLeftNameEl,
-      rightNameEl: visualRightNameEl,
-      enabled: isFullscreen
+      enabled: isFullscreen,
+      maxSets: state.config.maxSets,
+      version: layoutVersion
   });
 
   const enterFullscreenMode = async () => {
@@ -111,16 +114,12 @@ function App() {
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
-  // Visual Props Calculation for HUD (Swap Handling)
+  // Prop Calculation for Display
   const setsLeft = isSwapped ? state.setsB : state.setsA;
   const setsRight = isSwapped ? state.setsA : state.setsB;
-  const timeoutsLeft = isSwapped ? state.timeoutsB : state.timeoutsA;
-  const timeoutsRight = isSwapped ? state.timeoutsA : state.timeoutsB;
-  const onTimeoutLeft = isSwapped ? () => game.useTimeout('B') : () => game.useTimeout('A');
-  const onTimeoutRight = isSwapped ? () => game.useTimeout('A') : () => game.useTimeout('B');
   const colorLeft = isSwapped ? 'rose' : 'indigo';
   const colorRight = isSwapped ? 'indigo' : 'rose';
-
+  
   return (
     <LayoutProvider>
       <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative">
@@ -135,11 +134,12 @@ function App() {
           `}></div>
         </div>
 
+        {/* Normal Mode History Bar */}
         <div className={`
             z-30 transition-all duration-500 flex-none
             ${isFullscreen 
               ? '-translate-y-24 opacity-0 pointer-events-none absolute w-full' 
-              : 'relative pt-4 px-4 pb-2'}
+              : 'relative pt-[env(safe-area-inset-top)] px-4 pb-2 mt-2'}
         `}>
           <HistoryBar 
             history={state.history} 
@@ -156,30 +156,30 @@ function App() {
                   time={state.matchDurationSeconds}
                   currentSet={state.currentSet}
                   isTieBreak={game.isTieBreak}
-                  isDeuce={game.isDeuce}
                   onToggleTimer={toggleTimer}
                   isTimerRunning={state.isTimerRunning}
-                  inSuddenDeath={state.inSuddenDeath}
-                  centeredLeft={hudPlacement.topBarLeft}
-                  teamNameA={state.teamAName}
-                  teamNameB={state.teamBName}
+                  teamNameA={isSwapped ? state.teamBName : state.teamAName}
+                  teamNameB={isSwapped ? state.teamAName : state.teamBName}
+                  colorA={colorLeft}
+                  colorB={colorRight}
                   server={state.servingTeam}
+                  timeoutsA={isSwapped ? state.timeoutsB : state.timeoutsA}
+                  timeoutsB={isSwapped ? state.timeoutsA : state.timeoutsB}
+                  onTimeoutA={isSwapped ? () => game.useTimeout('B') : () => game.useTimeout('A')}
+                  onTimeoutB={isSwapped ? () => game.useTimeout('A') : () => game.useTimeout('B')}
               />
 
               <MeasuredFullscreenHUD
                   placement={hudPlacement}
                   setsLeft={setsLeft}
                   setsRight={setsRight}
-                  timeoutsLeft={timeoutsLeft}
-                  timeoutsRight={timeoutsRight}
-                  onTimeoutLeft={onTimeoutLeft}
-                  onTimeoutRight={onTimeoutRight}
                   colorLeft={colorLeft}
                   colorRight={colorRight}
               />
             </>
         )}
 
+        {/* Main Content Area */}
         <main className={`
             flex-1 flex relative z-10 transition-all duration-500 min-h-0 overflow-visible
             flex-col landscape:flex-row md:flex-row
@@ -192,7 +192,7 @@ function App() {
                   score={state.scoreA}
                   isServing={state.servingTeam === 'A'}
                   onAdd={() => game.addPoint('A')}
-                  onSubtract={() => game.undo()} 
+                  onSubtract={() => game.subtractPoint('A')} // Changed from undo() to subtractPoint()
                   isMatchPoint={game.isMatchPointA}
                   isSetPoint={game.isSetPointA}
                   isDeuce={game.isDeuce}
@@ -235,7 +235,7 @@ function App() {
                   score={state.scoreB}
                   isServing={state.servingTeam === 'B'}
                   onAdd={() => game.addPoint('B')}
-                  onSubtract={() => game.undo()} 
+                  onSubtract={() => game.subtractPoint('B')} // Changed from undo() to subtractPoint()
                   isMatchPoint={game.isMatchPointB}
                   isSetPoint={game.isSetPointB}
                   isDeuce={game.isDeuce}
@@ -275,7 +275,7 @@ function App() {
            {isFullscreen && (
                <button 
                   onClick={toggleFullscreen}
-                  className="absolute top-4 right-4 z-[60] p-3 rounded-full bg-black/20 text-white/30 hover:text-white hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all active:scale-95"
+                  className="absolute top-[calc(env(safe-area-inset-top)+1rem)] right-[calc(env(safe-area-inset-right)+1rem)] z-[60] p-3 rounded-full bg-black/20 text-white/30 hover:text-white hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all active:scale-95"
                >
                    <Minimize2 size={24} />
                </button>
@@ -285,7 +285,7 @@ function App() {
         {/* Standard Bottom Controls (Only visible in Normal Mode) */}
         <div 
           className={`
-              fixed bottom-0 left-0 w-full z-50 flex justify-center pb-6 
+              fixed bottom-0 left-0 w-full z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+1.5rem)] 
               transition-all duration-500
               ${isFullscreen ? 'translate-y-32 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'}
           `}
@@ -345,6 +345,7 @@ function App() {
           onRemove={game.removePlayer}
           onMove={game.movePlayer}
           onUpdateTeamName={game.updateTeamName}
+          onUpdatePlayerName={game.updatePlayerName}
           onAddPlayer={game.addPlayer}
           onUndoRemove={game.undoRemovePlayer}
           canUndoRemove={game.hasDeletedPlayers}

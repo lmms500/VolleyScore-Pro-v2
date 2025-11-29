@@ -47,14 +47,13 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
   // Minimal compact styling
   const pClass = 'p-3';
   const iconSize = 20;
-  const bottomPos = 'bottom-6';
 
   return (
     <div 
       ref={ref}
       style={{ transform: `translateX(-50%) scale(${scale})` }}
       className={`
-        fixed ${bottomPos} left-1/2 z-50 
+        fixed bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] left-1/2 z-50 
         transition-all duration-700 ease-in-out origin-bottom
         ${isVisible ? 'opacity-100 pointer-events-auto' : 'opacity-30 hover:opacity-100 pointer-events-auto'}
       `}

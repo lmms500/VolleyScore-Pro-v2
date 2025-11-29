@@ -35,12 +35,13 @@ interface TeamManagerModalProps {
   onRemove: (id: string) => void;
   onMove: (playerId: string, fromId: string, toId: string) => void;
   onUpdateTeamName: (teamId: string, name: string) => void;
+  onUpdatePlayerName: (playerId: string, name: string) => void;
   onAddPlayer: (name: string, target: 'A' | 'B' | 'Queue') => void;
   onUndoRemove: () => void;
   canUndoRemove: boolean;
 }
 
-const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; className?: string }> = ({ name, onSave, className }) => {
+const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; className?: string; isPlayer?: boolean }> = ({ name, onSave, className, isPlayer }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [val, setVal] = useState(name);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -54,20 +55,26 @@ const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; cla
     else setVal(name);
   };
 
+  const cancel = () => {
+      setIsEditing(false);
+      setVal(name);
+  };
+
   if(isEditing) {
     return (
         <input 
             ref={inputRef} type="text"
-            className="bg-black/50 dark:bg-black/50 text-white border-b border-white/50 outline-none w-full max-w-[150px] px-1 py-0.5 text-xs font-bold uppercase tracking-widest"
+            className={`bg-black/50 dark:bg-black/50 text-white border-b border-white/50 outline-none w-full px-1 py-0.5 font-bold ${isPlayer ? 'text-sm' : 'text-xs uppercase tracking-widest'}`}
             value={val} onChange={e => setVal(e.target.value)} onBlur={save}
-            onKeyDown={e => { if(e.key === 'Enter') save(); if(e.key === 'Escape') { setIsEditing(false); setVal(name); } }}
+            onKeyDown={e => { if(e.key === 'Enter') save(); if(e.key === 'Escape') cancel(); }}
+            onPointerDown={e => e.stopPropagation()} // Prevent drag start on input click
         />
     );
   }
   return (
       <div className={`flex items-center gap-2 group cursor-pointer ${className}`} onClick={() => setIsEditing(true)}>
-          <span>{name}</span>
-          <Edit2 size={10} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 dark:text-slate-400" />
+          <span className="truncate">{name}</span>
+          <Edit2 size={10} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 dark:text-slate-400 flex-shrink-0" />
       </div>
   );
 };
@@ -106,7 +113,7 @@ const AddPlayerInput: React.FC<{ onAdd: (name: string) => void; disabled?: boole
     );
 };
 
-const PlayerCard: React.FC<{ player: Player; locationId: string; onToggleFixed: (playerId: string, teamId?: string) => void; onRemove: (id: string) => void; }> = ({ player, locationId, onToggleFixed, onRemove }) => {
+const PlayerCard: React.FC<{ player: Player; locationId: string; onToggleFixed: (playerId: string, teamId?: string) => void; onRemove: (id: string) => void; onUpdateName: (id: string, name: string) => void; }> = ({ player, locationId, onToggleFixed, onRemove, onUpdateName }) => {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: player.id,
@@ -118,12 +125,12 @@ const PlayerCard: React.FC<{ player: Player; locationId: string; onToggleFixed: 
 
   return (
     <div ref={setNodeRef} style={style} className={`group relative flex items-center justify-between p-2 rounded-xl border transition-all ${player.isFixed ? 'bg-indigo-500/10 border-indigo-500/30 cursor-not-allowed' : 'bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/20'}`}>
-      <div className="flex items-center gap-2.5 overflow-hidden">
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-slate-500 dark:text-slate-600 touch-none">
+      <div className="flex items-center gap-2.5 overflow-hidden flex-1">
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-slate-500 dark:text-slate-600 touch-none flex-shrink-0">
           <GripVertical size={16} />
         </div>
-        <div className="flex flex-col min-w-0">
-          <span className="font-medium text-sm text-slate-800 dark:text-slate-200 truncate">{player.name}</span>
+        <div className="flex flex-col min-w-0 flex-1 pr-2">
+          <EditableTitle name={player.name} onSave={(val) => onUpdateName(player.id, val)} isPlayer={true} className="font-medium text-sm text-slate-800 dark:text-slate-200" />
           <span className="text-[9px] font-mono text-slate-500/50 dark:text-slate-500/50">#{player.id.slice(0, 4)}</span>
         </div>
       </div>
@@ -139,7 +146,7 @@ const PlayerCard: React.FC<{ player: Player; locationId: string; onToggleFixed: 
   );
 };
 
-const TeamColumn: React.FC<{ id: string; team: Team; onUpdateTeamName: (id: string, name: string) => void; onAddPlayer: (name: string) => void; onToggleFixed: (playerId: string, teamId?: string) => void; onRemove: (id: string) => void; color: 'indigo' | 'rose' | 'slate'; }> = ({ id, team, onUpdateTeamName, onAddPlayer, onToggleFixed, onRemove, color }) => {
+const TeamColumn: React.FC<{ id: string; team: Team; onUpdateTeamName: (id: string, name: string) => void; onUpdatePlayerName: (pid: string, n: string) => void; onAddPlayer: (name: string) => void; onToggleFixed: (playerId: string, teamId?: string) => void; onRemove: (id: string) => void; color: 'indigo' | 'rose' | 'slate'; }> = ({ id, team, onUpdateTeamName, onUpdatePlayerName, onAddPlayer, onToggleFixed, onRemove, color }) => {
   const { t } = useTranslation();
   const isFull = team.players.length >= 6;
   const { setNodeRef, isOver } = useSortable({ id: id, data: { type: 'container' } });
@@ -151,19 +158,19 @@ const TeamColumn: React.FC<{ id: string; team: Team; onUpdateTeamName: (id: stri
   };
 
   return (
-    <div ref={setNodeRef} className={`flex flex-col h-full ${theme[color].bg} p-4 rounded-2xl ${theme[color].border} transition-all duration-300 ${isOver && !isFull ? 'ring-2 ring-indigo-500 bg-indigo-500/10' : ''}`}>
-      <h3 className={`font-bold ${theme[color].text} mb-4 text-xs uppercase tracking-widest flex items-center justify-between`}>
+    <div ref={setNodeRef} className={`flex flex-col w-full h-fit ${theme[color].bg} p-3 rounded-2xl ${theme[color].border} transition-all duration-300 ${isOver && !isFull ? 'ring-2 ring-indigo-500 bg-indigo-500/10' : ''}`}>
+      <h3 className={`font-bold ${theme[color].text} mb-3 text-xs uppercase tracking-widest flex items-center justify-between`}>
         <span className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${theme[color].glow}`}></div>
           <EditableTitle name={team.name} onSave={n => onUpdateTeamName(id, n)} />
         </span>
         <span className={`${isFull ? 'text-rose-500 dark:text-rose-400' : `${theme[color].text}/50`}`}>{team.players.length}/6</span>
       </h3>
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-[200px] space-y-2">
-        {team.players.length === 0 && <span className="text-xs text-slate-500 dark:text-slate-600 italic px-2">{t('teamManager.dragPlayersHere')}</span>}
+      <div className="overflow-y-auto custom-scrollbar pr-1 min-h-[60px] max-h-[400px] space-y-2">
+        {team.players.length === 0 && <span className="text-xs text-slate-500 dark:text-slate-600 italic px-2 block pt-2">{t('teamManager.dragPlayersHere')}</span>}
         <SortableContextFixed items={team.players.map(p => p.id)} strategy={verticalListSortingStrategy}>
           {team.players.map(p => (
-            <PlayerCard key={p.id} player={p} locationId={id} onToggleFixed={onToggleFixed} onRemove={onRemove} />
+            <PlayerCard key={p.id} player={p} locationId={id} onToggleFixed={onToggleFixed} onRemove={onRemove} onUpdateName={onUpdatePlayerName} />
           ))}
         </SortableContextFixed>
       </div>
@@ -173,7 +180,7 @@ const TeamColumn: React.FC<{ id: string; team: Team; onUpdateTeamName: (id: stri
 };
 
 export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({ 
-  isOpen, onClose, courtA, courtB, queue, onGenerate, onToggleFixed, onRemove, onMove, onUpdateTeamName, onAddPlayer, onUndoRemove, canUndoRemove
+  isOpen, onClose, courtA, courtB, queue, onGenerate, onToggleFixed, onRemove, onMove, onUpdateTeamName, onUpdatePlayerName, onAddPlayer, onUndoRemove, canUndoRemove
 }) => {
   const { t } = useTranslation();
   const [rawNames, setRawNames] = useState('');
@@ -249,24 +256,25 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-          <div className="flex flex-col md:grid md:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-4 min-h-[60vh]">
-            <TeamColumn id="A" team={courtA} onUpdateTeamName={onUpdateTeamName} onAddPlayer={(n) => onAddPlayer(n, 'A')} onToggleFixed={onToggleFixed} onRemove={onRemove} color="indigo" />
-            <TeamColumn id="B" team={courtB} onUpdateTeamName={onUpdateTeamName} onAddPlayer={(n) => onAddPlayer(n, 'B')} onToggleFixed={onToggleFixed} onRemove={onRemove} color="rose" />
-            <div className="bg-black/[0.02] dark:bg-white/[0.02] p-4 rounded-2xl border border-black/5 dark:border-white/5 flex flex-col overflow-hidden min-h-[300px] md:min-h-0">
-                <h3 className="font-bold text-slate-500 dark:text-slate-400 mb-4 text-xs uppercase tracking-widest flex items-center gap-2 flex-none"><div className="w-2 h-2 rounded-full bg-slate-500 dark:bg-slate-600"></div>{t('teamManager.queue')}</h3>
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-4">
+          <div className="flex flex-col md:grid md:grid-cols-3 gap-4 items-start animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 min-h-[60vh]">
+            <TeamColumn id="A" team={courtA} onUpdateTeamName={onUpdateTeamName} onUpdatePlayerName={onUpdatePlayerName} onAddPlayer={(n) => onAddPlayer(n, 'A')} onToggleFixed={onToggleFixed} onRemove={onRemove} color="indigo" />
+            <TeamColumn id="B" team={courtB} onUpdateTeamName={onUpdateTeamName} onUpdatePlayerName={onUpdatePlayerName} onAddPlayer={(n) => onAddPlayer(n, 'B')} onToggleFixed={onToggleFixed} onRemove={onRemove} color="rose" />
+            
+            <div className="w-full bg-black/[0.02] dark:bg-white/[0.02] p-4 rounded-2xl border border-black/5 dark:border-white/5 flex flex-col h-fit">
+                <h3 className="font-bold text-slate-500 dark:text-slate-400 mb-3 text-xs uppercase tracking-widest flex items-center gap-2 flex-none"><div className="w-2 h-2 rounded-full bg-slate-500 dark:bg-slate-600"></div>{t('teamManager.queue')}</h3>
+                <div className="overflow-y-auto custom-scrollbar pr-1 space-y-4 max-h-[60vh]">
                   {queue.length === 0 && <span className="text-xs text-slate-500 dark:text-slate-600 italic px-2">{t('teamManager.queueEmpty')}</span>}
                   {queue.map(team => (
-                    <TeamColumn key={team.id} id={team.id} team={team} onUpdateTeamName={onUpdateTeamName} onAddPlayer={_ => {}} onToggleFixed={onToggleFixed} onRemove={onRemove} color="slate" />
+                    <TeamColumn key={team.id} id={team.id} team={team} onUpdateTeamName={onUpdateTeamName} onUpdatePlayerName={onUpdatePlayerName} onAddPlayer={_ => {}} onToggleFixed={onToggleFixed} onRemove={onRemove} color="slate" />
                   ))}
                 </div>
-                <div className="pt-2 border-t border-black/5 dark:border-white/5"><AddPlayerInput onAdd={n => onAddPlayer(n, 'Queue')} /></div>
+                <div className="pt-2 border-t border-black/5 dark:border-white/5 mt-4"><AddPlayerInput onAdd={n => onAddPlayer(n, 'Queue')} /></div>
             </div>
           </div>
           {createPortal(
             <DragOverlayFixed>
               {activePlayer ? (
-                <PlayerCard player={activePlayer} locationId="" onToggleFixed={() => {}} onRemove={() => {}} />
+                <PlayerCard player={activePlayer} locationId="" onToggleFixed={() => {}} onRemove={() => {}} onUpdateName={() => {}} />
               ) : null}
             </DragOverlayFixed>,
             document.body

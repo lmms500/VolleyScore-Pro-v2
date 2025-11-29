@@ -42,13 +42,15 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
       text: 'text-indigo-600 dark:text-indigo-400',
       bg: 'bg-indigo-500',
       shadow: 'shadow-indigo-500/50',
-      glowRadial: 'bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.25)_0%,rgba(99,102,241,0)_60%)]'
+      // Softer gradient for normal mode too
+      glowRadial: 'bg-[radial-gradient(closest-side,rgba(99,102,241,0.4)_0%,rgba(99,102,241,0)_100%)]'
     },
     rose: {
       text: 'text-rose-600 dark:text-rose-400',
       bg: 'bg-rose-500',
       shadow: 'shadow-rose-500/50',
-      glowRadial: 'bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.25)_0%,rgba(244,63,94,0)_60%)]'
+      // Softer gradient
+      glowRadial: 'bg-[radial-gradient(closest-side,rgba(244,63,94,0.4)_0%,rgba(244,63,94,0)_100%)]'
     }
   }[colorTheme];
 
@@ -65,48 +67,43 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
         `}
     >
       
-      <div 
-        className={`
-            absolute -inset-5 transition-opacity duration-1000 ease-in-out 
-            ${theme.glowRadial} 
-            pointer-events-none mix-blend-screen z-0
-            ${isServing ? 'opacity-100' : 'opacity-0'}
-        `} 
-      />
-
       <div className="flex flex-col h-full w-full relative z-10 py-2 md:py-4 px-2 justify-between items-center">
         
-        <div className="flex flex-col items-center justify-center w-full flex-none order-1">
-            <div className={`
-                flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/30 dark:bg-white/10 border border-black/10 dark:border-white/20 backdrop-blur-md shadow-lg transition-all duration-300 mb-0.5 scale-90
-                ${isServing ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}
-            `}>
-                <Volleyball size={14} className={`${theme.text} animate-bounce`} />
-                <span className={`text-[10px] font-black uppercase tracking-widest ${theme.text}`}>{t('game.serving')}</span>
-            </div>
-
-            <h2 
-                className="font-black uppercase text-center cursor-pointer hover:text-slate-600 dark:hover:text-white transition-all z-10 leading-none text-lg md:text-2xl text-slate-800 dark:text-slate-200 tracking-widest px-2 truncate w-full max-w-[90%]"
-                onPointerDown={(e) => e.stopPropagation()}
+        {/* Header: Name, Sets, Serve */}
+        <div className="flex flex-col items-center justify-center w-full flex-none order-1 mt-4">
+            
+            <div 
+                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
             >
-                {team?.name || ''}
-            </h2>
+                <h2 
+                    className="font-black uppercase text-center z-10 leading-none text-xl md:text-3xl text-slate-800 dark:text-slate-200 tracking-widest truncate max-w-[200px]"
+                >
+                    {team?.name || ''}
+                </h2>
+                <Volleyball 
+                    size={20} 
+                    className={`
+                        transition-all duration-300
+                        ${isServing ? `opacity-100 animate-bounce ${theme.text}` : 'opacity-0 scale-0 w-0'}
+                    `} 
+                />
+            </div>
 
-            <div className="flex gap-1.5 mt-1.5">
+            <div className="flex gap-2 mt-2">
                 {[...Array(setsNeededToWin)].map((_, i) => (
-                    <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i < setsWon ? theme.bg : 'bg-black/10 dark:bg-white/10'}`} />
+                    <div key={i} className={`w-2 h-2 rounded-full transition-all ${i < setsWon ? theme.bg : 'bg-black/10 dark:bg-white/10'}`} />
                 ))}
             </div>
         </div>
 
-
+        {/* Badges */}
         {(isMatchPoint || isSetPoint || isDeuce || inSuddenDeath) ? (
             <div className="flex-none py-2 order-2 w-full flex justify-center z-10 min-h-[2rem]">
                  <div className={`
                     px-3 py-1 rounded-full backdrop-blur-xl border border-black/10 dark:border-white/20 shadow-2xl
                     animate-pulse font-black uppercase tracking-[0.1em] text-center whitespace-nowrap
-                    text-[9px] shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center gap-1 transform transition-all
+                    text-[10px] shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center gap-1 transform transition-all
                     ${inSuddenDeath
                         ? 'bg-red-600 text-white shadow-red-500/50 scale-105 border-red-400'
                         : isMatchPoint 
@@ -115,29 +112,39 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
                                 ? `${theme.bg} text-white ${theme.shadow} scale-105`
                                 : 'bg-slate-200 text-slate-900'} 
                 `}>
-                    {inSuddenDeath && <Zap className="w-2.5 h-2.5" fill="currentColor" />}
+                    {inSuddenDeath && <Zap className="w-3 h-3" fill="currentColor" />}
                     {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
                 </div>
             </div>
         ) : <div className="order-2 min-h-[1.5rem] flex-none"></div>}
 
+        {/* The Number + Glow Container */}
         <div 
             className={`
-                order-3 flex items-center justify-center w-full flex-1 min-h-0
+                relative order-3 flex items-center justify-center w-full flex-1 min-h-0
                 font-black leading-none tracking-[-0.08em] text-slate-900 dark:text-white
-                drop-shadow-2xl transition-transform duration-100 active:scale-95
+                transition-transform duration-100 active:scale-95
                 outline-none select-none
-                text-[13vh] sm:text-[15vh] landscape:text-[22vh]
+                text-[15vh] landscape:text-[25vh]
                 ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
             `}
             style={{ touchAction: 'none' }}
             {...gestureHandlers}
         >
-            {score}
+            {/* Background Glow - Centered on Number, Same logic as Fullscreen but smaller relative scale for card */}
+            <div 
+                className={`
+                    absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                    w-[120%] h-[120%] rounded-full transition-opacity duration-1000 ease-in-out 
+                    ${theme.glowRadial} pointer-events-none mix-blend-screen blur-xl z-0
+                    ${isServing ? 'opacity-100' : 'opacity-0'}
+                `} 
+            />
+            <span className="relative z-10 drop-shadow-2xl">{score}</span>
         </div>
 
-
-        <div className="order-4 w-full flex items-center justify-center flex-none transition-all z-20 mt-1 mb-1">
+        {/* Timeouts */}
+        <div className="order-4 w-full flex items-center justify-center flex-none transition-all z-20 mt-1 mb-4">
            <button 
              onPointerDown={(e) => e.stopPropagation()}
              onClick={(e) => { 
@@ -149,7 +156,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
                 flex items-center justify-center gap-3 transition-all rounded-full border border-black/5 dark:border-white/5 py-2 px-4 bg-white/20 dark:bg-black/20 opacity-90 w-auto
                 ${timeoutsExhausted ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:bg-white/40 dark:hover:bg-black/50 active:scale-95 hover:border-black/10 dark:hover:border-white/20 shadow-lg'}
              `}
-             title={t('game.useTimeout')}
            >
               <span className="font-bold text-slate-600 dark:text-slate-500 uppercase tracking-widest text-[10px]">{t('game.timeout')}</span>
               <div className="flex gap-1.5">

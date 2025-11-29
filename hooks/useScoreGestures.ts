@@ -6,14 +6,12 @@ interface UseScoreGesturesProps {
   isLocked: boolean;
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
-  onSwipeLeft?: () => void;
-  onSwipeRight?: () => void;
 }
 
 // Constants for gesture detection
-const SWIPE_THRESHOLD = 40; // Min distance to be a swipe
-const TAP_MAX_DURATION_MS = 250; // Max time for a tap
-const TAP_MAX_MOVE = 15; // Max movement for a tap
+const SWIPE_THRESHOLD = 30; // Min distance to be a swipe
+const TAP_MAX_DURATION_MS = 200; // Max time for a tap
+const TAP_MAX_MOVE = 10; // Max movement for a tap
 
 export const useScoreGestures = ({ 
   onAdd, 
@@ -21,8 +19,6 @@ export const useScoreGestures = ({
   isLocked, 
   onInteractionStart, 
   onInteractionEnd,
-  onSwipeLeft,
-  onSwipeRight
 }: UseScoreGesturesProps) => {
   
   const startX = useRef<number | null>(null);
@@ -52,7 +48,7 @@ export const useScoreGestures = ({
     try {
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     } catch (error) {
-        console.warn("Failed to release pointer:", error);
+        // Ignore
     }
 
     const endX = e.clientX;
@@ -60,7 +56,7 @@ export const useScoreGestures = ({
     const deltaTime = Date.now() - startTime.current;
     
     const deltaX = endX - startX.current;
-    const deltaY = endY - startY.current; // Positive = Down
+    const deltaY = endY - startY.current; // Positive = Down, Negative = Up
     
     const absDeltaX = Math.abs(deltaX);
     const absDeltaY = Math.abs(deltaY);
@@ -69,26 +65,16 @@ export const useScoreGestures = ({
     if (deltaTime < TAP_MAX_DURATION_MS && absDeltaX < TAP_MAX_MOVE && absDeltaY < TAP_MAX_MOVE) {
       onAdd();
     } 
-    // Rule 2: Swipes (Significant Movement)
-    else {
-      // Determine dominant axis
-      if (absDeltaY > absDeltaX && absDeltaY > SWIPE_THRESHOLD) {
-        // Vertical Swipe
+    // Rule 2: Swipes (Significant Vertical Movement)
+    else if (absDeltaY > SWIPE_THRESHOLD && absDeltaY > absDeltaX) {
+        // Vertical Swipe Dominant
         if (deltaY < 0) {
-           onAdd(); // Swipe Up (Drag visual up adds points)
+           // Swipe Up -> Dragging score UP -> ADD
+           onAdd(); 
         } else {
-           onSubtract(); // Swipe Down
+           // Swipe Down -> Dragging score DOWN -> SUBTRACT
+           onSubtract(); 
         }
-      } else if (absDeltaX > absDeltaY && absDeltaX > SWIPE_THRESHOLD) {
-          // Horizontal Swipe
-          if (deltaX < 0) {
-              // Swipe Left
-              if (onSwipeLeft) onSwipeLeft();
-          } else {
-              // Swipe Right
-              if (onSwipeRight) onSwipeRight();
-          }
-      }
     }
     
     startX.current = null;
@@ -98,13 +84,6 @@ export const useScoreGestures = ({
 
   const handlePointerCancel = (e: React.PointerEvent) => {
     if (onInteractionEnd) onInteractionEnd();
-    
-    try {
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch (error) {
-        // ignore
-    }
-
     startX.current = null;
     startY.current = null;
     startTime.current = null;

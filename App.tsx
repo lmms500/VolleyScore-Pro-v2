@@ -325,8 +325,6 @@ function App() {
           isOpen={showSettings} 
           onClose={() => setShowSettings(false)}
           config={state.config}
-          teamAName={state.teamAName}
-          teamBName={state.teamBName}
           onSave={game.applySettings}
           onInstall={pwa.promptInstall}
           canInstall={pwa.isInstallable}
@@ -349,6 +347,8 @@ function App() {
           onAddPlayer={game.addPlayer}
           onUndoRemove={game.undoRemovePlayer}
           canUndoRemove={game.hasDeletedPlayers}
+          onCommitDeletions={game.commitDeletions}
+          deletedCount={game.deletedCount}
         />
 
         <MatchOverModal 

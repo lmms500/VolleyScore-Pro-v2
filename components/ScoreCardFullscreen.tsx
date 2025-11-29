@@ -38,15 +38,15 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
     indigo: {
       text: 'text-indigo-400',
       bg: 'bg-indigo-500',
-      // Much softer gradient, more transparency at core, wide fade out
-      glowRadial: 'bg-[radial-gradient(closest-side,rgba(99,102,241,0.5)_0%,rgba(99,102,241,0)_100%)]',
+      // Enhanced gradient from src version
+      glowRadial: 'bg-[radial-gradient(circle,rgba(99,102,241,0.6)_0%,rgba(99,102,241,0)_70%)]',
       glowShadow: 'drop-shadow-[0_0_30px_rgba(99,102,241,0.7)]'
     },
     rose: {
       text: 'text-rose-400',
       bg: 'bg-rose-500',
-      // Much softer gradient, more transparency at core, wide fade out
-      glowRadial: 'bg-[radial-gradient(closest-side,rgba(244,63,94,0.5)_0%,rgba(244,63,94,0)_100%)]',
+      // Enhanced gradient from src version
+      glowRadial: 'bg-[radial-gradient(circle,rgba(244,63,94,0.6)_0%,rgba(244,63,94,0)_70%)]',
       glowShadow: 'drop-shadow-[0_0_30px_rgba(244,63,94,0.7)]'
     }
   }[colorTheme];
@@ -80,14 +80,12 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
       {/* Content Container (Number + Badge + Glow) */}
       <div className="relative z-10 p-4 md:p-10 flex flex-col items-center overflow-visible">
         
-            {/* Background Glow (Centered strictly on this container behind the number) 
-                Reduced size (140% instead of 250%) and softer gradient.
-            */}
+            {/* Background Glow (Centered strictly on this container, huge size to avoid clipping) */}
             <div 
                 className={`
                     absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                    w-[140%] h-[140%] rounded-full transition-opacity duration-1000 ease-in-out 
-                    ${theme.glowRadial} pointer-events-none mix-blend-screen blur-xl
+                    w-[250%] h-[250%] rounded-full transition-opacity duration-1000 ease-in-out 
+                    ${theme.glowRadial} pointer-events-none mix-blend-screen 
                     ${isServing ? 'opacity-100' : 'opacity-0'}
                 `} 
             />
@@ -116,7 +114,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
             )}
 
             {/* The Number - Wrapped for strict ref measurement and glow alignment */}
-            <div className="relative z-10">
+            <div className="relative">
                 <span 
                     ref={scoreRefCallback}
                     className={`block font-black leading-none text-white tracking-tighter transition-all duration-300 ${glowClass}`}

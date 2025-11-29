@@ -39,16 +39,8 @@
       "language": "Language",
       "themes": {
         "light": "Light",
-        "dark": "Dark",
-        "system": "System"
+        "dark": "Dark"
       }
-    },
-    "teamNames": {
-      "title": "Team Names",
-      "home": "Home (A)",
-      "guest": "Guest (B)",
-      "placeholderA": "Team A",
-      "placeholderB": "Team B"
     },
     "rules": {
       "title": "Match Rules",

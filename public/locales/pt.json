@@ -39,16 +39,8 @@
       "language": "Idioma",
       "themes": {
         "light": "Claro",
-        "dark": "Escuro",
-        "system": "Sistema"
+        "dark": "Escuro"
       }
-    },
-    "teamNames": {
-      "title": "Nomes das Equipes",
-      "home": "Casa (A)",
-      "guest": "Visitante (B)",
-      "placeholderA": "Equipe A",
-      "placeholderB": "Equipe B"
     },
     "rules": {
       "title": "Regras da Partida",

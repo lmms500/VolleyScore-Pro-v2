@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameConfig } from '../../types';
-import { Check, Trophy, Sun, Zap, Download, Share, Smartphone, Menu, Moon, SunDim, Languages } from 'lucide-react';
+import { Check, Trophy, Sun, Zap, Download, Share, Smartphone, Menu, Moon } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -10,9 +10,7 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   config: GameConfig;
-  teamAName: string;
-  teamBName: string;
-  onSave: (config: GameConfig, names: { nameA: string, nameB: string }) => void;
+  onSave: (config: GameConfig) => void;
   onInstall?: () => void;
   canInstall?: boolean;
   isIOS?: boolean;
@@ -20,23 +18,21 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
-    isOpen, onClose, config, teamAName, teamBName, onSave, 
+    isOpen, onClose, config, onSave, 
     onInstall, canInstall, isIOS, isStandalone 
 }) => {
   const [localConfig, setLocalConfig] = useState<GameConfig>(config);
-  const [names, setNames] = useState({ nameA: teamAName, nameB: teamBName });
   const { t, language, setLanguage } = useTranslation();
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (isOpen) {
       setLocalConfig(config);
-      setNames({ nameA: teamAName, nameB: teamBName });
     }
-  }, [isOpen, config, teamAName, teamBName]);
+  }, [isOpen, config]);
 
   const handleSave = () => {
-    onSave(localConfig, names);
+    onSave(localConfig);
     onClose();
   };
 
@@ -48,7 +44,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const isBeach = localConfig.maxSets === 3 && localConfig.pointsPerSet === 21 && localConfig.hasTieBreak === true && localConfig.deuceType === 'standard';
   const isSegunda = localConfig.maxSets === 1 && localConfig.pointsPerSet === 15 && localConfig.hasTieBreak === false && localConfig.deuceType === 'sudden_death_3pt';
 
-  const inputClass = "w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl p-3 text-slate-800 dark:text-white placeholder:text-black/20 dark:placeholder:text-white/20 focus:border-indigo-500/50 focus:bg-white/10 outline-none transition-all font-inter";
   const labelClass = "text-xs font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-2 block";
   const sectionClass = "p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5";
 
@@ -77,13 +72,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex items-center justify-between">
                   <span className="text-slate-700 dark:text-slate-300 text-sm">{t('settings.appearance.theme')}</span>
                   <div className="flex bg-black/5 dark:bg-white/5 rounded-lg p-1 gap-1">
-                      {(['light', 'dark', 'system'] as const).map(th => (
+                      {(['light', 'dark'] as const).map(th => (
                           <button key={th} onClick={() => setTheme(th)}
                               className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${theme === th ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}
                           >
                               {th === 'light' && <Sun size={12} />}
                               {th === 'dark' && <Moon size={12} />}
-                              {th === 'system' && <SunDim size={12} />}
                               {t(`settings.appearance.themes.${th}`)}
                           </button>
                       ))}
@@ -93,12 +87,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span className="text-slate-700 dark:text-slate-300 text-sm">{t('settings.appearance.language')}</span>
                   <div className="relative">
                     <select value={language} onChange={(e) => setLanguage(e.target.value as any)}
-                        className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg pl-8 pr-4 py-2 text-xs text-slate-800 dark:text-white outline-none focus:border-indigo-500/50 appearance-none">
+                        className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-2 text-xs text-slate-800 dark:text-white outline-none focus:border-indigo-500/50 appearance-none text-right font-medium min-w-[100px]">
                         <option className="bg-white dark:bg-slate-900" value="en">{t('languages.en')}</option>
                         <option className="bg-white dark:bg-slate-900" value="pt">{t('languages.pt')}</option>
                         <option className="bg-white dark:bg-slate-900" value="es">{t('languages.es')}</option>
                     </select>
-                    <Languages size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                   </div>
               </div>
           </div>
@@ -108,20 +101,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
            <PresetButton active={isFIVB} onClick={setPresetFIVB} icon={Trophy} label={t('presets.fivb.label')} sub={t('presets.fivb.sub')} colorClass="indigo-500" borderClass="border-indigo-500" bgActive="bg-indigo-500/20" textActive="text-indigo-600 dark:text-indigo-300"/>
            <PresetButton active={isBeach} onClick={setPresetBeach} icon={Sun} label={t('presets.beach.label')} sub={t('presets.beach.sub')} colorClass="orange-500" borderClass="border-orange-500" bgActive="bg-orange-500/20" textActive="text-orange-600 dark:text-orange-300"/>
            <PresetButton active={isSegunda} onClick={setPresetSegunda} icon={Zap} label={t('presets.custom.label')} sub={t('presets.custom.sub')} colorClass="emerald-500" borderClass="border-emerald-500" bgActive="bg-emerald-500/20" textActive="text-emerald-600 dark:text-emerald-300"/>
-        </div>
-
-        <div className={sectionClass}>
-           <label className={labelClass}>{t('settings.teamNames.title')}</label>
-           <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-bold uppercase ml-1">{t('settings.teamNames.home')}</span>
-                <input type="text" value={names.nameA} onChange={e => setNames(prev => ({ ...prev, nameA: e.target.value }))} className={`${inputClass} focus:border-indigo-500/50`} placeholder={t('settings.teamNames.placeholderA')}/>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] text-rose-500 dark:text-rose-400 font-bold uppercase ml-1">{t('settings.teamNames.guest')}</span>
-                <input type="text" value={names.nameB} onChange={e => setNames(prev => ({ ...prev, nameB: e.target.value }))} className={`${inputClass} focus:border-rose-500/50`} placeholder={t('settings.teamNames.placeholderB')}/>
-              </div>
-           </div>
         </div>
 
         <div className={sectionClass}>

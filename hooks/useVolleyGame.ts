@@ -289,11 +289,9 @@ export const useVolleyGame = () => {
       });
   }, []);
 
-  const applySettings = useCallback((newConfig: GameConfig, names: {nameA: string, nameB: string}) => {
-      setState(prev => ({ ...prev, config: newConfig, teamAName: names.nameA, teamBName: names.nameB }));
-      queueManager.updateTeamName(state.teamARoster.id, names.nameA);
-      queueManager.updateTeamName(state.teamBRoster.id, names.nameB);
-  }, [queueManager, state.teamARoster.id, state.teamBRoster.id]);
+  const applySettings = useCallback((newConfig: GameConfig) => {
+      setState(prev => ({ ...prev, config: newConfig }));
+  }, []);
 
   const rotateTeams = useCallback(() => {
     if (!state.matchWinner) return;
@@ -317,6 +315,8 @@ export const useVolleyGame = () => {
     undoRemovePlayer: queueManager.undoRemovePlayer,
     hasDeletedPlayers: queueManager.hasDeletedPlayers,
     togglePlayerFixed: queueManager.togglePlayerFixed,
+    commitDeletions: queueManager.commitDeletions,
+    deletedCount: queueManager.deletedCount,
     
     isTieBreak,
     isMatchPointA: statusA.isMatchPoint,

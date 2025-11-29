@@ -395,6 +395,10 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     });
   }, []);
 
+  const commitDeletions = useCallback(() => {
+    setDeletedHistory([]);
+  }, []);
+
   const updateRosters = useCallback((cA: Player[], cB: Player[], q: Player[]) => { }, []);
   
   const movePlayer = useCallback((playerId: string, fromId: string, toId: string) => {
@@ -516,6 +520,8 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     addPlayer,
     removePlayer,
     undoRemovePlayer,
-    hasDeletedPlayers: deletedHistory.length > 0
+    commitDeletions,
+    hasDeletedPlayers: deletedHistory.length > 0,
+    deletedCount: deletedHistory.length
   };
 };

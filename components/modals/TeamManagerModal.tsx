@@ -39,6 +39,8 @@ interface TeamManagerModalProps {
   onAddPlayer: (name: string, target: 'A' | 'B' | 'Queue') => void;
   onUndoRemove: () => void;
   canUndoRemove: boolean;
+  onCommitDeletions: () => void;
+  deletedCount: number;
 }
 
 const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; className?: string; isPlayer?: boolean }> = ({ name, onSave, className, isPlayer }) => {
@@ -180,15 +182,38 @@ const TeamColumn: React.FC<{ id: string; team: Team; onUpdateTeamName: (id: stri
 };
 
 export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({ 
-  isOpen, onClose, courtA, courtB, queue, onGenerate, onToggleFixed, onRemove, onMove, onUpdateTeamName, onUpdatePlayerName, onAddPlayer, onUndoRemove, canUndoRemove
+  isOpen, onClose, courtA, courtB, queue, onGenerate, onToggleFixed, onRemove, onMove, onUpdateTeamName, onUpdatePlayerName, onAddPlayer, onUndoRemove, canUndoRemove, onCommitDeletions, deletedCount
 }) => {
   const { t } = useTranslation();
   const [rawNames, setRawNames] = useState('');
   const [view, setView] = useState<'roster' | 'input'>('roster');
   const [activePlayer, setActivePlayer] = useState<Player | null>(null);
+  const [undoVisible, setUndoVisible] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }), useSensor(KeyboardSensor));
   
+  // Timer for undo button
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (deletedCount > 0) {
+      setUndoVisible(true);
+      // Fade out after 5 seconds
+      timer = setTimeout(() => {
+        setUndoVisible(false);
+        // Commit after fade out animation (200ms)
+        setTimeout(() => onCommitDeletions(), 200);
+      }, 5000);
+    } else {
+      setUndoVisible(false);
+    }
+    return () => clearTimeout(timer);
+  }, [deletedCount, onCommitDeletions]);
+
+  const handleUndo = () => {
+    onUndoRemove();
+    // No need to manually hide, the deletedCount change will trigger the effect
+  };
+
   const playersById = useMemo(() => {
     const map = new Map<string, Player>();
     [...courtA.players, ...courtB.players, ...queue.flatMap(t => t.players)].forEach(p => map.set(p.id, p));
@@ -282,13 +307,22 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
         </DndContext>
       )}
 
-       {canUndoRemove && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] bg-slate-800 text-white px-5 py-3 rounded-full shadow-2xl border border-white/10 flex items-center gap-4 animate-in slide-in-from-bottom-5">
-                <span className="text-xs font-medium text-slate-300">{t('teamManager.playerRemoved')}</span>
-                <div className="h-4 w-px bg-white/20"></div>
-                <button onClick={onUndoRemove} className="flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-wider"><Undo2 size={16} /> {t('teamManager.undo')}</button>
-            </div>
-        )}
+      {/* Undo Button with Timer and Animation */}
+       <div 
+         className={`
+            fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] 
+            transition-all duration-200 ease-in-out
+            ${undoVisible && canUndoRemove ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}
+         `}
+       >
+         <div className="bg-slate-800/90 backdrop-blur-xl text-white px-5 py-3 rounded-full shadow-2xl border border-white/10 flex items-center gap-4">
+            <span className="text-xs font-medium text-slate-300">{t('teamManager.playerRemoved')}</span>
+            <div className="h-4 w-px bg-white/20"></div>
+            <button onClick={handleUndo} className="flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-wider">
+              <Undo2 size={16} /> {t('teamManager.undo')}
+            </button>
+         </div>
+       </div>
     </Modal>
   );
 };

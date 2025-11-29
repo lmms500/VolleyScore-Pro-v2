@@ -3,6 +3,9 @@ import { Team, TeamId } from '../types';
 import { Volleyball, Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
+import { ScoreTicker } from './ui/ScoreTicker';
+import { motion } from 'framer-motion';
+import { pulseHeartbeat } from '../utils/animations';
 
 interface ScoreCardNormalProps {
   teamId: TeamId;
@@ -54,6 +57,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
 
   const orderClass = reverseLayout ? (teamId === 'A' ? 'order-last' : 'order-first') : (teamId === 'A' ? 'order-first' : 'order-last');
   const timeoutsExhausted = timeouts >= 2;
+  const isCritical = isMatchPoint || isSetPoint || inSuddenDeath;
 
   return (
     <div 
@@ -99,23 +103,31 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
 
         {/* Badges */}
         {(isMatchPoint || isSetPoint || isDeuce || inSuddenDeath) ? (
-            <div className="flex-none py-2 order-2 w-full flex justify-center z-10 min-h-[2rem]">
-                 <div className={`
+            <motion.div 
+                className="flex-none py-2 order-2 w-full flex justify-center z-10 min-h-[2rem]"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+            >
+                 <motion.div 
+                    variants={pulseHeartbeat}
+                    animate={isCritical ? "pulse" : "idle"}
+                    className={`
                     px-3 py-1 rounded-full backdrop-blur-xl border border-black/10 dark:border-white/20 shadow-2xl
-                    animate-pulse font-black uppercase tracking-[0.1em] text-center whitespace-nowrap
+                    font-black uppercase tracking-[0.1em] text-center whitespace-nowrap
                     text-[10px] shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center gap-1 transform transition-all
                     ${inSuddenDeath
-                        ? 'bg-red-600 text-white shadow-red-500/50 scale-105 border-red-400'
+                        ? 'bg-red-600 text-white shadow-red-500/50 border-red-400'
                         : isMatchPoint 
-                            ? 'bg-amber-500 text-black shadow-amber-500/50 scale-105' 
+                            ? 'bg-amber-500 text-black shadow-amber-500/50' 
                             : isSetPoint 
-                                ? `${theme.bg} text-white ${theme.shadow} scale-105`
+                                ? `${theme.bg} text-white ${theme.shadow}`
                                 : 'bg-slate-200 text-slate-900'} 
                 `}>
                     {inSuddenDeath && <Zap className="w-3 h-3" fill="currentColor" />}
                     {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
-                </div>
-            </div>
+                </motion.div>
+            </motion.div>
         ) : <div className="order-2 min-h-[1.5rem] flex-none"></div>}
 
         {/* The Number + Glow Container */}
@@ -127,7 +139,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             style={{ touchAction: 'none' }}
             {...gestureHandlers}
         >
-            <div className="relative inline-flex items-center justify-center will-change-transform">
+            <div className="relative inline-flex items-center justify-center will-change-transform w-full">
                 {/* Background Glow */}
                 <div 
                     className={`
@@ -139,21 +151,24 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                     `} 
                 />
                 
-                <span className={`
-                    relative z-10 drop-shadow-2xl font-black leading-none tracking-[-0.08em] 
-                    text-slate-900 dark:text-white outline-none select-none
-                    text-[12vh] landscape:text-[20vh]
-                    transition-transform duration-100 active:scale-95
-                    ${theme.text}
-                `}>
-                    {score}
-                </span>
+                {/* Motion Ticker */}
+                <ScoreTicker 
+                    value={score}
+                    className={`
+                        relative z-10 drop-shadow-2xl font-black leading-none tracking-[-0.08em] 
+                        text-slate-900 dark:text-white outline-none select-none
+                        text-[12vh] landscape:text-[20vh]
+                        transition-transform duration-100 active:scale-95
+                        ${theme.text}
+                    `}
+                />
             </div>
         </div>
 
         {/* Timeouts */}
         <div className="order-4 w-full flex items-center justify-center flex-none transition-all z-20 mt-1 mb-4">
-           <button 
+           <motion.button 
+             whileTap={{ scale: 0.95 }}
              onPointerDown={(e) => e.stopPropagation()}
              onClick={(e) => { 
                 e.stopPropagation(); 
@@ -162,7 +177,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
              disabled={timeoutsExhausted}
              className={`
                 flex items-center justify-center gap-3 transition-all rounded-full border border-black/5 dark:border-white/5 py-2 px-4 bg-white/20 dark:bg-black/20 opacity-90 w-auto
-                ${timeoutsExhausted ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:bg-white/40 dark:hover:bg-black/50 active:scale-95 hover:border-black/10 dark:hover:border-white/20 shadow-lg'}
+                ${timeoutsExhausted ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:bg-white/40 dark:hover:bg-black/50 hover:border-black/10 dark:hover:border-white/20 shadow-lg'}
              `}
            >
               <span className="font-bold text-slate-600 dark:text-slate-500 uppercase tracking-widest text-[10px]">{t('game.timeout')}</span>
@@ -179,7 +194,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                     />
                 ))}
               </div>
-           </button>
+           </motion.button>
         </div>
 
       </div>

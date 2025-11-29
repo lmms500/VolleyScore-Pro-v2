@@ -1,6 +1,7 @@
 import React, { useState, memo } from 'react';
 import { TeamId } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
+import { ScoreTicker } from './ui/ScoreTicker';
 
 interface ScoreCardFullscreenProps {
   teamId: TeamId;
@@ -83,7 +84,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
             
         {/* The Number Wrapper - Added will-change-transform for GPU optimization */}
         <div className={`
-            relative inline-flex items-center justify-center overflow-visible transition-transform duration-150 
+            relative inline-flex items-center justify-center overflow-visible transition-transform duration-150 w-full
             ${isPressed ? 'scale-95' : 'scale-100'}
             will-change-transform
         `}>
@@ -100,22 +101,22 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
                 `} 
             />
 
-            <span 
-                ref={scoreRefCallback}
-                className={`
-                    block font-black leading-none tracking-tighter transition-all duration-150 relative z-10 
-                    ${theme.text}
-                    ${glowClass}
-                    ${isPressed ? 'brightness-125' : ''}
-                `}
-                style={{ 
-                    fontSize: 'clamp(4rem, 18vmax, 13rem)',
-                    textShadow: '0 20px 60px rgba(0,0,0,0.5)',
-                    lineHeight: 0.8
-                }}
-            >
-                {score}
-            </span>
+            <div ref={scoreRefCallback} className="w-full flex justify-center">
+              <ScoreTicker 
+                  value={score}
+                  className={`
+                      font-black leading-none tracking-tighter transition-all duration-150 relative z-10 
+                      ${theme.text}
+                      ${glowClass}
+                      ${isPressed ? 'brightness-125' : ''}
+                  `}
+                  style={{ 
+                      fontSize: 'clamp(4rem, 18vmax, 13rem)',
+                      textShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                      lineHeight: 0.8
+                  }}
+              />
+            </div>
         </div>
     </div>
   );

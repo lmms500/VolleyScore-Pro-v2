@@ -1,4 +1,6 @@
 import React from 'react';
+import { motion } from 'framer-motion';
+import { springSnappy } from '../../utils/animations';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'icon';
@@ -6,7 +8,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button: React.FC<ButtonProps> = ({ variant = 'primary', size = 'md', className = '', children, ...props }) => {
-  const base = "font-inter font-semibold rounded-2xl transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-black focus:ring-indigo-500/50 dark:focus:ring-white/20";
+  const base = "font-inter font-semibold rounded-2xl flex items-center justify-center gap-2 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-black focus:ring-indigo-500/50 dark:focus:ring-white/20 select-none";
   
   const variants = {
     primary: "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 border-t border-white/10",
@@ -26,8 +28,13 @@ export const Button: React.FC<ButtonProps> = ({ variant = 'primary', size = 'md'
   const appliedSize = variant === 'icon' ? '' : sizes[size];
 
   return (
-    <button className={`${base} ${variants[variant]} ${appliedSize} ${className}`} {...props}>
+    <motion.button 
+      className={`${base} ${variants[variant]} ${appliedSize} ${className}`}
+      whileTap={{ scale: 0.94 }}
+      transition={springSnappy}
+      {...props as any} // Cast needed for motion component overlap
+    >
       {children}
-    </button>
+    </motion.button>
   );
 };

@@ -2,17 +2,17 @@ import React from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameState } from '../../types';
-import { Trophy, RefreshCw, ArrowRight, UserPlus, ShieldAlert, Users } from 'lucide-react';
+import { Trophy, RefreshCw, ArrowRight, UserPlus, ShieldAlert, Users, RotateCcw } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 
 interface MatchOverModalProps {
   isOpen: boolean;
   state: GameState;
   onRotate: () => void;
-  onClose: () => void;
+  onReset: () => void;
 }
 
-export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, onRotate, onClose }) => {
+export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, onRotate, onReset }) => {
   const { t } = useTranslation();
   const winnerName = state.matchWinner === 'A' ? state.teamAName : state.teamBName;
   const isA = state.matchWinner === 'A';
@@ -23,7 +23,13 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   const reinforcements = report?.stolenPlayers || [];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('matchOver.title')}>
+    <Modal 
+      isOpen={isOpen} 
+      onClose={() => {}} 
+      title={t('matchOver.title')}
+      showCloseButton={false}
+      persistent={true}
+    >
       <div className="flex flex-col items-center text-center space-y-6">
         
         <div className="relative group mt-2">
@@ -96,10 +102,17 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
             </div>
         )}
 
-        <Button onClick={onRotate} size="lg" className="w-full shadow-emerald-500/10 bg-emerald-600 hover:bg-emerald-500 border-t border-white/20">
-            <RefreshCw size={18} />
-            {t('matchOver.nextGameButton')}
-        </Button>
+        <div className="flex flex-col w-full gap-3">
+            <Button onClick={onRotate} size="lg" className="w-full shadow-emerald-500/10 bg-emerald-600 hover:bg-emerald-500 border-t border-white/20">
+                <RefreshCw size={18} />
+                {t('matchOver.nextGameButton')}
+            </Button>
+            
+            <Button onClick={onReset} size="md" variant="secondary" className="w-full">
+                <RotateCcw size={16} />
+                {t('controls.reset')}
+            </Button>
+        </div>
       </div>
     </Modal>
   );

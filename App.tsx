@@ -385,7 +385,7 @@ function App() {
                 isOpen={state.isMatchOver}
                 state={state}
                 onRotate={game.rotateTeams}
-                onClose={() => {}}
+                onReset={game.resetMatch}
               />
             )}
 

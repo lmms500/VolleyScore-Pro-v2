@@ -81,7 +81,7 @@ const TimeoutButton = memo<{
       `}
     >
         <div className={`p-1.5 rounded-md ${color === 'indigo' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-rose-500/20 text-rose-300'}`}>
-            <Timer size={18} strokeWidth={2.5} />
+            <Timer size={16} strokeWidth={2.5} />
         </div>
         <TimeoutDots count={timeouts} total={2} color={color} />
     </button>
@@ -102,15 +102,15 @@ const TeamInfoStealth = memo<{
 
   return (
     <div 
-      className={`flex flex-col ${align === 'right' ? 'items-end text-right' : 'items-start text-left'} justify-center relative min-w-[100px] h-full`}
+      className={`flex flex-col ${align === 'right' ? 'items-end text-right' : 'items-start text-left'} justify-center relative min-w-0 flex-shrink`}
     >
       {/* Top Row: Name + Serve Icon */}
       <div 
         className={`flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'} cursor-pointer group`}
         onClick={(e) => { e.stopPropagation(); onSetServer(); }}
       >
-        <span className={`text-[11px] md:text-xs font-black uppercase tracking-wider text-slate-300 group-hover:text-white transition-colors`}>
-          {truncateName(name)}
+        <span className={`text-[11px] font-black uppercase tracking-wider text-slate-300 group-hover:text-white transition-colors truncate max-w-[80px] md:max-w-[120px]`}>
+          {name}
         </span>
         
         {/* Serving Icon - Pulsing */}
@@ -124,7 +124,7 @@ const TeamInfoStealth = memo<{
                     className={`${color === 'indigo' ? 'text-indigo-400' : 'text-rose-400'}`}
                 >
                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
-                        <Volleyball size={14} fill="currentColor" />
+                        <Volleyball size={12} fill="currentColor" />
                      </motion.div>
                 </motion.div>
             )}
@@ -132,7 +132,7 @@ const TeamInfoStealth = memo<{
       </div>
 
       {/* Badge Row */}
-      <div className={`h-5 mt-1 flex ${align === 'right' ? 'justify-end' : 'justify-start'}`}>
+      <div className={`h-4 mt-1 flex ${align === 'right' ? 'justify-end' : 'justify-start'}`}>
         <AnimatePresence mode="wait">
           {hasBadge && (
             <motion.div
@@ -141,13 +141,13 @@ const TeamInfoStealth = memo<{
               animate={{ y: 0, opacity: 1 }} 
               exit={{ y: -5, opacity: 0 }}
               className={`
-                px-1.5 py-[2px] rounded flex items-center gap-1 shadow-lg backdrop-blur-md border border-white/10
+                px-1.5 py-[1px] rounded flex items-center gap-1 shadow-lg backdrop-blur-md border border-white/10
                 ${isMatchPoint 
                     ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
                     : (color === 'indigo' ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30')}
               `}
             >
-               <span className="text-[9px] font-black uppercase tracking-wider leading-none whitespace-nowrap">
+               <span className="text-[8px] font-black uppercase tracking-wider leading-none whitespace-nowrap">
                  {isMatchPoint ? t('status.match_point') : t('status.set_point')}
                </span>
             </motion.div>
@@ -176,15 +176,15 @@ const CenterDisplayStealth = memo<{
   const StatusPill = ({ icon: Icon, text, colorClass, borderClass, bgClass, animateIcon }: any) => (
       <motion.div 
          layout
-         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border backdrop-blur-md ${borderClass} ${bgClass} shadow-lg`}
+         className={`flex items-center gap-2 px-3 py-1 rounded-md border backdrop-blur-md ${borderClass} ${bgClass} shadow-lg`}
       >
            <motion.div 
              animate={animateIcon}
              transition={{ duration: 1.5, repeat: Infinity }}
            >
-              <Icon size={14} className={colorClass} />
+              <Icon size={12} className={colorClass} />
            </motion.div>
-           <span className={`text-[10px] font-black uppercase tracking-widest leading-none ${colorClass}`}>
+           <span className={`text-[9px] font-black uppercase tracking-widest leading-none ${colorClass}`}>
              {text}
            </span>
       </motion.div>
@@ -199,10 +199,10 @@ const CenterDisplayStealth = memo<{
   } else {
     content = (
       <button onClick={onToggleTimer} className="flex flex-col items-center group py-1">
-        <span className={`font-mono text-2xl font-bold tabular-nums leading-none tracking-tight transition-colors ${isTimerRunning ? 'text-white' : 'text-slate-500'}`}>
+        <span className={`font-mono text-xl font-bold tabular-nums leading-none tracking-tight transition-colors ${isTimerRunning ? 'text-white' : 'text-slate-500'}`}>
             {formatTime(time)}
         </span>
-        <span className={`text-[9px] font-bold uppercase tracking-[0.2em] mt-0.5 flex items-center gap-1 ${isTieBreak ? 'text-amber-400' : 'text-slate-500 group-hover:text-slate-300'}`}>
+        <span className={`text-[8px] font-bold uppercase tracking-[0.2em] mt-0.5 flex items-center gap-1 ${isTieBreak ? 'text-amber-400' : 'text-slate-500 group-hover:text-slate-300'}`}>
             {isTieBreak && <Scale size={8} />}
             {isTieBreak ? 'TIE' : `SET ${currentSet}`}
         </span>
@@ -211,7 +211,7 @@ const CenterDisplayStealth = memo<{
   }
 
   return (
-    <div className="flex items-center justify-center h-full relative z-10 w-full">
+    <div className="flex items-center justify-center h-full relative z-10 min-w-[60px]">
       <AnimatePresence mode="popLayout" custom={key}>
         <motion.div
           key={key}
@@ -231,21 +231,21 @@ const CenterDisplayStealth = memo<{
 
 export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
   return (
-    <div className="fixed top-2 md:top-4 left-0 w-full z-[55] flex justify-center pointer-events-none px-4">
+    <div className="fixed top-2 md:top-6 left-0 w-full z-[55] flex justify-center pointer-events-none px-4">
       
       <motion.div 
         layout
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="
           pointer-events-auto
-          relative w-full max-w-4xl
-          bg-slate-950/80 backdrop-blur-2xl 
-          border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)]
-          py-2 px-4
+          w-auto max-w-[95vw]
+          bg-slate-900/60 backdrop-blur-xl
+          border border-white/10 rounded-full shadow-2xl
+          py-1.5 px-6
         "
       >
-        {/* 5-Column Grid Layout: [Team A] [Timeout A] [Timer] [Timeout B] [Team B] */}
-        <div className="grid grid-cols-[1fr_auto_minmax(100px,auto)_auto_1fr] items-center gap-2 md:gap-4">
+        {/* Compact Grid Layout: Hugs content */}
+        <div className="flex items-center justify-between gap-3 md:gap-6">
             
           {/* Col 1: Team A */}
           <TeamInfoStealth 
@@ -259,7 +259,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
           />
 
           {/* Col 2: Timeout A */}
-          <div className="border-r border-white/5 pr-2 md:pr-4">
+          <div className="border-r border-white/5 pr-2 md:pr-4 py-1">
             <TimeoutButton 
                 timeouts={props.timeoutsA} 
                 onTimeout={props.onTimeoutA} 
@@ -268,8 +268,8 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
             />
           </div>
 
-          {/* Col 3: Timer (Absolute Center) */}
-          <div className="flex items-center justify-center px-2">
+          {/* Col 3: Timer (Center) */}
+          <div className="flex items-center justify-center px-1">
             <CenterDisplayStealth 
               time={props.time}
               isTimerRunning={props.isTimerRunning}
@@ -282,7 +282,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
           </div>
 
           {/* Col 4: Timeout B */}
-          <div className="border-l border-white/5 pl-2 md:pl-4">
+          <div className="border-l border-white/5 pl-2 md:pl-4 py-1">
             <TimeoutButton 
                 timeouts={props.timeoutsB} 
                 onTimeout={props.onTimeoutB} 

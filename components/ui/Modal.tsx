@@ -9,9 +9,26 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   maxWidth?: string;
+  showCloseButton?: boolean;
+  persistent?: boolean;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }) => {
+export const Modal: React.FC<ModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  title, 
+  children, 
+  maxWidth = 'max-w-md',
+  showCloseButton = true,
+  persistent = false
+}) => {
+  
+  const handleBackdropClick = () => {
+    if (!persistent) {
+      onClose();
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -23,7 +40,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
             animate="visible"
             exit="exit"
             variants={overlayVariants}
-            onClick={onClose}
+            onClick={handleBackdropClick}
           />
           
           {/* Container */}
@@ -43,12 +60,14 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
             {/* Header */}
             <div className="p-6 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-black/[0.02] dark:bg-white/[0.02]">
               <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-[0.2em] font-inter opacity-90">{title}</h2>
-              <button 
-                onClick={onClose} 
-                className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white active:scale-90"
-              >
-                <X size={20} />
-              </button>
+              {showCloseButton && (
+                <button 
+                  onClick={onClose} 
+                  className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white active:scale-90"
+                >
+                  <X size={20} />
+                </button>
+              )}
             </div>
             
             {/* Content Area */}

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -188,7 +189,7 @@ function App() {
               z-30 transition-all duration-500 flex-none
               ${isFullscreen 
                 ? '-translate-y-24 opacity-0 pointer-events-none absolute w-full' 
-                : 'relative pt-[env(safe-area-inset-top)] pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] pb-2 mt-2'}
+                : 'relative pt-[env(safe-area-inset-top)] pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] pb-4 mt-2'}
           `}>
             <HistoryBar 
               history={state.history} 

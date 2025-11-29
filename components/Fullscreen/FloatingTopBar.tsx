@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Volleyball, Timer } from 'lucide-react';
+import { Clock, Volleyball, Timer, Zap, AlertCircle } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { TeamId } from '../../types';
 
@@ -18,6 +18,13 @@ interface FloatingTopBarProps {
   timeoutsB: number;
   onTimeoutA: () => void;
   onTimeoutB: () => void;
+  // New Props for Status Integration
+  isMatchPointA: boolean;
+  isSetPointA: boolean;
+  isMatchPointB: boolean;
+  isSetPointB: boolean;
+  isDeuce: boolean;
+  inSuddenDeath: boolean;
 }
 
 const formatTime = (seconds: number) => {
@@ -27,7 +34,7 @@ const formatTime = (seconds: number) => {
 };
 
 const truncateName = (name: string) => {
-  if (name.length > 8) return name.substring(0, 7) + '..';
+  if (name.length > 10) return name.substring(0, 9) + '..';
   return name;
 };
 
@@ -38,25 +45,28 @@ const TeamSection: React.FC<{
     align: 'left' | 'right';
     timeouts: number;
     onTimeout: () => void;
-}> = ({ name, color, isServing, align, timeouts, onTimeout }) => {
+    isMatchPoint: boolean;
+    isSetPoint: boolean;
+}> = ({ name, color, isServing, align, timeouts, onTimeout, isMatchPoint, isSetPoint }) => {
+    const { t } = useTranslation();
     const colorClass = color === 'indigo' ? 'text-indigo-400' : 'text-rose-400';
     const dotColorClass = color === 'indigo' ? 'bg-indigo-500' : 'bg-rose-500';
     const dotShadowClass = color === 'indigo' ? 'shadow-indigo-500/50' : 'shadow-rose-500/50';
+    const bgBadge = color === 'indigo' ? 'bg-indigo-500' : 'bg-rose-500';
     
     // Timeouts >= 2 means both used (assuming max 2 per set)
     const isExhausted = timeouts >= 2;
 
     return (
-        <div className={`flex items-center gap-4 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-center gap-3 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
             
-            {/* Timeout Group: Button + Indicators */}
-            <div className={`flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
-                {/* Timeout Button (Larger Icon & Touch Target) */}
+            {/* Timeout Group */}
+            <div className={`flex items-center gap-1.5 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
                 <button 
                     onClick={(e) => { e.stopPropagation(); if(!isExhausted) onTimeout(); }}
                     disabled={isExhausted}
                     className={`
-                        flex items-center justify-center w-12 h-12 rounded-full border 
+                        flex items-center justify-center w-8 h-8 rounded-full border 
                         transition-all active:scale-90 duration-200
                         ${isExhausted 
                             ? 'bg-white/5 border-white/5 opacity-30 cursor-not-allowed text-slate-500' 
@@ -64,19 +74,17 @@ const TeamSection: React.FC<{
                     `}
                     aria-label="Timeout"
                 >
-                    <Timer size={22} />
+                    <Timer size={14} />
                 </button>
 
-                {/* Vertical Dots Indicator (Outside button, colored by team) */}
-                <div className="flex flex-col gap-1.5 py-1">
+                <div className="flex flex-col gap-1 py-1">
                      {[1, 2].map(i => {
-                         // Logic: If i is greater than timeouts used, it is available.
                          const isAvailable = i > timeouts;
                          return (
                              <div 
                                 key={i} 
                                 className={`
-                                    w-2 h-2 rounded-full transition-all duration-300 border border-black/20
+                                    w-1.5 h-1.5 rounded-full transition-all duration-300 border border-black/20
                                     ${isAvailable 
                                         ? `${dotColorClass} ${dotShadowClass} shadow-[0_0_8px_currentColor] opacity-100 scale-100` 
                                         : 'bg-slate-700 opacity-30 scale-75 shadow-none'}
@@ -87,18 +95,33 @@ const TeamSection: React.FC<{
                 </div>
             </div>
 
-            {/* Name & Serve */}
-            <div className={`flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <span className={`text-base md:text-xl font-bold uppercase tracking-widest whitespace-nowrap ${colorClass}`}>
-                    {truncateName(name)}
-                </span>
-                <Volleyball 
-                    size={16} 
-                    className={`
-                        text-white transition-all duration-300
-                        ${isServing ? 'opacity-100 scale-100 animate-pulse' : 'opacity-0 scale-0 w-0'}
-                    `} 
-                />
+            {/* Name, Badge & Serve */}
+            <div className={`flex flex-col ${align === 'right' ? 'items-end' : 'items-start'} justify-center h-full`}>
+                <div className={`flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <span className={`text-sm md:text-base font-bold uppercase tracking-widest whitespace-nowrap leading-none ${colorClass}`}>
+                        {truncateName(name)}
+                    </span>
+                    <Volleyball 
+                        size={12} 
+                        className={`
+                            text-white transition-all duration-300
+                            ${isServing ? 'opacity-100 scale-100 animate-pulse' : 'opacity-0 scale-0 w-0'}
+                        `} 
+                    />
+                </div>
+                
+                {/* Status Badges - Compact */}
+                <div className={`h-4 flex items-center mt-0.5 ${align === 'right' ? 'justify-end' : 'justify-start'}`}>
+                    {isMatchPoint ? (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-500 text-black text-[9px] font-black uppercase tracking-wider leading-none shadow-lg shadow-amber-500/20 animate-pulse">
+                            MATCH POINT
+                        </span>
+                    ) : isSetPoint ? (
+                        <span className={`px-1.5 py-0.5 rounded ${bgBadge} text-white text-[9px] font-black uppercase tracking-wider leading-none shadow-lg opacity-90`}>
+                            SET POINT
+                        </span>
+                    ) : null}
+                </div>
             </div>
         </div>
     );
@@ -106,48 +129,72 @@ const TeamSection: React.FC<{
 
 export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
   time, currentSet, isTieBreak, onToggleTimer, isTimerRunning,
-  teamNameA, teamNameB, colorA, colorB, server, timeoutsA, timeoutsB, onTimeoutA, onTimeoutB
+  teamNameA, teamNameB, colorA, colorB, server, timeoutsA, timeoutsB, onTimeoutA, onTimeoutB,
+  isMatchPointA, isSetPointA, isMatchPointB, isSetPointB, isDeuce, inSuddenDeath
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div 
       className={`
-        fixed top-4 left-1/2 -translate-x-1/2 z-[55] 
+        fixed top-2 left-1/2 -translate-x-1/2 z-[55] 
         transition-all duration-500 ease-out origin-top
-        pt-[env(safe-area-inset-top)]
+        pt-[env(safe-area-inset-top)] w-auto max-w-[95vw]
       `}
     >
-      <div className="flex items-center gap-3 md:gap-8 px-4 md:px-6 py-2 rounded-full bg-slate-900/60 backdrop-blur-2xl border border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.6)] ring-1 ring-white/5">
+      <div className="flex items-center gap-2 md:gap-6 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-2xl border border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.6)] ring-1 ring-white/5">
         
         <TeamSection 
             name={teamNameA} color={colorA} isServing={server === 'A'} align="left"
             timeouts={timeoutsA} onTimeout={onTimeoutA}
+            isMatchPoint={isMatchPointA} isSetPoint={isSetPointA}
         />
 
         {/* Divider */}
-        <div className="w-px h-8 bg-white/10"></div>
+        <div className="w-px h-6 bg-white/10"></div>
 
-        {/* Center Info */}
-        <div className="flex flex-col items-center min-w-[60px]">
-             <button 
-                onClick={onToggleTimer}
-                className={`flex items-center gap-1.5 active:scale-95 transition-transform ${isTimerRunning ? 'text-white' : 'text-slate-500'}`}
-            >
-                <Clock size={14} />
-                <span className="font-mono text-base font-bold tabular-nums leading-none">{formatTime(time)}</span>
-            </button>
-            <div className="mt-1">
-                <span className={`text-[10px] font-bold uppercase tracking-widest leading-none ${isTieBreak ? 'text-amber-400' : 'text-slate-400'}`}>
-                    {isTieBreak ? 'TIE BREAK' : `SET ${currentSet}`}
-                </span>
-            </div>
+        {/* Center Info - Dynamic Status */}
+        <div className="flex flex-col items-center min-w-[70px]">
+             
+            {inSuddenDeath ? (
+                 <div className="flex flex-col items-center animate-pulse">
+                    <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest leading-none mb-0.5 flex items-center gap-1">
+                         <Zap size={8} fill="currentColor" /> DEATH
+                    </span>
+                    <span className="text-xs font-bold text-white tabular-nums leading-none">SUDDEN</span>
+                 </div>
+            ) : isDeuce ? (
+                <div className="flex flex-col items-center">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">
+                        ADVANTAGE
+                    </span>
+                    <span className="text-xs font-bold text-white tabular-nums leading-none">DEUCE</span>
+                 </div>
+            ) : (
+                <>
+                    <button 
+                        onClick={onToggleTimer}
+                        className={`flex items-center gap-1.5 active:scale-95 transition-transform ${isTimerRunning ? 'text-white' : 'text-slate-500'}`}
+                    >
+                        <Clock size={10} />
+                        <span className="font-mono text-xs font-bold tabular-nums leading-none">{formatTime(time)}</span>
+                    </button>
+                    <div className="mt-0.5">
+                        <span className={`text-[9px] font-bold uppercase tracking-widest leading-none ${isTieBreak ? 'text-amber-400' : 'text-slate-400'}`}>
+                            {isTieBreak ? 'TIE BREAK' : `SET ${currentSet}`}
+                        </span>
+                    </div>
+                </>
+            )}
         </div>
 
         {/* Divider */}
-        <div className="w-px h-8 bg-white/10"></div>
+        <div className="w-px h-6 bg-white/10"></div>
 
         <TeamSection 
             name={teamNameB} color={colorB} isServing={server === 'B'} align="right"
             timeouts={timeoutsB} onTimeout={onTimeoutB}
+            isMatchPoint={isMatchPointB} isSetPoint={isSetPointB}
         />
 
       </div>

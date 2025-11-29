@@ -167,6 +167,13 @@ function App() {
                   timeoutsB={isSwapped ? state.timeoutsA : state.timeoutsB}
                   onTimeoutA={isSwapped ? () => game.useTimeout('B') : () => game.useTimeout('A')}
                   onTimeoutB={isSwapped ? () => game.useTimeout('A') : () => game.useTimeout('B')}
+                  // Status Passing
+                  isMatchPointA={isSwapped ? game.isMatchPointB : game.isMatchPointA}
+                  isSetPointA={isSwapped ? game.isSetPointB : game.isSetPointA}
+                  isMatchPointB={isSwapped ? game.isMatchPointA : game.isMatchPointB}
+                  isSetPointB={isSwapped ? game.isSetPointA : game.isSetPointB}
+                  isDeuce={game.isDeuce}
+                  inSuddenDeath={state.inSuddenDeath}
               />
 
               <MeasuredFullscreenHUD
@@ -192,7 +199,7 @@ function App() {
                   score={state.scoreA}
                   isServing={state.servingTeam === 'A'}
                   onAdd={() => game.addPoint('A')}
-                  onSubtract={() => game.subtractPoint('A')} // Changed from undo() to subtractPoint()
+                  onSubtract={() => game.subtractPoint('A')} 
                   isMatchPoint={game.isMatchPointA}
                   isSetPoint={game.isSetPointA}
                   isDeuce={game.isDeuce}
@@ -235,7 +242,7 @@ function App() {
                   score={state.scoreB}
                   isServing={state.servingTeam === 'B'}
                   onAdd={() => game.addPoint('B')}
-                  onSubtract={() => game.subtractPoint('B')} // Changed from undo() to subtractPoint()
+                  onSubtract={() => game.subtractPoint('B')} 
                   isMatchPoint={game.isMatchPointB}
                   isSetPoint={game.isSetPointB}
                   isDeuce={game.isDeuce}

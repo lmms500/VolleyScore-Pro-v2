@@ -1,14 +1,13 @@
 import React from 'react';
 import { TeamId } from '../types';
-import { Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
-import { useTranslation } from '../contexts/LanguageContext';
 
 interface ScoreCardFullscreenProps {
   teamId: TeamId;
   score: number;
   onAdd: () => void;
   onSubtract: () => void;
+  // Status props retained for Glow Logic, but badges are removed
   isMatchPoint: boolean;
   isSetPoint: boolean;
   isDeuce?: boolean;
@@ -28,7 +27,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
   scoreRefCallback, isServing
 }) => {
-  const { t } = useTranslation();
   
   const gestureHandlers = useScoreGestures({
     onAdd, onSubtract, isLocked, onInteractionStart, onInteractionEnd
@@ -49,12 +47,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
     }
   }[colorTheme];
 
-  const isVisualLeft = reverseLayout ? teamId === 'B' : teamId === 'A';
-  
-  const alignClass = isVisualLeft 
-    ? 'items-center md:items-start pl-[env(safe-area-inset-left)] md:pl-[5vw]' 
-    : 'items-center md:items-end pr-[env(safe-area-inset-right)] md:pr-[5vw]';
-
   const orderClass = reverseLayout 
     ? (teamId === 'A' ? 'order-last' : 'order-first') 
     : (teamId === 'A' ? 'order-first' : 'order-last');
@@ -65,7 +57,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
     <div 
         className={`
             flex-1 relative h-full flex flex-col justify-center select-none overflow-visible
-            ${orderClass} ${alignClass}
+            ${orderClass}
             ${isLocked ? 'opacity-50 grayscale' : ''}
             transition-all duration-300
         `}
@@ -73,36 +65,18 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
         {...gestureHandlers}
     >
       
-      {/* Content Container */}
-      <div className="relative z-10 p-4 md:p-10 flex flex-col items-center overflow-visible">
-        
-            {/* Badge - Always above the number */}
-            {(isMatchPoint || isSetPoint || inSuddenDeath || isDeuce) && (
-                <div className="absolute top-[-2rem] md:top-[-3rem] z-20 animate-in fade-in slide-in-from-bottom-2 duration-300 pointer-events-none">
-                    <div 
-                        className={`
-                            px-4 py-1.5 rounded-lg backdrop-blur-xl border border-white/20 shadow-2xl
-                            font-black uppercase tracking-[0.2em] text-center whitespace-nowrap
-                            text-xs md:text-sm shadow-[0_0_40px_rgba(0,0,0,0.8)] flex items-center gap-2
-                            ${inSuddenDeath 
-                                ? 'bg-red-600 text-white shadow-red-500/60 ring-2 ring-red-500/30' 
-                                : isMatchPoint 
-                                    ? 'bg-amber-500 text-black shadow-amber-500/60 ring-2 ring-amber-500/30' 
-                                    : isSetPoint 
-                                        ? `${theme.bg} text-white ring-2 ring-white/20` 
-                                        : 'bg-indigo-900/80 text-white ring-1 ring-white/30'} 
-                        `}
-                    >
-                        {inSuddenDeath && <Zap className="w-3 h-3" fill="currentColor" />}
-                        {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
-                    </div>
-                </div>
-            )}
-
-            {/* The Number Wrapper - Inline Block to hug the text width for perfect glow centering */}
-            <div className="relative inline-flex items-center justify-center overflow-visible">
+      {/* 
+         Content Container:
+         1. Uses w-full to fill the 50% split.
+         2. Uses flex/items-center to mathematically center the content within this 50% block.
+         3. Ignores safe-area-insets for horizontal positioning to ensure perfect symmetry relative to screen center.
+      */}
+      <div className="w-full h-full flex items-center justify-center relative z-10 overflow-visible">
+            
+            {/* The Number Wrapper - Constrained Max Width to ensure HUD Gap */}
+            <div className="relative inline-flex items-center justify-center overflow-visible max-w-[40vw]">
                 
-                {/* DYNAMIC GLOW: Sits inside the inline wrapper, centered on the glyph */}
+                {/* DYNAMIC GLOW */}
                 <div 
                     className={`
                         absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
@@ -116,8 +90,8 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
                     ref={scoreRefCallback}
                     className={`block font-black leading-none text-white tracking-tighter transition-all duration-300 relative z-10 ${glowClass}`}
                     style={{ 
-                        // Reduced clamp values significantly for small screens to avoid overlaps
-                        fontSize: 'clamp(5rem, 25vw, 18rem)',
+                        // Adjusted clamp for elegance and safety gap
+                        fontSize: 'clamp(4rem, 18vw, 13rem)',
                         textShadow: '0 20px 60px rgba(0,0,0,0.5)',
                         lineHeight: 0.8
                     }}

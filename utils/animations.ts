@@ -102,9 +102,30 @@ export const pulseHeartbeat: Variants = {
   idle: { scale: 1, opacity: 1 },
   pulse: {
     scale: [1, 1.05, 1],
-    opacity: [1, 0.8, 1],
     transition: {
-      duration: 2,
+      duration: 1.2,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }
+  }
+};
+
+// Vignette Pulse (Sudden Death)
+export const vignettePulse: Variants = {
+  hidden: { opacity: 0 },
+  visible: { 
+    opacity: 1,
+    transition: { duration: 0.5 }
+  },
+  pulse: {
+    opacity: [0.3, 0.7, 0.3],
+    boxShadow: [
+      "inset 0 0 50px rgba(225, 29, 72, 0.2)", 
+      "inset 0 0 150px rgba(225, 29, 72, 0.5)", 
+      "inset 0 0 50px rgba(225, 29, 72, 0.2)"
+    ],
+    transition: {
+      duration: 2.5,
       repeat: Infinity,
       ease: "easeInOut"
     }

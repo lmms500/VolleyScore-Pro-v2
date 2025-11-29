@@ -3,7 +3,7 @@ import { TeamId } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { ScoreTicker } from './ui/ScoreTicker';
 import { motion } from 'framer-motion';
-import { layoutTransition } from '../utils/animations';
+import { layoutTransition, pulseHeartbeat } from '../utils/animations';
 import { TrackingGlow } from './ui/TrackingGlow';
 
 interface ScoreCardFullscreenProps {
@@ -125,9 +125,11 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
                   <div className="relative inline-flex items-center justify-center pointer-events-none">
                       
                       {/* Score Ticker Wrapper - Targeted by TrackingGlow */}
-                      <div 
+                      <motion.div 
                         ref={numberRef} 
                         className="relative z-10 flex items-center justify-center"
+                        variants={pulseHeartbeat}
+                        animate={isCritical ? "pulse" : "idle"}
                       >
                          {/* 
                             Combine both refs: 
@@ -152,7 +154,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
                                }}
                            />
                         </div>
-                      </div>
+                      </motion.div>
                   </div>
               </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { springSnappy } from '../../utils/animations';
 
@@ -11,8 +11,9 @@ interface ScoreTickerProps {
 /**
  * ScoreTicker
  * Animates numbers sliding up/down like an odometer based on value change.
+ * Memoized to prevent re-renders when parent re-renders but value is identical.
  */
-export const ScoreTicker: React.FC<ScoreTickerProps> = ({ value, className, style }) => {
+export const ScoreTicker: React.FC<ScoreTickerProps> = memo(({ value, className, style }) => {
   const prevValue = useRef(value);
   const [direction, setDirection] = useState(0); // 1 = up (increase), -1 = down (decrease)
 
@@ -66,4 +67,4 @@ export const ScoreTicker: React.FC<ScoreTickerProps> = ({ value, className, styl
       </AnimatePresence>
     </div>
   );
-};
+});

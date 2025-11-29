@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
 import { ScoreCardNormal } from './components/ScoreCardNormal';
@@ -15,6 +15,7 @@ import { FullscreenMenuDrawer } from './components/Fullscreen/FullscreenMenuDraw
 import { LayoutProvider } from './contexts/LayoutContext';
 import { useHudMeasure } from './hooks/useHudMeasure';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { SuddenDeathOverlay } from './components/ui/CriticalPointAnimation';
 
 // Lazy Loaded Heavy Modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -24,7 +25,7 @@ const ConfirmationModal = lazy(() => import('./components/modals/ConfirmationMod
 
 function App() {
   const game = useVolleyGame();
-  const { state, setState, isLoaded } = game;
+  const { state, isLoaded } = game;
   const { t } = useTranslation();
   
   const pwa = usePWAInstallPrompt();
@@ -111,9 +112,25 @@ function App() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  const toggleTimer = () => {
-    setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
-  };
+  const toggleTimer = useCallback(() => {
+    game.setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
+  }, [game]);
+
+  // Stable Handlers for Interactions
+  // These are crucial to prevent prop churn on ScoreCards during gestures
+  const handleInteractionStartA = useCallback(() => setInteractingTeam('A'), []);
+  const handleInteractionStartB = useCallback(() => setInteractingTeam('B'), []);
+  const handleInteractionEnd = useCallback(() => setInteractingTeam(null), []);
+  
+  // Handlers for Score (Wrapped to keep JSX clean)
+  const handleAddA = () => game.addPoint('A');
+  const handleSubA = () => game.subtractPoint('A');
+  const handleAddB = () => game.addPoint('B');
+  const handleSubB = () => game.subtractPoint('B');
+  const handleSetServerA = () => game.setServer('A');
+  const handleSetServerB = () => game.setServer('B');
+  const handleTimeoutA = () => game.useTimeout('A');
+  const handleTimeoutB = () => game.useTimeout('B');
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
@@ -158,6 +175,8 @@ function App() {
           {/* Fullscreen Floating Elements */}
           {isFullscreen && (
               <>
+                <SuddenDeathOverlay active={state.inSuddenDeath} />
+
                 <FloatingTopBar
                     time={state.matchDurationSeconds}
                     currentSet={state.currentSet}
@@ -170,12 +189,12 @@ function App() {
                     colorB={colorRight}
                     isServingLeft={isSwapped ? state.servingTeam === 'B' : state.servingTeam === 'A'}
                     isServingRight={isSwapped ? state.servingTeam === 'A' : state.servingTeam === 'B'}
-                    onSetServerA={isSwapped ? () => game.setServer('B') : () => game.setServer('A')}
-                    onSetServerB={isSwapped ? () => game.setServer('A') : () => game.setServer('B')}
+                    onSetServerA={isSwapped ? handleSetServerB : handleSetServerA}
+                    onSetServerB={isSwapped ? handleSetServerA : handleSetServerB}
                     timeoutsA={isSwapped ? state.timeoutsB : state.timeoutsA}
                     timeoutsB={isSwapped ? state.timeoutsA : state.timeoutsB}
-                    onTimeoutA={isSwapped ? () => game.useTimeout('B') : () => game.useTimeout('A')}
-                    onTimeoutB={isSwapped ? () => game.useTimeout('A') : () => game.useTimeout('B')}
+                    onTimeoutA={isSwapped ? handleTimeoutB : handleTimeoutA}
+                    onTimeoutB={isSwapped ? handleTimeoutA : handleTimeoutB}
                     // Status Passing
                     isMatchPointA={isSwapped ? game.isMatchPointB : game.isMatchPointA}
                     isSetPointA={isSwapped ? game.isSetPointB : game.isSetPointA}
@@ -210,16 +229,16 @@ function App() {
                       teamId="A"
                       score={state.scoreA}
                       isServing={state.servingTeam === 'A'}
-                      onAdd={() => game.addPoint('A')}
-                      onSubtract={() => game.subtractPoint('A')} 
+                      onAdd={handleAddA}
+                      onSubtract={handleSubA} 
                       isMatchPoint={game.isMatchPointA}
                       isSetPoint={game.isSetPointA}
                       isDeuce={game.isDeuce}
                       inSuddenDeath={state.inSuddenDeath}
                       colorTheme="indigo"
                       isLocked={interactingTeam !== null && interactingTeam !== 'A'}
-                      onInteractionStart={() => setInteractingTeam('A')}
-                      onInteractionEnd={() => setInteractingTeam(null)}
+                      onInteractionStart={handleInteractionStartA}
+                      onInteractionEnd={handleInteractionEnd}
                       reverseLayout={isSwapped}
                       scoreRefCallback={setScoreElA}
                       // Alignment logic based on swapping to keep center clean
@@ -229,16 +248,16 @@ function App() {
                       teamId="B"
                       score={state.scoreB}
                       isServing={state.servingTeam === 'B'}
-                      onAdd={() => game.addPoint('B')}
-                      onSubtract={() => game.subtractPoint('B')} 
+                      onAdd={handleAddB}
+                      onSubtract={handleSubB} 
                       isMatchPoint={game.isMatchPointB}
                       isSetPoint={game.isSetPointB}
                       isDeuce={game.isDeuce}
                       inSuddenDeath={state.inSuddenDeath}
                       colorTheme="rose"
                       isLocked={interactingTeam !== null && interactingTeam !== 'B'}
-                      onInteractionStart={() => setInteractingTeam('B')}
-                      onInteractionEnd={() => setInteractingTeam(null)}
+                      onInteractionStart={handleInteractionStartB}
+                      onInteractionEnd={handleInteractionEnd}
                       reverseLayout={isSwapped}
                       scoreRefCallback={setScoreElB}
                       // Alignment logic based on swapping to keep center clean
@@ -253,11 +272,11 @@ function App() {
                       score={state.scoreA}
                       setsWon={state.setsA}
                       isServing={state.servingTeam === 'A'}
-                      onAdd={() => game.addPoint('A')}
-                      onSubtract={() => game.subtractPoint('A')}
-                      onSetServer={() => game.setServer('A')}
+                      onAdd={handleAddA}
+                      onSubtract={handleSubA}
+                      onSetServer={handleSetServerA}
                       timeouts={state.timeoutsA}
-                      onTimeout={() => game.useTimeout('A')}
+                      onTimeout={handleTimeoutA}
                       isMatchPoint={game.isMatchPointA}
                       isSetPoint={game.isSetPointA}
                       isDeuce={game.isDeuce}
@@ -266,8 +285,8 @@ function App() {
                       setsNeededToWin={game.setsNeededToWin}
                       colorTheme="indigo"
                       isLocked={interactingTeam !== null && interactingTeam !== 'A'}
-                      onInteractionStart={() => setInteractingTeam('A')}
-                      onInteractionEnd={() => setInteractingTeam(null)}
+                      onInteractionStart={handleInteractionStartA}
+                      onInteractionEnd={handleInteractionEnd}
                   />
                   <ScoreCardNormal
                       teamId="B"
@@ -275,11 +294,11 @@ function App() {
                       score={state.scoreB}
                       setsWon={state.setsB}
                       isServing={state.servingTeam === 'B'}
-                      onAdd={() => game.addPoint('B')}
-                      onSubtract={() => game.subtractPoint('B')}
-                      onSetServer={() => game.setServer('B')}
+                      onAdd={handleAddB}
+                      onSubtract={handleSubB}
+                      onSetServer={handleSetServerB}
                       timeouts={state.timeoutsB}
-                      onTimeout={() => game.useTimeout('B')}
+                      onTimeout={handleTimeoutB}
                       isMatchPoint={game.isMatchPointB}
                       isSetPoint={game.isSetPointB}
                       isDeuce={game.isDeuce}
@@ -288,8 +307,8 @@ function App() {
                       setsNeededToWin={game.setsNeededToWin}
                       colorTheme="rose"
                       isLocked={interactingTeam !== null && interactingTeam !== 'B'}
-                      onInteractionStart={() => setInteractingTeam('B')}
-                      onInteractionEnd={() => setInteractingTeam(null)}
+                      onInteractionStart={handleInteractionStartB}
+                      onInteractionEnd={handleInteractionEnd}
                   />
                 </>
              )}

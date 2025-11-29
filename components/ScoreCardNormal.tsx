@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Team, TeamId } from '../types';
-import { Volleyball, Zap } from 'lucide-react';
+import { Volleyball, Zap, Timer, Skull, TrendingUp, Trophy } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
 import { ScoreTicker } from './ui/ScoreTicker';
@@ -42,22 +42,54 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
 
   const theme = {
     indigo: {
-      text: 'text-indigo-600 dark:text-indigo-400',
-      bg: 'bg-indigo-500',
+      text: 'text-indigo-600 dark:text-indigo-300',
+      glow: 'shadow-[0_0_15px_rgba(99,102,241,0.5)]',
       haloColor: 'bg-indigo-500',
-      shadow: 'shadow-indigo-500/50',
+      badgeBg: 'bg-indigo-500/20',
+      badgeBorder: 'border-indigo-500/30',
+      badgeText: 'text-indigo-600 dark:text-indigo-300',
     },
     rose: {
-      text: 'text-rose-600 dark:text-rose-500 saturate-[1.25] dark:saturate-[1.75] dark:brightness-125',
-      bg: 'bg-rose-500 saturate-150',
+      text: 'text-rose-600 dark:text-rose-300',
+      glow: 'shadow-[0_0_15px_rgba(244,63,94,0.5)]',
       haloColor: 'bg-rose-500',
-      shadow: 'shadow-rose-500/50',
+      badgeBg: 'bg-rose-500/20',
+      badgeBorder: 'border-rose-500/30',
+      badgeText: 'text-rose-600 dark:text-rose-300',
     }
   }[colorTheme];
 
   const orderClass = reverseLayout ? (teamId === 'A' ? 'order-last' : 'order-first') : (teamId === 'A' ? 'order-first' : 'order-last');
   const timeoutsExhausted = timeouts >= 2;
   const isCritical = isMatchPoint || isSetPoint || inSuddenDeath;
+
+  // Badge Configuration
+  let badgeConfig = null;
+  if (inSuddenDeath) {
+      badgeConfig = { 
+          icon: Skull, 
+          text: t('status.sudden_death'), 
+          className: 'bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/30 shadow-red-500/20' 
+      };
+  } else if (isMatchPoint) {
+      badgeConfig = { 
+          icon: Trophy, 
+          text: t('status.match_point'), 
+          className: 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30 shadow-amber-500/20' 
+      };
+  } else if (isSetPoint) {
+      badgeConfig = { 
+          icon: Zap, 
+          text: t('status.set_point'), 
+          className: `${theme.badgeBg} ${theme.badgeText} ${theme.badgeBorder}` 
+      };
+  } else if (isDeuce) {
+      badgeConfig = { 
+          icon: TrendingUp, 
+          text: t('status.advantage'), 
+          className: 'bg-slate-500/20 text-slate-600 dark:text-slate-300 border-slate-500/30' 
+      };
+  }
 
   return (
     <motion.div 
@@ -74,48 +106,59 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
       <div className="flex flex-col h-full w-full relative z-10 py-2 md:py-4 px-2 justify-between items-center">
         
         {/* Header: Name, Sets, Serve */}
-        <div className="flex flex-col items-center justify-center w-full flex-none order-1 mt-4">
+        <div className="flex flex-col items-center justify-center w-full flex-none order-1 mt-4 space-y-3">
             
             <div 
-                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity active:scale-95 duration-200"
+                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity active:scale-95 duration-200 group"
                 onClick={(e) => { e.stopPropagation(); onSetServer(); }}
                 role="button"
                 aria-label={`Set serve to ${team?.name}`}
             >
                 <h2 
-                    className="font-black uppercase text-center z-10 leading-none text-xl md:text-3xl text-slate-800 dark:text-slate-200 tracking-widest truncate max-w-[200px]"
+                    className="font-black uppercase text-center z-10 leading-none text-xl md:text-2xl text-slate-800 dark:text-slate-200 tracking-widest truncate max-w-[200px] group-hover:scale-105 transition-transform"
                 >
                     {team?.name || ''}
                 </h2>
                 <AnimatePresence>
                   {isServing && (
                     <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
+                      initial={{ scale: 0, opacity: 0, rotate: -180 }}
+                      animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                      exit={{ scale: 0, opacity: 0, rotate: 180 }}
                       transition={{ type: "spring", stiffness: 400, damping: 20 }}
                     >
                       <Volleyball 
-                          size={20} 
+                          size={18} 
                           className={`animate-bounce ${theme.text}`} 
+                          fill="currentColor"
+                          fillOpacity={0.2}
                       />
                     </motion.div>
                   )}
                 </AnimatePresence>
             </div>
 
-            <div className="flex gap-2 mt-2">
+            {/* Sets Indicator - Glowing Dots */}
+            <div className="flex gap-2">
                 {[...Array(setsNeededToWin)].map((_, i) => (
-                    <div key={i} className={`w-2 h-2 rounded-full transition-all ${i < setsWon ? theme.bg : 'bg-black/10 dark:bg-white/10'}`} />
+                    <div 
+                        key={i} 
+                        className={`
+                            w-2.5 h-2.5 rounded-full transition-all duration-500 border border-black/5 dark:border-white/5
+                            ${i < setsWon 
+                                ? `${theme.haloColor} ${theme.glow} scale-110` 
+                                : 'bg-black/10 dark:bg-white/10'}
+                        `} 
+                    />
                 ))}
             </div>
         </div>
 
-        {/* Badges - STAMP EFFECT */}
+        {/* Badges - STAMP EFFECT (Neo-Glass Style) */}
         <AnimatePresence mode="popLayout">
-            {(isMatchPoint || isSetPoint || isDeuce || inSuddenDeath) && (
+            {badgeConfig && (
                 <motion.div 
-                    className="flex-none py-2 order-2 w-full flex justify-center z-10 min-h-[2rem]"
+                    className="flex-none py-2 order-2 w-full flex justify-center z-10 min-h-[2.5rem]"
                     variants={stampVariants}
                     initial="hidden"
                     animate="visible"
@@ -123,25 +166,19 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                     key="badge-container"
                 >
                     <div className={`
-                        px-3 py-1 rounded-full backdrop-blur-xl border border-black/10 dark:border-white/20 shadow-2xl
-                        font-black uppercase tracking-[0.1em] text-center whitespace-nowrap
-                        text-[10px] shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center gap-1 transform transition-all
-                        ${inSuddenDeath
-                            ? 'bg-red-600 text-white shadow-red-500/50 border-red-400'
-                            : isMatchPoint 
-                                ? 'bg-amber-500 text-black shadow-amber-500/50' 
-                                : isSetPoint 
-                                    ? `${theme.bg} text-white ${theme.shadow}`
-                                    : 'bg-slate-200 text-slate-900'} 
+                        px-3 py-1.5 rounded-md backdrop-blur-xl border shadow-lg
+                        font-bold uppercase tracking-widest text-center whitespace-nowrap
+                        text-[10px] flex items-center gap-2 transform transition-all
+                        ${badgeConfig.className}
                     `}>
-                        {inSuddenDeath && <Zap className="w-3 h-3" fill="currentColor" />}
-                        {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
+                        {badgeConfig.icon && <badgeConfig.icon size={12} strokeWidth={3} />}
+                        {badgeConfig.text}
                     </div>
                 </motion.div>
             )}
         </AnimatePresence>
         
-        {(!isCritical && !isDeuce) && <div className="order-2 min-h-[1.5rem] flex-none"></div>}
+        {!badgeConfig && <div className="order-2 min-h-[2.5rem] flex-none"></div>}
 
         {/* The Number + Halo Container */}
         <div 
@@ -152,26 +189,20 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             style={{ touchAction: 'none' }}
             {...gestureHandlers}
         >
-            {/* 
-                We move the font-size to this wrapper so the Halo (using em) scales perfectly with the text.
-                The ScoreTicker inherits the font size.
-            */}
             <div className="relative inline-flex items-center justify-center text-[12vh] landscape:text-[20vh] leading-none">
                 
                 {/* 
                     THE PERFECT HALO 
-                    - Absolute centered behind text
-                    - Aspect square & rounded-full for perfect circle
-                    - Size defined in em (relative to font size) for precision
+                    Adjusted for Neo-Glass: Softer, larger, more diffuse
                 */}
                 <div 
                     className={`
                         absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                        w-[1.3em] h-[1.3em] rounded-full -z-10
-                        blur-2xl opacity-0 transition-opacity duration-700 ease-out
+                        w-[1.4em] h-[1.4em] rounded-full -z-10
+                        blur-3xl opacity-0 transition-opacity duration-700 ease-out
                         pointer-events-none mix-blend-screen
                         ${theme.haloColor}
-                        ${isServing ? 'opacity-30' : 'opacity-0'}
+                        ${isServing ? 'opacity-40 dark:opacity-30' : 'opacity-0'}
                     `} 
                 />
                 
@@ -179,17 +210,19 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                 <ScoreTicker 
                     value={score}
                     className={`
-                        relative z-10 drop-shadow-2xl font-black tracking-[-0.08em] 
+                        relative z-10 drop-shadow-2xl font-black tracking-tighter
                         text-slate-900 dark:text-white outline-none select-none
                         transition-transform duration-100 active:scale-95
-                        ${theme.text}
                     `}
+                    style={{
+                        textShadow: isServing ? '0 0 40px rgba(0,0,0,0.3)' : 'none'
+                    }}
                 />
             </div>
         </div>
 
-        {/* Timeouts */}
-        <div className="order-4 w-full flex items-center justify-center flex-none transition-all z-20 mt-1 mb-4">
+        {/* Timeouts - Compact Icon Only Style */}
+        <div className="order-4 w-full flex items-center justify-center flex-none transition-all z-20 mt-2 mb-6">
            <motion.button 
              whileTap={{ scale: 0.95 }}
              onPointerDown={(e) => e.stopPropagation()}
@@ -199,23 +232,35 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
              }}
              disabled={timeoutsExhausted}
              className={`
-                flex items-center justify-center gap-3 transition-all rounded-full border border-black/5 dark:border-white/5 py-2 px-4 bg-white/20 dark:bg-black/20 opacity-90 w-auto
-                ${timeoutsExhausted ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:bg-white/40 dark:hover:bg-black/50 hover:border-black/10 dark:hover:border-white/20 shadow-lg'}
+                flex items-center gap-2 transition-all rounded-xl border py-2 px-3
+                backdrop-blur-md shadow-lg
+                ${timeoutsExhausted 
+                    ? 'bg-black/5 dark:bg-white/5 border-transparent opacity-40 cursor-not-allowed grayscale' 
+                    : 'bg-white/20 dark:bg-white/5 border-white/20 hover:bg-white/30 dark:hover:bg-white/10 hover:border-white/30 cursor-pointer'}
              `}
+             title={t('game.useTimeout')}
            >
-              <span className="font-bold text-slate-600 dark:text-slate-500 uppercase tracking-widest text-[10px]">{t('game.timeout')}</span>
-              <div className="flex gap-1.5">
-                {[1, 2].map(t => (
-                    <div 
-                    key={t}
-                    className={`
-                        transition-all duration-300 rounded-full w-2.5 h-2.5
-                        ${t <= timeouts 
-                        ? 'bg-slate-400 dark:bg-slate-800 border border-slate-500 dark:border-slate-700' 
-                        : `${theme.bg} shadow-[0_0_8px_currentColor] border-white/10`}
-                    `}
-                    />
-                ))}
+              {/* Icon Only */}
+              <div className="text-slate-800 dark:text-white">
+                  <Timer size={18} />
+              </div>
+              
+              {/* Vertical Dots Column - Compact */}
+              <div className="flex flex-col gap-1 border-l border-black/10 dark:border-white/10 pl-2">
+                {[1, 2].map(t => {
+                     const isUsed = t <= timeouts;
+                     return (
+                        <div 
+                        key={t}
+                        className={`
+                            transition-all duration-300 rounded-full w-1.5 h-1.5
+                            ${isUsed 
+                            ? 'bg-black/20 dark:bg-white/20' 
+                            : `${theme.haloColor} shadow-[0_0_8px_currentColor] scale-110`}
+                        `}
+                        />
+                     );
+                })}
               </div>
            </motion.button>
         </div>

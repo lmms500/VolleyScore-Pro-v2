@@ -76,7 +76,8 @@ export const TrackingGlow: React.FC<TrackingGlowProps> = ({
           : isCritical 
             ? { 
                 scale: [1, 1.35, 1],
-                opacity: isMatchPoint ? [0.4, 0.9, 0.4] : [0.3, 0.7, 0.3],
+                // Increased opacity range for critical moments
+                opacity: isMatchPoint ? [0.6, 1, 0.6] : [0.4, 0.8, 0.4],
               }
             : { 
                 scale: 1, 
@@ -85,7 +86,7 @@ export const TrackingGlow: React.FC<TrackingGlowProps> = ({
       }
       transition={
         isCritical 
-          ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+          ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
           : { duration: 0.3, ease: "easeOut" }
       }
     />

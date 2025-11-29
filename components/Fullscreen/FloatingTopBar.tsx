@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Volleyball, Timer, Skull, TrendingUp, Scale } from 'lucide-react';
+import { Volleyball, Timer, Skull, TrendingUp, Scale, Hash } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { popRotateVariants, springSnappy } from '../../utils/animations';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -43,16 +43,16 @@ const TimeoutDots = memo<{
   total: number; 
   color: 'indigo' | 'rose'; 
 }>(({ count, color }) => {
-  const activeClass = color === 'indigo' ? 'bg-indigo-400' : 'bg-rose-400';
+  const activeClass = color === 'indigo' ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]';
   
   return (
-    <div className="flex gap-1 mt-1">
+    <div className="flex gap-1.5 mt-1.5">
         {[1, 2].map(i => {
           const isUsed = i <= count;
           return (
             <div
               key={i}
-              className={`w-1 h-1 rounded-full transition-all duration-300 ${isUsed ? 'bg-white/20' : activeClass}`}
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isUsed ? 'bg-white/20' : activeClass}`}
             />
           );
         })}
@@ -70,13 +70,13 @@ const TimeoutButton = memo<{
     <button
       onClick={(e) => { e.stopPropagation(); onTimeout(); }}
       className={`
-         flex flex-col items-center justify-center p-2 rounded-lg transition-all active:scale-90
+         flex flex-col items-center justify-center p-2 rounded-xl transition-all active:scale-90
          hover:bg-white/10 border border-transparent hover:border-white/5
          ${timeouts >= 2 ? 'opacity-40 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
       `}
     >
-        <div className={`p-1.5 rounded-md ${color === 'indigo' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-rose-500/20 text-rose-300'}`}>
-            <Timer size={16} strokeWidth={2.5} />
+        <div className={`p-1.5 rounded-lg ${color === 'indigo' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-rose-500/20 text-rose-300'}`}>
+            <Timer size={18} />
         </div>
         <TimeoutDots count={timeouts} total={2} color={color} />
     </button>
@@ -119,7 +119,7 @@ const TeamInfoStealth = memo<{
                     className={`${color === 'indigo' ? 'text-indigo-400' : 'text-rose-400'}`}
                 >
                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
-                        <Volleyball size={12} fill="currentColor" />
+                        <Volleyball size={14} fill="currentColor" fillOpacity={0.2} />
                      </motion.div>
                 </motion.div>
             )}
@@ -136,13 +136,13 @@ const TeamInfoStealth = memo<{
               animate={{ y: 0, opacity: 1 }} 
               exit={{ y: -5, opacity: 0 }}
               className={`
-                px-1.5 py-[1px] rounded flex items-center gap-1 shadow-lg backdrop-blur-md border border-white/10
+                px-2 py-[2px] rounded-md flex items-center gap-1 shadow-lg backdrop-blur-md border
                 ${isMatchPoint 
                     ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' 
                     : (color === 'indigo' ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30')}
               `}
             >
-               <span className="text-[8px] font-black uppercase tracking-wider leading-none whitespace-nowrap">
+               <span className="text-[9px] font-black uppercase tracking-widest leading-none whitespace-nowrap">
                  {isMatchPoint ? t('status.match_point') : t('status.set_point')}
                </span>
             </motion.div>
@@ -171,15 +171,15 @@ const CenterDisplayStealth = memo<{
   const StatusPill = ({ icon: Icon, text, colorClass, borderClass, bgClass, animateIcon }: any) => (
       <motion.div 
          layout
-         className={`flex items-center gap-2 px-3 py-1 rounded-md border backdrop-blur-md ${borderClass} ${bgClass} shadow-lg`}
+         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border backdrop-blur-md ${borderClass} ${bgClass} shadow-lg`}
       >
            <motion.div 
              animate={animateIcon}
              transition={{ duration: 1.5, repeat: Infinity }}
            >
-              <Icon size={12} className={colorClass} />
+              <Icon size={14} className={colorClass} strokeWidth={2.5} />
            </motion.div>
-           <span className={`text-[9px] font-black uppercase tracking-widest leading-none ${colorClass}`}>
+           <span className={`text-[10px] font-black uppercase tracking-widest leading-none ${colorClass}`}>
              {text}
            </span>
       </motion.div>
@@ -193,12 +193,12 @@ const CenterDisplayStealth = memo<{
     content = <StatusPill icon={TrendingUp} text={t('status.advantage')} colorClass="text-orange-200" borderClass="border-orange-500/30" bgClass="bg-orange-900/40" animateIcon={{ y: [-1, 1, -1] }} />;
   } else {
     content = (
-      <button onClick={onToggleTimer} className="flex flex-col items-center group py-1">
-        <span className={`font-mono text-xl font-bold tabular-nums leading-none tracking-tight transition-colors ${isTimerRunning ? 'text-white' : 'text-slate-500'}`}>
+      <button onClick={onToggleTimer} className="flex flex-col items-center group py-1 select-none">
+        <span className={`font-mono text-xl font-bold tabular-nums leading-none tracking-tight transition-colors ${isTimerRunning ? 'text-white drop-shadow-md' : 'text-slate-500'}`}>
             {formatTime(time)}
         </span>
-        <span className={`text-[8px] font-bold uppercase tracking-[0.2em] mt-0.5 flex items-center gap-1 ${isTieBreak ? 'text-amber-400' : 'text-slate-500 group-hover:text-slate-300'}`}>
-            {isTieBreak && <Scale size={8} />}
+        <span className={`text-[9px] font-bold uppercase tracking-[0.2em] mt-1 flex items-center gap-1.5 ${isTieBreak ? 'text-amber-400' : 'text-slate-500 group-hover:text-slate-300'}`}>
+            {isTieBreak ? <Scale size={10} /> : <Hash size={10} />}
             {isTieBreak ? 'TIE' : `SET ${currentSet}`}
         </span>
       </button>
@@ -225,7 +225,6 @@ const CenterDisplayStealth = memo<{
 // --- MAIN COMPONENT ---
 
 export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
-  // System Look Styles
   const glassContainer = "bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/40";
 
   return (
@@ -238,14 +237,12 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
           pointer-events-auto
           w-auto max-w-[95vw]
           ${glassContainer}
-          rounded-full
-          py-1.5 px-6
+          rounded-2xl
+          py-2 px-6
         `}
       >
-        {/* Compact Grid Layout: Hugs content */}
-        <div className="flex items-center justify-between gap-3 md:gap-6">
+        <div className="flex items-center justify-between gap-4 md:gap-8">
             
-          {/* Col 1: Team A */}
           <TeamInfoStealth 
             name={props.teamNameA} 
             color={props.colorA} 
@@ -256,8 +253,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
             isSetPoint={props.isSetPointA}
           />
 
-          {/* Col 2: Timeout A */}
-          <div className="border-r border-white/5 pr-2 md:pr-4 py-1">
+          <div className="border-r border-white/5 pr-3 md:pr-4 py-1">
             <TimeoutButton 
                 timeouts={props.timeoutsA} 
                 onTimeout={props.onTimeoutA} 
@@ -266,7 +262,6 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
             />
           </div>
 
-          {/* Col 3: Timer (Center) */}
           <div className="flex items-center justify-center px-1">
             <CenterDisplayStealth 
               time={props.time}
@@ -279,8 +274,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
             />
           </div>
 
-          {/* Col 4: Timeout B */}
-          <div className="border-l border-white/5 pl-2 md:pl-4 py-1">
+          <div className="border-l border-white/5 pl-3 md:pl-4 py-1">
             <TimeoutButton 
                 timeouts={props.timeoutsB} 
                 onTimeout={props.onTimeoutB} 
@@ -289,7 +283,6 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
             />
           </div>
 
-          {/* Col 5: Team B */}
           <TeamInfoStealth 
             name={props.teamNameB} 
             color={props.colorB} 

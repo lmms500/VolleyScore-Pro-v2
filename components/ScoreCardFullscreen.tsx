@@ -38,14 +38,12 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
     indigo: {
       text: 'text-indigo-400',
       bg: 'bg-indigo-500',
-      // Gradient mais suave e focado no centro
       glowRadial: 'bg-[radial-gradient(circle,rgba(99,102,241,0.5)_0%,rgba(99,102,241,0)_70%)]',
       glowShadow: 'drop-shadow-[0_0_30px_rgba(99,102,241,0.7)]'
     },
     rose: {
       text: 'text-rose-400',
       bg: 'bg-rose-500',
-      // Gradient mais suave e focado no centro
       glowRadial: 'bg-[radial-gradient(circle,rgba(244,63,94,0.5)_0%,rgba(244,63,94,0)_70%)]',
       glowShadow: 'drop-shadow-[0_0_30px_rgba(244,63,94,0.7)]'
     }
@@ -118,7 +116,8 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
                     ref={scoreRefCallback}
                     className={`block font-black leading-none text-white tracking-tighter transition-all duration-300 relative z-10 ${glowClass}`}
                     style={{ 
-                        fontSize: 'clamp(10rem, 35vw, 26rem)',
+                        // Reduced clamp values significantly for small screens to avoid overlaps
+                        fontSize: 'clamp(5rem, 25vw, 18rem)',
                         textShadow: '0 20px 60px rgba(0,0,0,0.5)',
                         lineHeight: 0.8
                     }}

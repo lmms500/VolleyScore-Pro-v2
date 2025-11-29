@@ -42,15 +42,15 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
       text: 'text-indigo-600 dark:text-indigo-400',
       bg: 'bg-indigo-500',
       shadow: 'shadow-indigo-500/50',
-      // Gradient consistente com Fullscreen
-      glowRadial: 'bg-[radial-gradient(circle,rgba(99,102,241,0.4)_0%,rgba(99,102,241,0)_70%)]'
+      // Glow mais forte (0.6 opacity) e mais amplo
+      glowRadial: 'bg-[radial-gradient(circle,rgba(99,102,241,0.6)_0%,rgba(99,102,241,0)_70%)]'
     },
     rose: {
       text: 'text-rose-600 dark:text-rose-400',
       bg: 'bg-rose-500',
       shadow: 'shadow-rose-500/50',
-      // Gradient consistente com Fullscreen
-      glowRadial: 'bg-[radial-gradient(circle,rgba(244,63,94,0.4)_0%,rgba(244,63,94,0)_70%)]'
+      // Glow mais forte (0.6 opacity) e mais amplo
+      glowRadial: 'bg-[radial-gradient(circle,rgba(244,63,94,0.6)_0%,rgba(244,63,94,0)_70%)]'
     }
   }[colorTheme];
 
@@ -128,20 +128,21 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
             {...gestureHandlers}
         >
             <div className="relative inline-flex items-center justify-center">
-                {/* Background Glow - Centered on Number, Dynamic Size */}
+                {/* Background Glow - Significantly Increased Size and Intensity */}
                 <div 
                     className={`
                         absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                        w-[160%] h-[160%] rounded-full transition-opacity duration-700 ease-out 
+                        w-[250%] h-[250%] rounded-full transition-opacity duration-700 ease-out 
                         ${theme.glowRadial} pointer-events-none mix-blend-screen blur-[60px] z-0
                         ${isServing ? 'opacity-100' : 'opacity-0'}
                     `} 
                 />
                 
+                {/* Reduced font size slightly to accommodate larger glow and small screens */}
                 <span className={`
                     relative z-10 drop-shadow-2xl font-black leading-none tracking-[-0.08em] 
                     text-slate-900 dark:text-white outline-none select-none
-                    text-[15vh] landscape:text-[25vh]
+                    text-[12vh] landscape:text-[20vh]
                     transition-transform duration-100 active:scale-95
                 `}>
                     {score}

@@ -13,7 +13,7 @@ interface UseHudMeasureProps {
   rightScoreEl: HTMLElement | null;
   enabled?: boolean;
   maxSets: number;
-  version?: number; // Added version prop to force re-calc
+  version?: number;
 }
 
 const INITIAL_PLACEMENT: HudPlacement = {
@@ -41,83 +41,45 @@ export function useHudMeasure({
         return;
     }
 
-    // 2. Missing Elements or Disabled
-    if (!enabled || !leftScoreEl || !rightScoreEl) {
+    if (!enabled) {
         setPlacement(prev => prev.visible ? { ...prev, visible: false } : prev);
         return;
     }
 
-    const rectA = leftScoreEl.getBoundingClientRect();
-    const rectB = rightScoreEl.getBoundingClientRect();
     const windowW = window.innerWidth;
     const windowH = window.innerHeight;
 
-    // Safety check for invalid rects (e.g. hidden elements during transition)
-    if (rectA.width === 0 || rectB.width === 0) return;
-
+    // Fixed Centralized Positioning
+    // The user requested the HUD to be strictly fixed in the center of the screen,
+    // both vertically and horizontally.
+    
+    const centerX = windowW / 2;
+    const centerY = windowH / 2;
+    
+    // Scale Logic: Ensure it fits on smaller screens
+    // Base width of HUD is approx 200px.
     const isPortrait = windowH > windowW;
-
+    const minDimension = Math.min(windowW, windowH);
+    
+    let scale = 1;
+    
     if (isPortrait) {
-        // Portrait: Position between bottom of Top Score and top of Bottom Score
-        const gapTop = rectA.bottom;
-        const gapBottom = rectB.top;
-        const availableHeight = gapBottom - gapTop;
-
-        if (availableHeight < 50) {
-             setPlacement({ visible: false, left: 0, top: 0, width: 0, scale: 1 });
-             return;
-        }
-
-        const centerY = gapTop + (availableHeight / 2);
-        const centerX = windowW / 2;
-        
-        const scale = Math.min(1, availableHeight / 150);
-
-        setPlacement({
-            visible: true,
-            left: centerX,
-            top: centerY,
-            width: windowW * 0.8,
-            scale
-        });
-
+        // In portrait, width is the constraint
+        scale = Math.min(1, windowW / 300); 
     } else {
-        // Landscape: Position between right of Left Score and left of Right Score
-        
-        const gapLeft = rectA.right;
-        const gapRight = rectB.left;
-        const availableWidth = gapRight - gapLeft;
-
-        // If gap is negative (overlap), hide HUD
-        if (availableWidth < 20) {
-            setPlacement(prev => prev.visible ? { ...prev, visible: false } : prev);
-            return;
-        }
-
-        let centerX = gapLeft + (availableWidth / 2);
-        const centerY = windowH / 2;
-
-        // Safe Area Clamping (Simulated)
-        // In a real device, safe-area-inset-left/right might push content.
-        // We ensure centerX is at least X px from edges.
-        const safeMargin = 40; // Approx notch width
-        const minX = safeMargin;
-        const maxX = windowW - safeMargin;
-        centerX = Math.max(minX, Math.min(centerX, maxX));
-
-        // Calculate Scale based on Gap Width
-        const scale = Math.min(1, availableWidth / 220);
-
-        setPlacement({
-            visible: true,
-            left: centerX,
-            top: centerY,
-            width: availableWidth,
-            scale
-        });
+        // In landscape, height might be constraint if text is huge, but width is usually fine.
+        scale = Math.min(1, windowH / 250); 
     }
 
-  }, [enabled, leftScoreEl, rightScoreEl, maxSets]);
+    setPlacement({
+        visible: true,
+        left: centerX,
+        top: centerY,
+        width: 200, // Nominal width
+        scale: Math.max(0.6, scale) // Prevent it from becoming microscopic
+    });
+
+  }, [enabled, maxSets]);
 
   useLayoutEffect(() => {
     if (!enabled) return;
@@ -126,20 +88,14 @@ export function useHudMeasure({
     
     triggerCalc();
     
-    // Resize Observer to track Score Element changes
-    const observer = new ResizeObserver(triggerCalc);
-    if(leftScoreEl) observer.observe(leftScoreEl);
-    if(rightScoreEl) observer.observe(rightScoreEl);
-    
     window.addEventListener('resize', triggerCalc);
     window.addEventListener('orientationchange', triggerCalc);
     
     return () => {
       window.removeEventListener('resize', triggerCalc);
       window.removeEventListener('orientationchange', triggerCalc);
-      observer.disconnect();
     };
-  }, [calculateLayout, enabled, leftScoreEl, rightScoreEl, version]); // Version dependency added
+  }, [calculateLayout, enabled, version]);
 
   return placement;
 }

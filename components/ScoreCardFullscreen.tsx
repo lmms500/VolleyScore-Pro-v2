@@ -21,13 +21,14 @@ interface ScoreCardFullscreenProps {
   reverseLayout?: boolean;
   scoreRefCallback?: (node: HTMLElement | null) => void;
   isServing?: boolean;
+  alignment?: 'left' | 'right';
 }
 
 export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
   teamId, score, onAdd, onSubtract,
   isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, colorTheme,
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
-  scoreRefCallback, isServing
+  scoreRefCallback, isServing, alignment = 'left'
 }) => {
   const [isPressed, setIsPressed] = useState(false);
 
@@ -70,6 +71,14 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
 
   const glowClass = (isMatchPoint || isSetPoint) ? theme.glowShadow : '';
 
+  // Alignment Logic: Push content AWAY from the center of the screen
+  // If alignment is 'left' (Team on left side), push text LEFT (padding-right)
+  // If alignment is 'right' (Team on right side), push text RIGHT (padding-left)
+  // This creates a channel in the middle for the HUD.
+  const paddingClass = alignment === 'left' 
+      ? 'landscape:pr-[12vw] landscape:pl-0' 
+      : 'landscape:pl-[12vw] landscape:pr-0';
+
   return (
     <motion.div 
         layout
@@ -83,35 +92,32 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
         {...gestureHandlers}
     >
             
-        {/* 
-            Wrapper with Font Size Definition
-            Moved font-size style here so both the Ticker and the Halo use the same em reference.
-        */}
+        {/* Wrapper with Massive Font Size Definition */}
         <div 
             className={`
-                relative inline-flex items-center justify-center overflow-visible transition-transform duration-150 w-full
+                relative inline-flex items-center justify-center overflow-visible transition-transform duration-150 w-full h-full
+                ${paddingClass}
                 ${isPressed ? 'scale-95' : 'scale-100'}
                 will-change-transform
             `}
             style={{ 
-                fontSize: 'clamp(4rem, 18vmax, 13rem)',
+                // Increased font size significantly for impact
+                fontSize: 'clamp(8rem, 28vmax, 22rem)',
                 lineHeight: 0.8
             }}
         >
             
             {/* 
                 THE PERFECT HALO 
-                - Tight circle using em units
-                - Reduced blur for a cleaner "neon light" feel
                 - Stays behind the text
             */}
             <div 
                 className={`
                     absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                    w-[1.3em] h-[1.3em] rounded-full transition-all duration-700 ease-out 
-                    ${theme.haloColor} pointer-events-none mix-blend-screen blur-[50px]
-                    ${isServing ? 'opacity-40' : 'opacity-0'}
-                    ${isPressed ? 'scale-110 opacity-60' : ''}
+                    w-[1.1em] h-[1.1em] rounded-full transition-all duration-700 ease-out 
+                    ${theme.haloColor} pointer-events-none mix-blend-screen blur-[60px]
+                    ${isServing ? 'opacity-30' : 'opacity-0'}
+                    ${isPressed ? 'scale-110 opacity-50' : ''}
                     will-change-[opacity,transform] -z-10
                 `} 
             />

@@ -53,7 +53,7 @@ export default defineConfig({
         id: '/', 
         theme_color: '#020617',
         background_color: '#020617',
-        display: 'standalone',
+        display: 'fullscreen',
         orientation: 'landscape',
         start_url: '/',
         categories: ['sports', 'utilities'],

@@ -32,9 +32,12 @@
     "menu": "Menú"
   },
   "status": {
-    "sudden_death": "Muerte Súbita",
-    "advantage": "Ventaja de 2",
-    "golden_point": "Punto de Oro"
+    "sudden_death": "MUERTE SÚBITA",
+    "advantage": "VENTAJA",
+    "golden_point": "PUNTO DE ORO",
+    "match_point": "MATCH POINT",
+    "set_point": "SET POINT",
+    "tie_break": "TIE BREAK"
   },
   "settings": {
     "title": "Configuración",

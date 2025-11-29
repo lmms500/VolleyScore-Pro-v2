@@ -222,6 +222,8 @@ function App() {
                       onInteractionEnd={() => setInteractingTeam(null)}
                       reverseLayout={isSwapped}
                       scoreRefCallback={setScoreElA}
+                      // Alignment logic based on swapping to keep center clean
+                      alignment={isSwapped ? 'right' : 'left'}
                   />
                   <ScoreCardFullscreen
                       teamId="B"
@@ -239,6 +241,8 @@ function App() {
                       onInteractionEnd={() => setInteractingTeam(null)}
                       reverseLayout={isSwapped}
                       scoreRefCallback={setScoreElB}
+                      // Alignment logic based on swapping to keep center clean
+                      alignment={isSwapped ? 'left' : 'right'}
                   />
                 </>
              ) : (

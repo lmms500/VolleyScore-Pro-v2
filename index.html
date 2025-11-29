@@ -31,12 +31,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
-      /* PWA & Mobile Optimizations */
+      /* PWA & Mobile Optimizations - True Fullscreen Reset */
+      html, body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden; /* Prevents scroll bounce */
+        overscroll-behavior: none;
+        background-color: #000000; /* Deep black backing for notch/dynamic island */
+      }
+      
       html.dark {
         color-scheme: dark;
       }
+      
       body {
-        overscroll-behavior-y: none;
         -webkit-tap-highlight-color: transparent;
         font-family: 'Inter', sans-serif;
       }

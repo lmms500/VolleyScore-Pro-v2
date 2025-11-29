@@ -1,1 +1,0 @@
-// This file is deprecated. Please refer to ScoreCardNormal.tsx and ScoreCardFullscreen.tsx

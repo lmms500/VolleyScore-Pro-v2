@@ -2,6 +2,8 @@ import React, { useState, memo } from 'react';
 import { TeamId } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { ScoreTicker } from './ui/ScoreTicker';
+import { motion } from 'framer-motion';
+import { layoutTransition } from '../utils/animations';
 
 interface ScoreCardFullscreenProps {
   teamId: TeamId;
@@ -48,14 +50,12 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
   const theme = {
     indigo: {
       text: 'text-white',
-      bg: 'bg-indigo-500',
-      glowRadial: 'bg-[radial-gradient(circle,rgba(99,102,241,0.5)_0%,rgba(99,102,241,0)_70%)]',
+      haloColor: 'bg-indigo-500',
       glowShadow: 'drop-shadow-[0_0_30px_rgba(99,102,241,0.7)]'
     },
     rose: {
       text: 'text-white', 
-      bg: 'bg-rose-600 saturate-150',
-      glowRadial: 'bg-[radial-gradient(circle,rgba(244,63,94,0.6)_0%,rgba(244,63,94,0)_70%)]',
+      haloColor: 'bg-rose-600',
       glowShadow: 'drop-shadow-[0_0_40px_rgba(244,63,94,0.9)]'
     }
   }[colorTheme];
@@ -71,37 +71,52 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
   const glowClass = (isMatchPoint || isSetPoint) ? theme.glowShadow : '';
 
   return (
-    <div 
+    <motion.div 
+        layout
+        transition={layoutTransition}
         className={`
             fixed z-10 flex flex-col justify-center items-center select-none overflow-visible
             ${positionClasses}
             ${isLocked ? 'opacity-50 grayscale' : ''}
-            transition-all duration-300
         `}
         style={{ touchAction: 'none' }}
         {...gestureHandlers}
     >
             
-        {/* The Number Wrapper - Added will-change-transform for GPU optimization */}
-        <div className={`
-            relative inline-flex items-center justify-center overflow-visible transition-transform duration-150 w-full
-            ${isPressed ? 'scale-95' : 'scale-100'}
-            will-change-transform
-        `}>
+        {/* 
+            Wrapper with Font Size Definition
+            Moved font-size style here so both the Ticker and the Halo use the same em reference.
+        */}
+        <div 
+            className={`
+                relative inline-flex items-center justify-center overflow-visible transition-transform duration-150 w-full
+                ${isPressed ? 'scale-95' : 'scale-100'}
+                will-change-transform
+            `}
+            style={{ 
+                fontSize: 'clamp(4rem, 18vmax, 13rem)',
+                lineHeight: 0.8
+            }}
+        >
             
-            {/* DYNAMIC GLOW */}
+            {/* 
+                THE PERFECT HALO 
+                - Tight circle using em units
+                - Reduced blur for a cleaner "neon light" feel
+                - Stays behind the text
+            */}
             <div 
                 className={`
                     absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                    w-[160%] h-[160%] rounded-full transition-opacity duration-700 ease-out 
-                    ${theme.glowRadial} pointer-events-none mix-blend-screen blur-[80px]
-                    ${isServing ? 'opacity-100' : 'opacity-0'}
-                    ${isPressed ? 'opacity-80 scale-110' : ''}
-                    will-change-[opacity,transform]
+                    w-[1.3em] h-[1.3em] rounded-full transition-all duration-700 ease-out 
+                    ${theme.haloColor} pointer-events-none mix-blend-screen blur-[50px]
+                    ${isServing ? 'opacity-40' : 'opacity-0'}
+                    ${isPressed ? 'scale-110 opacity-60' : ''}
+                    will-change-[opacity,transform] -z-10
                 `} 
             />
 
-            <div ref={scoreRefCallback} className="w-full flex justify-center">
+            <div ref={scoreRefCallback} className="w-full flex justify-center relative z-10">
               <ScoreTicker 
                   value={score}
                   className={`
@@ -111,13 +126,11 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
                       ${isPressed ? 'brightness-125' : ''}
                   `}
                   style={{ 
-                      fontSize: 'clamp(4rem, 18vmax, 13rem)',
                       textShadow: '0 20px 60px rgba(0,0,0,0.5)',
-                      lineHeight: 0.8
                   }}
               />
             </div>
         </div>
-    </div>
+    </motion.div>
   );
 });

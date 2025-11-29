@@ -4,8 +4,8 @@ import { Volleyball, Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
 import { ScoreTicker } from './ui/ScoreTicker';
-import { motion } from 'framer-motion';
-import { pulseHeartbeat } from '../utils/animations';
+import { motion, AnimatePresence } from 'framer-motion';
+import { layoutTransition, stampVariants } from '../utils/animations';
 
 interface ScoreCardNormalProps {
   teamId: TeamId;
@@ -44,14 +44,14 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
     indigo: {
       text: 'text-indigo-600 dark:text-indigo-400',
       bg: 'bg-indigo-500',
+      haloColor: 'bg-indigo-500',
       shadow: 'shadow-indigo-500/50',
-      glowRadial: 'bg-[radial-gradient(circle,rgba(99,102,241,0.6)_0%,rgba(99,102,241,0)_70%)]'
     },
     rose: {
       text: 'text-rose-600 dark:text-rose-500 saturate-[1.25] dark:saturate-[1.75] dark:brightness-125',
       bg: 'bg-rose-500 saturate-150',
+      haloColor: 'bg-rose-500',
       shadow: 'shadow-rose-500/50',
-      glowRadial: 'bg-[radial-gradient(circle,rgba(244,63,94,0.6)_0%,rgba(244,63,94,0)_70%)]'
     }
   }[colorTheme];
 
@@ -60,9 +60,11 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
   const isCritical = isMatchPoint || isSetPoint || inSuddenDeath;
 
   return (
-    <div 
+    <motion.div 
+        layout
+        transition={layoutTransition}
         className={`
-            flex flex-col flex-1 relative h-full transition-all duration-500 select-none overflow-visible
+            flex flex-col flex-1 relative h-full transition-colors duration-500 select-none overflow-visible
             ${orderClass} 
             ${isLocked ? 'opacity-90 grayscale-[0.2]' : ''}
             ${isServing ? 'z-20' : 'z-0'} 
@@ -85,13 +87,21 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                 >
                     {team?.name || ''}
                 </h2>
-                <Volleyball 
-                    size={20} 
-                    className={`
-                        transition-all duration-300
-                        ${isServing ? `opacity-100 animate-bounce ${theme.text}` : 'opacity-0 scale-0 w-0'}
-                    `} 
-                />
+                <AnimatePresence>
+                  {isServing && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                    >
+                      <Volleyball 
+                          size={20} 
+                          className={`animate-bounce ${theme.text}`} 
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
             </div>
 
             <div className="flex gap-2 mt-2">
@@ -101,36 +111,39 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             </div>
         </div>
 
-        {/* Badges */}
-        {(isMatchPoint || isSetPoint || isDeuce || inSuddenDeath) ? (
-            <motion.div 
-                className="flex-none py-2 order-2 w-full flex justify-center z-10 min-h-[2rem]"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-            >
-                 <motion.div 
-                    variants={pulseHeartbeat}
-                    animate={isCritical ? "pulse" : "idle"}
-                    className={`
-                    px-3 py-1 rounded-full backdrop-blur-xl border border-black/10 dark:border-white/20 shadow-2xl
-                    font-black uppercase tracking-[0.1em] text-center whitespace-nowrap
-                    text-[10px] shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center gap-1 transform transition-all
-                    ${inSuddenDeath
-                        ? 'bg-red-600 text-white shadow-red-500/50 border-red-400'
-                        : isMatchPoint 
-                            ? 'bg-amber-500 text-black shadow-amber-500/50' 
-                            : isSetPoint 
-                                ? `${theme.bg} text-white ${theme.shadow}`
-                                : 'bg-slate-200 text-slate-900'} 
-                `}>
-                    {inSuddenDeath && <Zap className="w-3 h-3" fill="currentColor" />}
-                    {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
+        {/* Badges - STAMP EFFECT */}
+        <AnimatePresence mode="popLayout">
+            {(isMatchPoint || isSetPoint || isDeuce || inSuddenDeath) && (
+                <motion.div 
+                    className="flex-none py-2 order-2 w-full flex justify-center z-10 min-h-[2rem]"
+                    variants={stampVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    key="badge-container"
+                >
+                    <div className={`
+                        px-3 py-1 rounded-full backdrop-blur-xl border border-black/10 dark:border-white/20 shadow-2xl
+                        font-black uppercase tracking-[0.1em] text-center whitespace-nowrap
+                        text-[10px] shadow-[0_0_20px_rgba(0,0,0,0.5)] flex items-center gap-1 transform transition-all
+                        ${inSuddenDeath
+                            ? 'bg-red-600 text-white shadow-red-500/50 border-red-400'
+                            : isMatchPoint 
+                                ? 'bg-amber-500 text-black shadow-amber-500/50' 
+                                : isSetPoint 
+                                    ? `${theme.bg} text-white ${theme.shadow}`
+                                    : 'bg-slate-200 text-slate-900'} 
+                    `}>
+                        {inSuddenDeath && <Zap className="w-3 h-3" fill="currentColor" />}
+                        {inSuddenDeath ? t('game.suddenDeath') : isMatchPoint ? t('game.matchPoint') : isSetPoint ? t('game.setPoint') : t('game.deuce')}
+                    </div>
                 </motion.div>
-            </motion.div>
-        ) : <div className="order-2 min-h-[1.5rem] flex-none"></div>}
+            )}
+        </AnimatePresence>
+        
+        {(!isCritical && !isDeuce) && <div className="order-2 min-h-[1.5rem] flex-none"></div>}
 
-        {/* The Number + Glow Container */}
+        {/* The Number + Halo Container */}
         <div 
             className={`
                 relative order-3 flex items-center justify-center w-full flex-1 min-h-0 overflow-visible
@@ -139,15 +152,26 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             style={{ touchAction: 'none' }}
             {...gestureHandlers}
         >
-            <div className="relative inline-flex items-center justify-center will-change-transform w-full">
-                {/* Background Glow */}
+            {/* 
+                We move the font-size to this wrapper so the Halo (using em) scales perfectly with the text.
+                The ScoreTicker inherits the font size.
+            */}
+            <div className="relative inline-flex items-center justify-center text-[12vh] landscape:text-[20vh] leading-none">
+                
+                {/* 
+                    THE PERFECT HALO 
+                    - Absolute centered behind text
+                    - Aspect square & rounded-full for perfect circle
+                    - Size defined in em (relative to font size) for precision
+                */}
                 <div 
                     className={`
                         absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                        w-[250%] h-[250%] rounded-full transition-opacity duration-700 ease-out 
-                        ${theme.glowRadial} pointer-events-none mix-blend-screen blur-[60px] z-0
-                        ${isServing ? 'opacity-100' : 'opacity-0'}
-                        will-change-[opacity]
+                        w-[1.3em] h-[1.3em] rounded-full -z-10
+                        blur-2xl opacity-0 transition-opacity duration-700 ease-out
+                        pointer-events-none mix-blend-screen
+                        ${theme.haloColor}
+                        ${isServing ? 'opacity-30' : 'opacity-0'}
                     `} 
                 />
                 
@@ -155,9 +179,8 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                 <ScoreTicker 
                     value={score}
                     className={`
-                        relative z-10 drop-shadow-2xl font-black leading-none tracking-[-0.08em] 
+                        relative z-10 drop-shadow-2xl font-black tracking-[-0.08em] 
                         text-slate-900 dark:text-white outline-none select-none
-                        text-[12vh] landscape:text-[20vh]
                         transition-transform duration-100 active:scale-95
                         ${theme.text}
                     `}
@@ -198,6 +221,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
         </div>
 
       </div>
-    </div>
+    </motion.div>
   );
 });

@@ -30,6 +30,14 @@ export const springFloat: Transition = {
   damping: 20
 };
 
+// Smooth Layout Transition (Magic Swap)
+export const layoutTransition: Transition = {
+  type: "spring",
+  stiffness: 200,
+  damping: 25,
+  mass: 1
+};
+
 // --- REUSABLE VARIANTS ---
 
 // Modal / Drawer Slide Up
@@ -95,6 +103,80 @@ export const pulseHeartbeat: Variants = {
   pulse: {
     scale: [1, 1.05, 1],
     opacity: [1, 0.8, 1],
+    transition: {
+      duration: 2,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }
+  }
+};
+
+// Stamp Effect (Impact entrance)
+export const stampVariants: Variants = {
+  hidden: { scale: 2.5, opacity: 0, rotate: -15 },
+  visible: { 
+    scale: 1, 
+    opacity: 1, 
+    rotate: 0,
+    transition: { 
+      type: "spring",
+      stiffness: 300,
+      damping: 15,
+      mass: 0.8
+    }
+  },
+  exit: { 
+    scale: 0.5, 
+    opacity: 0,
+    transition: { duration: 0.2 }
+  }
+};
+
+// Pop & Rotate (Server Indicator)
+export const popRotateVariants: Variants = {
+  hidden: { scale: 0, rotate: -180, opacity: 0 },
+  visible: { 
+    scale: 1, 
+    rotate: 0, 
+    opacity: 1,
+    transition: { type: "spring", stiffness: 400, damping: 20 }
+  },
+  pop: {
+    scale: [1, 1.3, 1],
+    rotate: [0, 360],
+    transition: { duration: 0.6, ease: "circOut" }
+  }
+};
+
+// Shake (Timeout/Error)
+export const shakeVariants: Variants = {
+  idle: { x: 0 },
+  shake: {
+    x: [0, -3, 3, -3, 3, 0],
+    transition: { duration: 0.4 }
+  }
+};
+
+// Glow Pulse (Sudden Death / Deuce - TopBar)
+export const pulseGlowVariants: Variants = {
+  initial: { opacity: 0, y: -20 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: springSnappy
+  },
+  exit: { 
+    opacity: 0, 
+    y: 10,
+    transition: { duration: 0.2 }
+  },
+  pulse: {
+    boxShadow: [
+      "0 0 0px rgba(0,0,0,0)",
+      "0 0 20px rgba(255,255,255,0.3)",
+      "0 0 0px rgba(0,0,0,0)"
+    ],
+    scale: [1, 1.02, 1],
     transition: {
       duration: 2,
       repeat: Infinity,

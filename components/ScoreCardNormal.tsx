@@ -4,7 +4,7 @@ import { Volleyball, Zap, Timer, Skull, TrendingUp, Trophy } from 'lucide-react'
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
 import { ScoreTicker } from './ui/ScoreTicker';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { layoutTransition, stampVariants } from '../utils/animations';
 
 interface ScoreCardNormalProps {
@@ -61,7 +61,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
 
   const orderClass = reverseLayout ? (teamId === 'A' ? 'order-last' : 'order-first') : (teamId === 'A' ? 'order-first' : 'order-last');
   const timeoutsExhausted = timeouts >= 2;
-  const isCritical = isMatchPoint || isSetPoint || inSuddenDeath;
+  const isCritical = isMatchPoint || isSetPoint;
 
   // Badge Configuration
   let badgeConfig = null;
@@ -69,27 +69,49 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
       badgeConfig = { 
           icon: Skull, 
           text: t('status.sudden_death'), 
-          className: 'bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/30 shadow-red-500/20' 
+          className: 'bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/30 shadow-red-500/20',
+          animateIcon: true 
       };
   } else if (isMatchPoint) {
       badgeConfig = { 
           icon: Trophy, 
           text: t('status.match_point'), 
-          className: 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30 shadow-amber-500/20' 
+          className: 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30 shadow-amber-500/20',
+          animateIcon: false
       };
   } else if (isSetPoint) {
       badgeConfig = { 
           icon: Zap, 
           text: t('status.set_point'), 
-          className: `${theme.badgeBg} ${theme.badgeText} ${theme.badgeBorder}` 
+          className: `${theme.badgeBg} ${theme.badgeText} ${theme.badgeBorder}`,
+          animateIcon: false
       };
   } else if (isDeuce) {
       badgeConfig = { 
           icon: TrendingUp, 
           text: t('status.advantage'), 
-          className: 'bg-slate-500/20 text-slate-600 dark:text-slate-300 border-slate-500/30' 
+          className: 'bg-slate-500/20 text-slate-600 dark:text-slate-300 border-slate-500/30',
+          animateIcon: false
       };
   }
+
+  // Determine Halo State
+  const haloColorClass = isMatchPoint 
+    ? 'bg-amber-500 saturate-150' // Gold for Match Point
+    : theme.haloColor;
+
+  const haloVariants: Variants = {
+    idle: { scale: 1, opacity: isServing ? 0.4 : 0 },
+    critical: {
+      scale: [1, 1.25, 1],
+      opacity: isMatchPoint ? [0.5, 0.9, 0.5] : [0.4, 0.8, 0.4],
+      transition: {
+        duration: 1.5,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }
+    }
+  };
 
   return (
     <motion.div 
@@ -171,7 +193,14 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                         text-[10px] flex items-center gap-2 transform transition-all
                         ${badgeConfig.className}
                     `}>
-                        {badgeConfig.icon && <badgeConfig.icon size={12} strokeWidth={3} />}
+                        {badgeConfig.icon && (
+                            <motion.div
+                                animate={badgeConfig.animateIcon ? { scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] } : {}}
+                                transition={{ repeat: Infinity, duration: 1 }}
+                            >
+                                <badgeConfig.icon size={12} strokeWidth={3} />
+                            </motion.div>
+                        )}
                         {badgeConfig.text}
                     </div>
                 </motion.div>
@@ -192,18 +221,19 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             <div className="relative inline-flex items-center justify-center text-[12vh] landscape:text-[20vh] leading-none">
                 
                 {/* 
-                    THE PERFECT HALO 
-                    Adjusted for Neo-Glass: Softer, larger, more diffuse
+                    THE DYNAMIC GLOWING HALO 
+                    Adjusted for Set/Match points to be more intense
                 */}
-                <div 
+                <motion.div 
                     className={`
                         absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                         w-[1.4em] h-[1.4em] rounded-full -z-10
-                        blur-3xl opacity-0 transition-opacity duration-700 ease-out
-                        pointer-events-none mix-blend-screen
-                        ${theme.haloColor}
-                        ${isServing ? 'opacity-40 dark:opacity-30' : 'opacity-0'}
-                    `} 
+                        blur-3xl pointer-events-none mix-blend-screen
+                        ${haloColorClass}
+                    `}
+                    variants={haloVariants}
+                    animate={isCritical ? "critical" : "idle"}
+                    transition={{ duration: 0.5 }}
                 />
                 
                 {/* Motion Ticker */}
@@ -213,6 +243,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                         relative z-10 drop-shadow-2xl font-black tracking-tighter
                         text-slate-900 dark:text-white outline-none select-none
                         transition-transform duration-100 active:scale-95
+                        ${isMatchPoint ? 'brightness-110 drop-shadow-[0_0_15px_rgba(251,191,36,0.3)]' : ''}
                     `}
                     style={{
                         textShadow: isServing ? '0 0 40px rgba(0,0,0,0.3)' : 'none'

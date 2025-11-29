@@ -179,6 +179,9 @@ function App() {
             `}></div>
           </div>
 
+          {/* Global Sudden Death Overlay - Applied to both Normal and Fullscreen */}
+          <SuddenDeathOverlay active={state.inSuddenDeath} />
+
           {/* Normal Mode History Bar */}
           <div className={`
               z-30 transition-all duration-500 flex-none
@@ -197,8 +200,6 @@ function App() {
           {/* Fullscreen Floating Elements */}
           {isFullscreen && (
               <>
-                <SuddenDeathOverlay active={state.inSuddenDeath} />
-
                 <FloatingTopBar
                     time={state.matchDurationSeconds}
                     currentSet={state.currentSet}

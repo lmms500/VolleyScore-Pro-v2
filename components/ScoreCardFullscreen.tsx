@@ -93,7 +93,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
           className={`
               fixed z-10 flex flex-col justify-center items-center select-none overflow-visible
               ${positionClasses}
-              ${isLocked ? 'opacity-50 grayscale' : ''}
+              
           `}
           style={{ touchAction: 'none' }}
           {...gestureHandlers}

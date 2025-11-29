@@ -25,7 +25,29 @@ const ConfirmationModal = lazy(() => import('./components/modals/ConfirmationMod
 
 function App() {
   const game = useVolleyGame();
-  const { state, isLoaded } = game;
+  const { 
+    state, 
+    isLoaded, 
+    addPoint, 
+    subtractPoint, 
+    setServer, 
+    useTimeout, 
+    undo, 
+    toggleSides, 
+    applySettings, 
+    resetMatch, 
+    generateTeams, 
+    togglePlayerFixed, 
+    removePlayer, 
+    movePlayer, 
+    updateTeamName, 
+    updatePlayerName, 
+    addPlayer, 
+    undoRemovePlayer, 
+    commitDeletions, 
+    rotateTeams 
+  } = game;
+
   const { t } = useTranslation();
   
   const pwa = usePWAInstallPrompt();
@@ -122,15 +144,15 @@ function App() {
   const handleInteractionStartB = useCallback(() => setInteractingTeam('B'), []);
   const handleInteractionEnd = useCallback(() => setInteractingTeam(null), []);
   
-  // Handlers for Score (Wrapped to keep JSX clean)
-  const handleAddA = () => game.addPoint('A');
-  const handleSubA = () => game.subtractPoint('A');
-  const handleAddB = () => game.addPoint('B');
-  const handleSubB = () => game.subtractPoint('B');
-  const handleSetServerA = () => game.setServer('A');
-  const handleSetServerB = () => game.setServer('B');
-  const handleTimeoutA = () => game.useTimeout('A');
-  const handleTimeoutB = () => game.useTimeout('B');
+  // Handlers for Score (Wrapped to keep JSX clean AND stable for memoization)
+  const handleAddA = useCallback(() => addPoint('A'), [addPoint]);
+  const handleSubA = useCallback(() => subtractPoint('A'), [subtractPoint]);
+  const handleAddB = useCallback(() => addPoint('B'), [addPoint]);
+  const handleSubB = useCallback(() => subtractPoint('B'), [subtractPoint]);
+  const handleSetServerA = useCallback(() => setServer('A'), [setServer]);
+  const handleSetServerB = useCallback(() => setServer('B'), [setServer]);
+  const handleTimeoutA = useCallback(() => useTimeout('A'), [useTimeout]);
+  const handleTimeoutB = useCallback(() => useTimeout('B'), [useTimeout]);
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
@@ -333,9 +355,9 @@ function App() {
             `}
           >
               <Controls 
-                  onUndo={game.undo}
+                  onUndo={undo}
                   canUndo={game.canUndo}
-                  onSwap={game.toggleSides}
+                  onSwap={toggleSides}
                   onSettings={() => setShowSettings(true)}
                   onRoster={() => setShowManager(true)}
                   onReset={() => setShowResetConfirm(true)}
@@ -346,9 +368,9 @@ function App() {
           {/* Floating Control Bar */}
           {isFullscreen && (
             <FloatingControlBar 
-                onUndo={game.undo}
+                onUndo={undo}
                 canUndo={game.canUndo}
-                onSwap={game.toggleSides}
+                onSwap={toggleSides}
                 onReset={() => setShowResetConfirm(true)}
                 onMenu={() => setShowFullscreenMenu(true)}
             />
@@ -369,7 +391,7 @@ function App() {
                 isOpen={showSettings} 
                 onClose={() => setShowSettings(false)}
                 config={state.config}
-                onSave={game.applySettings}
+                onSave={applySettings}
                 onInstall={pwa.promptInstall}
                 canInstall={pwa.isInstallable}
                 isIOS={pwa.isIOS}
@@ -385,16 +407,16 @@ function App() {
                 courtA={state.teamARoster}
                 courtB={state.teamBRoster}
                 queue={state.queue}
-                onGenerate={game.generateTeams}
-                onToggleFixed={game.togglePlayerFixed}
-                onRemove={game.removePlayer}
-                onMove={game.movePlayer}
-                onUpdateTeamName={game.updateTeamName}
-                onUpdatePlayerName={game.updatePlayerName}
-                onAddPlayer={game.addPlayer}
-                onUndoRemove={game.undoRemovePlayer}
+                onGenerate={generateTeams}
+                onToggleFixed={togglePlayerFixed}
+                onRemove={removePlayer}
+                onMove={movePlayer}
+                onUpdateTeamName={updateTeamName}
+                onUpdatePlayerName={updatePlayerName}
+                onAddPlayer={addPlayer}
+                onUndoRemove={undoRemovePlayer}
                 canUndoRemove={game.hasDeletedPlayers}
-                onCommitDeletions={game.commitDeletions}
+                onCommitDeletions={commitDeletions}
                 deletedCount={game.deletedCount}
               />
             )}
@@ -403,8 +425,8 @@ function App() {
               <MatchOverModal 
                 isOpen={state.isMatchOver}
                 state={state}
-                onRotate={game.rotateTeams}
-                onReset={game.resetMatch}
+                onRotate={rotateTeams}
+                onReset={resetMatch}
               />
             )}
 
@@ -412,7 +434,7 @@ function App() {
               <ConfirmationModal 
                 isOpen={showResetConfirm}
                 onClose={() => setShowResetConfirm(false)}
-                onConfirm={game.resetMatch}
+                onConfirm={resetMatch}
                 title="Reset Match?"
                 message="Are you sure you want to reset the match? All scores and history will be lost."
               />

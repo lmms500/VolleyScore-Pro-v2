@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useRef, useState, memo } from 'react';
 import { motion } from 'framer-motion';
 
 interface TrackingGlowProps {
@@ -10,7 +10,7 @@ interface TrackingGlowProps {
   isPressed: boolean;
 }
 
-export const TrackingGlow: React.FC<TrackingGlowProps> = ({
+export const TrackingGlow: React.FC<TrackingGlowProps> = memo(({
   targetRef,
   colorTheme,
   isServing,
@@ -91,4 +91,4 @@ export const TrackingGlow: React.FC<TrackingGlowProps> = ({
       }
     />
   );
-};
+});

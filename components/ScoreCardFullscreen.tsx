@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { TeamId } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 
@@ -28,23 +27,36 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
   scoreRefCallback, isServing
 }) => {
+  const [isPressed, setIsPressed] = useState(false);
+
+  const handleStart = () => {
+    setIsPressed(true);
+    onInteractionStart?.();
+  };
+
+  const handleEnd = () => {
+    setIsPressed(false);
+    onInteractionEnd?.();
+  };
   
   const gestureHandlers = useScoreGestures({
-    onAdd, onSubtract, isLocked, onInteractionStart, onInteractionEnd
+    onAdd, onSubtract, isLocked, 
+    onInteractionStart: handleStart, 
+    onInteractionEnd: handleEnd
   });
 
   const theme = {
     indigo: {
-      text: 'text-indigo-400',
+      text: 'text-white',
       bg: 'bg-indigo-500',
       glowRadial: 'bg-[radial-gradient(circle,rgba(99,102,241,0.5)_0%,rgba(99,102,241,0)_70%)]',
       glowShadow: 'drop-shadow-[0_0_30px_rgba(99,102,241,0.7)]'
     },
     rose: {
-      text: 'text-rose-400',
-      bg: 'bg-rose-500',
-      glowRadial: 'bg-[radial-gradient(circle,rgba(244,63,94,0.5)_0%,rgba(244,63,94,0)_70%)]',
-      glowShadow: 'drop-shadow-[0_0_30px_rgba(244,63,94,0.7)]'
+      text: 'text-white', 
+      bg: 'bg-rose-600 saturate-150',
+      glowRadial: 'bg-[radial-gradient(circle,rgba(244,63,94,0.6)_0%,rgba(244,63,94,0)_70%)]',
+      glowShadow: 'drop-shadow-[0_0_40px_rgba(244,63,94,0.9)]'
     }
   }[colorTheme];
 
@@ -74,7 +86,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
     >
             
         {/* The Number Wrapper */}
-        <div className="relative inline-flex items-center justify-center overflow-visible">
+        <div className={`relative inline-flex items-center justify-center overflow-visible transition-transform duration-150 ${isPressed ? 'scale-95' : 'scale-100'}`}>
             
             {/* DYNAMIC GLOW */}
             <div 
@@ -83,12 +95,18 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
                     w-[160%] h-[160%] rounded-full transition-opacity duration-700 ease-out 
                     ${theme.glowRadial} pointer-events-none mix-blend-screen blur-[80px]
                     ${isServing ? 'opacity-100' : 'opacity-0'}
+                    ${isPressed ? 'opacity-80 scale-110' : ''}
                 `} 
             />
 
             <span 
                 ref={scoreRefCallback}
-                className={`block font-black leading-none text-white tracking-tighter transition-all duration-300 relative z-10 ${glowClass}`}
+                className={`
+                    block font-black leading-none tracking-tighter transition-all duration-150 relative z-10 
+                    ${theme.text}
+                    ${glowClass}
+                    ${isPressed ? 'brightness-125' : ''}
+                `}
                 style={{ 
                     // Using vw/vh based on orientation to ensure consistency
                     fontSize: 'clamp(4rem, 18vmax, 13rem)',

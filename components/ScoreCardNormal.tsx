@@ -46,8 +46,10 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
       glowRadial: 'bg-[radial-gradient(circle,rgba(99,102,241,0.6)_0%,rgba(99,102,241,0)_70%)]'
     },
     rose: {
-      text: 'text-rose-600 dark:text-rose-400',
-      bg: 'bg-rose-500',
+      // Increased saturation for consistency with Fullscreen mode (Vermelho Punch)
+      // Matches ScoreCardFullscreen: saturate-[1.75] brightness-125 in Dark Mode
+      text: 'text-rose-600 dark:text-rose-500 saturate-[1.25] dark:saturate-[1.75] dark:brightness-125',
+      bg: 'bg-rose-500 saturate-150',
       shadow: 'shadow-rose-500/50',
       // Glow mais forte (0.6 opacity) e mais amplo
       glowRadial: 'bg-[radial-gradient(circle,rgba(244,63,94,0.6)_0%,rgba(244,63,94,0)_70%)]'
@@ -144,6 +146,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
                     text-slate-900 dark:text-white outline-none select-none
                     text-[12vh] landscape:text-[20vh]
                     transition-transform duration-100 active:scale-95
+                    ${theme.text}
                 `}>
                     {score}
                 </span>

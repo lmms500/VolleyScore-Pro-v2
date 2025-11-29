@@ -75,7 +75,7 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
 
         <div className="w-px h-6 bg-white/10 mx-0.5"></div>
 
-        <button onClick={onReset} className={`${buttonBase} ${pClass} text-rose-400 hover:text-rose-200 hover:bg-rose-500/20 hover:border-rose-500/30`} title={t('controls.reset')}>
+        <button onClick={onReset} className={`${buttonBase} ${pClass} text-rose-500 saturate-150 hover:text-rose-200 hover:bg-rose-500/20 hover:border-rose-500/30`} title={t('controls.reset')}>
           <RotateCcw size={iconSize} />
         </button>
 

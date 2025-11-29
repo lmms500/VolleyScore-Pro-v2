@@ -18,8 +18,9 @@ export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = ({
   if (!placement.visible) return null;
 
   const getTheme = (color: 'indigo' | 'rose') => ({
-      text: color === 'indigo' ? 'text-indigo-400' : 'text-rose-400',
-      glow: color === 'indigo' ? 'drop-shadow-[0_0_25px_rgba(99,102,241,0.5)]' : 'drop-shadow-[0_0_25px_rgba(244,63,94,0.5)]',
+      // Punchy saturation for rose to contrast against indigo
+      text: color === 'indigo' ? 'text-indigo-400' : 'text-rose-500 saturate-150 brightness-125',
+      glow: color === 'indigo' ? 'drop-shadow-[0_0_25px_rgba(99,102,241,0.5)]' : 'drop-shadow-[0_0_30px_rgba(244,63,94,0.8)]',
   });
 
   const themeLeft = getTheme(colorLeft);

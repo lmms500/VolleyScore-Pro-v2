@@ -72,9 +72,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
   const glowClass = (isMatchPoint || isSetPoint) ? theme.glowShadow : '';
 
   // Alignment Logic: Push content AWAY from the center of the screen
-  // If alignment is 'left' (Team on left side), push text LEFT (padding-right)
-  // If alignment is 'right' (Team on right side), push text RIGHT (padding-left)
-  // This creates a channel in the middle for the HUD.
   const paddingClass = alignment === 'left' 
       ? 'landscape:pr-[12vw] landscape:pl-0' 
       : 'landscape:pl-[12vw] landscape:pr-0';
@@ -92,49 +89,54 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
         {...gestureHandlers}
     >
             
-        {/* Wrapper with Massive Font Size Definition */}
+        {/* Outer Position Wrapper */}
         <div 
             className={`
-                relative inline-flex items-center justify-center overflow-visible transition-transform duration-150 w-full h-full
+                relative flex items-center justify-center overflow-visible transition-transform duration-150 w-full h-full
                 ${paddingClass}
                 ${isPressed ? 'scale-95' : 'scale-100'}
                 will-change-transform
             `}
             style={{ 
-                // Increased font size significantly for impact
                 fontSize: 'clamp(8rem, 28vmax, 22rem)',
                 lineHeight: 0.8
             }}
         >
-            
             {/* 
-                THE PERFECT HALO 
-                - Stays behind the text
+               TIGHT WRAPPER 
+               This is the key fix. We wrap the ticker and the glow in a tight inline-block.
+               This ensures the glow is calculated relative to the text bounding box,
+               regardless of the parent's padding or positioning.
             */}
-            <div 
-                className={`
-                    absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                    w-[1.1em] h-[1.1em] rounded-full transition-all duration-700 ease-out 
-                    ${theme.haloColor} pointer-events-none mix-blend-screen blur-[60px]
-                    ${isServing ? 'opacity-30' : 'opacity-0'}
-                    ${isPressed ? 'scale-110 opacity-50' : ''}
-                    will-change-[opacity,transform] -z-10
-                `} 
-            />
+            <div className="relative inline-flex items-center justify-center pointer-events-none">
+                
+                {/* THE PERFECT HALO - Positioned absolutely inside the tight wrapper */}
+                <div 
+                    className={`
+                        absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                        w-[1.2em] h-[1.2em] rounded-full transition-all duration-700 ease-out 
+                        ${theme.haloColor} mix-blend-screen blur-[60px]
+                        ${isServing ? 'opacity-40' : 'opacity-0'}
+                        ${isPressed ? 'scale-110 opacity-60' : ''}
+                        will-change-[opacity,transform] -z-10
+                    `} 
+                />
 
-            <div ref={scoreRefCallback} className="w-full flex justify-center relative z-10">
-              <ScoreTicker 
-                  value={score}
-                  className={`
-                      font-black leading-none tracking-tighter transition-all duration-150 relative z-10 
-                      ${theme.text}
-                      ${glowClass}
-                      ${isPressed ? 'brightness-125' : ''}
-                  `}
-                  style={{ 
-                      textShadow: '0 20px 60px rgba(0,0,0,0.5)',
-                  }}
-              />
+                {/* Score Ticker - Relative z-10 to sit above glow */}
+                <div ref={scoreRefCallback} className="relative z-10">
+                  <ScoreTicker 
+                      value={score}
+                      className={`
+                          font-black leading-none tracking-tighter transition-all duration-150
+                          ${theme.text}
+                          ${glowClass}
+                          ${isPressed ? 'brightness-125' : ''}
+                      `}
+                      style={{ 
+                          textShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                      }}
+                  />
+                </div>
             </div>
         </div>
     </motion.div>

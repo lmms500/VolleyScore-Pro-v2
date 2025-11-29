@@ -1,5 +1,4 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 
 interface TrackingGlowProps {
@@ -54,7 +53,7 @@ export const TrackingGlow: React.FC<TrackingGlowProps> = ({
     updatePosition();
 
     return () => cancelAnimationFrame(rAFId);
-  }, [targetRef, size]); // Re-bind if ref changes, but internal rAF handles layout shifts
+  }, [targetRef, size]); 
 
   const theme = {
     indigo: { haloColor: 'bg-indigo-500' },
@@ -63,11 +62,7 @@ export const TrackingGlow: React.FC<TrackingGlowProps> = ({
 
   const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : theme.haloColor;
 
-  // Render via Portal to document.body to ensure:
-  // 1. No overflow:hidden clipping from parent containers
-  // 2. Correct z-indexing (behind text, above background)
-  // 3. Independence from flexbox alignment quirks
-  return createPortal(
+  return (
     <motion.div
       ref={glowRef}
       className={`
@@ -93,7 +88,6 @@ export const TrackingGlow: React.FC<TrackingGlowProps> = ({
           ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
           : { duration: 0.3, ease: "easeOut" }
       }
-    />,
-    document.body
+    />
   );
 };

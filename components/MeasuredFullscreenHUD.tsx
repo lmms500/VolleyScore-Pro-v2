@@ -26,6 +26,9 @@ export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = ({
   const themeLeft = getTheme(colorLeft);
   const themeRight = getTheme(colorRight);
 
+  // System Look
+  const glassContainer = "bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/40";
+
   return (
     <div 
         style={{
@@ -37,10 +40,10 @@ export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = ({
             pointerEvents: 'none',
             zIndex: 40,
         }} 
-        className="flex items-center justify-center gap-8 transition-transform duration-100 ease-linear"
+        className="flex items-center justify-center transition-transform duration-100 ease-linear"
     >
-        {/* Sets Display */}
-        <div className="flex items-center justify-center gap-6 bg-black/40 backdrop-blur-md px-6 py-2 rounded-2xl border border-white/5 shadow-2xl">
+        {/* Sets Display - Ultra Glass */}
+        <div className={`flex items-center justify-center gap-6 px-6 py-2 rounded-3xl ${glassContainer}`}>
             <span className={`font-black text-6xl leading-none ${themeLeft.text} ${themeLeft.glow}`}>
                 {setsLeft}
             </span>

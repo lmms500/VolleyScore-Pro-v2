@@ -36,11 +36,6 @@ const formatTime = (seconds: number) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
-const truncateName = (name: string) => {
-  if (name.length > 10) return name.substring(0, 9) + '.';
-  return name;
-};
-
 // --- SUB-COMPONENTS ---
 
 const TimeoutDots = memo<{ 
@@ -70,7 +65,7 @@ const TimeoutButton = memo<{
   onTimeout: () => void;
   color: 'indigo' | 'rose';
   align: 'left' | 'right';
-}>(({ timeouts, onTimeout, color, align }) => {
+}>(({ timeouts, onTimeout, color }) => {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onTimeout(); }}
@@ -230,19 +225,22 @@ const CenterDisplayStealth = memo<{
 // --- MAIN COMPONENT ---
 
 export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
+  // System Look Styles
+  const glassContainer = "bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/40";
+
   return (
     <div className="fixed top-2 md:top-6 left-0 w-full z-[55] flex justify-center pointer-events-none px-4">
       
       <motion.div 
         layout
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="
+        className={`
           pointer-events-auto
           w-auto max-w-[95vw]
-          bg-slate-900/60 backdrop-blur-xl
-          border border-white/10 rounded-full shadow-2xl
+          ${glassContainer}
+          rounded-full
           py-1.5 px-6
-        "
+        `}
       >
         {/* Compact Grid Layout: Hugs content */}
         <div className="flex items-center justify-between gap-3 md:gap-6">

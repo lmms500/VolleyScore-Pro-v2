@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useMemo } from 'react';
 import { TeamId } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { ScoreTicker } from './ui/ScoreTicker';
@@ -52,15 +52,32 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
     indigo: {
       text: 'text-white',
       haloColor: 'bg-indigo-500',
-      glowShadow: 'drop-shadow-[0_0_30px_rgba(99,102,241,0.7)]'
+      glowShadow: 'drop-shadow-[0_0_50px_rgba(99,102,241,0.6)]'
     },
     rose: {
       text: 'text-white', 
       haloColor: 'bg-rose-600',
-      glowShadow: 'drop-shadow-[0_0_40px_rgba(244,63,94,0.9)]'
+      glowShadow: 'drop-shadow-[0_0_60px_rgba(244,63,94,0.8)]'
     }
   }[colorTheme];
 
+  // --- THE GOLDEN POINT LOGIC ---
+  const isCritical = isMatchPoint || isSetPoint;
+  
+  // Determine Halo Appearance
+  const haloColorClass = useMemo(() => {
+    if (isMatchPoint) return 'bg-amber-500 saturate-150'; // Golden Point
+    return theme.haloColor; // Team Color
+  }, [isMatchPoint, theme.haloColor]);
+
+  // Determine Text Glow/Shadow
+  const textEffectClass = useMemo(() => {
+    if (isMatchPoint) return 'drop-shadow-[0_0_60px_rgba(251,191,36,0.9)] brightness-110'; // Gold Glow
+    if (isCritical) return theme.glowShadow; // Intense Team Glow
+    return ''; // Standard
+  }, [isMatchPoint, isCritical, theme.glowShadow]);
+
+  // Layout Logic
   const isFirstPosition = reverseLayout 
     ? teamId === 'B' 
     : teamId === 'A';
@@ -69,9 +86,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
     ? 'landscape:left-0 landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-0 left-0 w-[100vw] h-[50dvh]' 
     : 'landscape:left-[50vw] landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-[50dvh] left-0 w-[100vw] h-[50dvh]';
 
-  const glowClass = (isMatchPoint || isSetPoint) ? theme.glowShadow : '';
-
-  // Alignment Logic: Push content AWAY from the center of the screen
   const paddingClass = alignment === 'left' 
       ? 'landscape:pr-[12vw] landscape:pl-0' 
       : 'landscape:pl-[12vw] landscape:pr-0';
@@ -89,7 +103,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
         {...gestureHandlers}
     >
             
-        {/* Outer Position Wrapper */}
+        {/* Inner Content Wrapper - Scales on Press */}
         <div 
             className={`
                 relative flex items-center justify-center overflow-visible transition-transform duration-150 w-full h-full
@@ -103,36 +117,58 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
             }}
         >
             {/* 
-               TIGHT WRAPPER 
-               This is the key fix. We wrap the ticker and the glow in a tight inline-block.
-               This ensures the glow is calculated relative to the text bounding box,
-               regardless of the parent's padding or positioning.
+               THE TIGHT WRAPPER 
+               This is crucial for centering. It shrink-wraps the text content.
+               The Halo is absolute relative to THIS, ensuring true optical centering.
             */}
             <div className="relative inline-flex items-center justify-center pointer-events-none">
                 
-                {/* THE PERFECT HALO - Positioned absolutely inside the tight wrapper */}
-                <div 
+                {/* 
+                  THE HALO (Motion Implementation)
+                  Responsive to game state: Idle, Serving, Critical, Golden Point 
+                */}
+                <motion.div 
                     className={`
                         absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                        w-[1.2em] h-[1.2em] rounded-full transition-all duration-700 ease-out 
-                        ${theme.haloColor} mix-blend-screen blur-[60px]
-                        ${isServing ? 'opacity-40' : 'opacity-0'}
-                        ${isPressed ? 'scale-110 opacity-60' : ''}
-                        will-change-[opacity,transform] -z-10
-                    `} 
+                        w-[1.5em] h-[1.5em] rounded-full aspect-square
+                        mix-blend-screen blur-[60px] md:blur-[80px]
+                        will-change-[opacity,transform] z-[-1]
+                        ${haloColorClass}
+                    `}
+                    animate={
+                        isPressed 
+                        ? { scale: 1.1, opacity: 0.7 } 
+                        : isCritical 
+                            ? { 
+                                // Heartbeat / Tension Pulse
+                                scale: [1, 1.35, 1],
+                                opacity: isMatchPoint ? [0.4, 0.8, 0.4] : [0.3, 0.6, 0.3],
+                              }
+                            : { 
+                                // Standard State (Serving or Idle)
+                                scale: 1, 
+                                opacity: isServing ? 0.35 : 0 
+                              }
+                    }
+                    transition={
+                        isCritical 
+                        ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" } // Slow deep breath
+                        : { duration: 0.5, ease: "easeOut" } // Standard transition
+                    }
                 />
 
-                {/* Score Ticker - Relative z-10 to sit above glow */}
-                <div ref={scoreRefCallback} className="relative z-10">
+                {/* Score Ticker Wrapper */}
+                <div ref={scoreRefCallback} className="relative z-10 flex items-center justify-center">
                   <ScoreTicker 
                       value={score}
                       className={`
-                          font-black leading-none tracking-tighter transition-all duration-150
+                          font-black leading-none tracking-tighter transition-all duration-300
                           ${theme.text}
-                          ${glowClass}
+                          ${textEffectClass}
                           ${isPressed ? 'brightness-125' : ''}
                       `}
                       style={{ 
+                          // Base shadow for depth, separate from the glow
                           textShadow: '0 20px 60px rgba(0,0,0,0.5)',
                       }}
                   />

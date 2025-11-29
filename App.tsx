@@ -242,7 +242,7 @@ function App() {
               transition-all duration-500 min-h-0 overflow-visible
               ${isFullscreen 
                  ? 'fixed inset-0 z-10 w-screen h-screen p-0 border-none m-0 block' 
-                 : 'relative flex-1 z-10 flex flex-col landscape:flex-row md:flex-row pb-28 landscape:pb-20 pt-2 md:pb-32 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]'
+                 : 'relative flex-1 z-10 flex flex-col landscape:flex-row md:flex-row pt-2 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]'
               }
           `}>
              
@@ -349,9 +349,9 @@ function App() {
           {/* Standard Bottom Controls */}
           <div 
             className={`
-                fixed bottom-0 left-0 w-full z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+1.5rem)] 
-                transition-all duration-500
-                ${isFullscreen ? 'translate-y-32 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'}
+                flex-none w-full z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4
+                transition-all duration-500 overflow-hidden
+                ${isFullscreen ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-40 opacity-100 pointer-events-auto'}
                 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
             `}
           >

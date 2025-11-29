@@ -218,16 +218,17 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             style={{ touchAction: 'none' }}
             {...gestureHandlers}
         >
-            <div className="relative inline-flex items-center justify-center text-[12vh] landscape:text-[20vh] leading-none">
+            {/* Grid-based centering for robust alignment */}
+            <div className="relative grid place-items-center text-[12vh] landscape:text-[20vh] leading-none">
                 
                 {/* 
-                    THE DYNAMIC GLOWING HALO 
-                    Adjusted for Set/Match points to be more intense
+                    THE DYNAMIC GLOWING HALO
+                    Placed on the same grid cell as the ScoreTicker.
                 */}
                 <motion.div 
                     className={`
-                        absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                        w-[1.4em] h-[1.4em] rounded-full -z-10
+                        [grid-area:1/1]
+                        w-[1.4em] h-[1.4em] rounded-full
                         blur-3xl pointer-events-none mix-blend-screen
                         ${haloColorClass}
                     `}
@@ -236,10 +237,11 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                     transition={{ duration: 0.5 }}
                 />
                 
-                {/* Motion Ticker */}
+                {/* Motion Ticker - Also on the same grid cell, stacked on top via z-index */}
                 <ScoreTicker 
                     value={score}
                     className={`
+                        [grid-area:1/1]
                         relative z-10 drop-shadow-2xl font-black tracking-tighter
                         text-slate-900 dark:text-white outline-none select-none
                         transition-transform duration-100 active:scale-95

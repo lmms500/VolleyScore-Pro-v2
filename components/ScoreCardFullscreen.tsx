@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { TeamId } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 
@@ -7,7 +7,6 @@ interface ScoreCardFullscreenProps {
   score: number;
   onAdd: () => void;
   onSubtract: () => void;
-  // Status props retained for Glow Logic, but badges are removed
   isMatchPoint: boolean;
   isSetPoint: boolean;
   isDeuce?: boolean;
@@ -21,7 +20,7 @@ interface ScoreCardFullscreenProps {
   isServing?: boolean;
 }
 
-export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
+export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
   teamId, score, onAdd, onSubtract,
   isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, colorTheme,
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
@@ -60,16 +59,13 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
     }
   }[colorTheme];
 
-  // Logic to determine position on screen (Left/Top vs Right/Bottom)
-  // Standard (No Swap): A is Left/Top, B is Right/Bottom
-  // Swapped: A is Right/Bottom, B is Left/Top
   const isFirstPosition = reverseLayout 
     ? teamId === 'B' 
     : teamId === 'A';
 
   const positionClasses = isFirstPosition
-    ? 'landscape:left-0 landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-0 left-0 w-[100vw] h-[50dvh]' // Left (Landscape) / Top (Portrait)
-    : 'landscape:left-[50vw] landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-[50dvh] left-0 w-[100vw] h-[50dvh]'; // Right (Landscape) / Bottom (Portrait)
+    ? 'landscape:left-0 landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-0 left-0 w-[100vw] h-[50dvh]' 
+    : 'landscape:left-[50vw] landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-[50dvh] left-0 w-[100vw] h-[50dvh]';
 
   const glowClass = (isMatchPoint || isSetPoint) ? theme.glowShadow : '';
 
@@ -85,8 +81,12 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
         {...gestureHandlers}
     >
             
-        {/* The Number Wrapper */}
-        <div className={`relative inline-flex items-center justify-center overflow-visible transition-transform duration-150 ${isPressed ? 'scale-95' : 'scale-100'}`}>
+        {/* The Number Wrapper - Added will-change-transform for GPU optimization */}
+        <div className={`
+            relative inline-flex items-center justify-center overflow-visible transition-transform duration-150 
+            ${isPressed ? 'scale-95' : 'scale-100'}
+            will-change-transform
+        `}>
             
             {/* DYNAMIC GLOW */}
             <div 
@@ -96,6 +96,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
                     ${theme.glowRadial} pointer-events-none mix-blend-screen blur-[80px]
                     ${isServing ? 'opacity-100' : 'opacity-0'}
                     ${isPressed ? 'opacity-80 scale-110' : ''}
+                    will-change-[opacity,transform]
                 `} 
             />
 
@@ -108,7 +109,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
                     ${isPressed ? 'brightness-125' : ''}
                 `}
                 style={{ 
-                    // Using vw/vh based on orientation to ensure consistency
                     fontSize: 'clamp(4rem, 18vmax, 13rem)',
                     textShadow: '0 20px 60px rgba(0,0,0,0.5)',
                     lineHeight: 0.8
@@ -119,4 +119,4 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = ({
         </div>
     </div>
   );
-};
+});

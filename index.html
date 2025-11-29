@@ -6,6 +6,18 @@
     <meta name="theme-color" content="#020617" />
     <meta name="description" content="Advanced Volleyball Scoreboard & Team Management PWA with rotation logic, sudden death rules, and neo-glass UI.">
     
+    <!-- Security: Content Security Policy (Dev-Unrestricted for Sandbox Compatibility) -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;
+      script-src * 'unsafe-inline' 'unsafe-eval' data: blob:;
+      connect-src * 'unsafe-inline' data: blob:;
+      img-src * data: blob:;
+      frame-src * data: blob:;
+      style-src * 'unsafe-inline';
+      worker-src * data: blob:;
+      font-src * data:;
+    ">
+
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="VolleyScore" />

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Clock, Volleyball, Timer, Zap } from 'lucide-react';
+import React, { memo } from 'react';
+import { Volleyball, Timer, Zap } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 
 interface FloatingTopBarProps {
@@ -14,6 +14,8 @@ interface FloatingTopBarProps {
   colorB: 'indigo' | 'rose';
   isServingLeft: boolean;
   isServingRight: boolean;
+  onSetServerA: () => void;
+  onSetServerB: () => void;
   timeoutsA: number;
   timeoutsB: number;
   onTimeoutA: () => void;
@@ -37,20 +39,21 @@ const truncateName = (name: string) => {
   return name;
 };
 
-const TeamSection: React.FC<{ 
+// Memoized Team Section - Stable unless team data changes
+const TeamSection = memo<{ 
     name: string; 
     color: 'indigo' | 'rose'; 
     isServing: boolean; 
+    onSetServer: () => void;
     align: 'left' | 'right';
     timeouts: number;
     onTimeout: () => void;
     isMatchPoint: boolean;
     isSetPoint: boolean;
-}> = ({ name, color, isServing, align, timeouts, onTimeout, isMatchPoint, isSetPoint }) => {
+}>(({ name, color, isServing, onSetServer, align, timeouts, onTimeout, isMatchPoint, isSetPoint }) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { t } = useTranslation();
     
-    // Increased saturation for Rose (Team B)
     const colorClass = color === 'indigo' ? 'text-indigo-400' : 'text-rose-500 saturate-150 brightness-110';
     const dotColorClass = color === 'indigo' ? 'bg-indigo-500' : 'bg-rose-500 saturate-150';
     const dotShadowClass = color === 'indigo' ? 'shadow-indigo-500/50' : 'shadow-rose-500/50';
@@ -60,7 +63,6 @@ const TeamSection: React.FC<{
 
     return (
         <div className={`flex items-center gap-4 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
-            
             {/* Timeout Group */}
             <div className={`flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
                 <button 
@@ -98,7 +100,11 @@ const TeamSection: React.FC<{
 
             {/* Name, Badge & Serve */}
             <div className={`flex flex-col ${align === 'right' ? 'items-end' : 'items-start'} justify-center h-full`}>
-                <div className={`flex items-center gap-3 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div 
+                    className={`flex items-center gap-3 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'} cursor-pointer hover:opacity-80 active:scale-95 transition-all`}
+                    onClick={(e) => { e.stopPropagation(); onSetServer(); }}
+                    role="button"
+                >
                     <span className={`text-base md:text-xl font-black uppercase tracking-widest whitespace-nowrap leading-none ${colorClass} drop-shadow-sm`}>
                         {truncateName(name)}
                     </span>
@@ -126,37 +132,20 @@ const TeamSection: React.FC<{
             </div>
         </div>
     );
-};
+});
 
-export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
-  time, currentSet, isTieBreak, onToggleTimer, isTimerRunning,
-  teamNameA, teamNameB, colorA, colorB, 
-  isServingLeft, isServingRight,
-  timeoutsA, timeoutsB, onTimeoutA, onTimeoutB,
-  isMatchPointA, isSetPointA, isMatchPointB, isSetPointB, isDeuce, inSuddenDeath
-}) => {
-  return (
-    <div 
-      className={`
-        fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-[55] 
-        transition-all duration-500 ease-out origin-top
-        pt-[env(safe-area-inset-top)] w-auto max-w-[98vw]
-      `}
-    >
-      <div className="flex items-center gap-6 md:gap-12 px-8 py-4 md:px-10 md:py-5 rounded-3xl bg-slate-900/90 backdrop-blur-3xl border border-white/10 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)] ring-1 ring-white/5">
-        
-        <TeamSection 
-            name={teamNameA} color={colorA} isServing={isServingLeft} align="left"
-            timeouts={timeoutsA} onTimeout={onTimeoutA}
-            isMatchPoint={isMatchPointA} isSetPoint={isSetPointA}
-        />
-
-        {/* Divider */}
-        <div className="w-px h-12 md:h-16 bg-gradient-to-b from-transparent via-white/10 to-transparent"></div>
-
-        {/* Center Info - Massive Timer & Set */}
+// Memoized Central Timer Component
+const CenterTimer = memo<{
+    time: number;
+    isTimerRunning: boolean;
+    onToggleTimer: () => void;
+    currentSet: number;
+    isTieBreak: boolean;
+    inSuddenDeath: boolean;
+    isDeuce: boolean;
+}>(({ time, isTimerRunning, onToggleTimer, currentSet, isTieBreak, inSuddenDeath, isDeuce }) => {
+    return (
         <div className="flex flex-col items-center justify-center min-w-[120px] md:min-w-[160px]">
-             
             {inSuddenDeath ? (
                  <div className="flex flex-col items-center animate-pulse">
                     <span className="text-xs md:text-sm font-black text-rose-500 uppercase tracking-[0.2em] leading-none mb-2 flex items-center gap-1.5">
@@ -191,12 +180,53 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
                 </button>
             )}
         </div>
+    );
+});
+
+export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
+  const {
+      time, currentSet, isTieBreak, onToggleTimer, isTimerRunning,
+      teamNameA, teamNameB, colorA, colorB, 
+      isServingLeft, isServingRight, onSetServerA, onSetServerB,
+      timeoutsA, timeoutsB, onTimeoutA, onTimeoutB,
+      isMatchPointA, isSetPointA, isMatchPointB, isSetPointB, isDeuce, inSuddenDeath
+  } = props;
+
+  return (
+    <div 
+      className={`
+        fixed top-4 md:top-6 left-1/2 -translate-x-1/2 z-[55] 
+        transition-all duration-500 ease-out origin-top
+        pt-[env(safe-area-inset-top)] w-auto max-w-[98vw]
+      `}
+    >
+      <div className="flex items-center gap-6 md:gap-12 px-8 py-4 md:px-10 md:py-5 rounded-3xl bg-slate-900/90 backdrop-blur-3xl border border-white/10 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)] ring-1 ring-white/5">
+        
+        <TeamSection 
+            name={teamNameA} color={colorA} isServing={isServingLeft} onSetServer={onSetServerA} align="left"
+            timeouts={timeoutsA} onTimeout={onTimeoutA}
+            isMatchPoint={isMatchPointA} isSetPoint={isSetPointA}
+        />
+
+        {/* Divider */}
+        <div className="w-px h-12 md:h-16 bg-gradient-to-b from-transparent via-white/10 to-transparent"></div>
+
+        {/* Center Info - Only this part updates every second */}
+        <CenterTimer 
+            time={time} 
+            isTimerRunning={isTimerRunning} 
+            onToggleTimer={onToggleTimer} 
+            currentSet={currentSet}
+            isTieBreak={isTieBreak}
+            inSuddenDeath={inSuddenDeath}
+            isDeuce={isDeuce}
+        />
 
         {/* Divider */}
         <div className="w-px h-12 md:h-16 bg-gradient-to-b from-transparent via-white/10 to-transparent"></div>
 
         <TeamSection 
-            name={teamNameB} color={colorB} isServing={isServingRight} align="right"
+            name={teamNameB} color={colorB} isServing={isServingRight} onSetServer={onSetServerB} align="right"
             timeouts={timeoutsB} onTimeout={onTimeoutB}
             isMatchPoint={isMatchPointB} isSetPoint={isSetPointB}
         />
@@ -204,4 +234,4 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = ({
       </div>
     </div>
   );
-};
+});

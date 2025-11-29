@@ -1,3 +1,4 @@
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -7,13 +8,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // INCLUI TODOS OS ASSETS DEDICADOS (PNG, ICO, SVG)
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'], 
       devOptions: {
         enabled: true
       },
       workbox: {
-        // Assegura que ICO e PNG sejam incluídos no cache
         globPatterns: ['**/*.{js,css,html,svg,json,ico,png}'], 
         cleanupOutdatedCaches: true,
         runtimeCaching: [
@@ -59,21 +58,18 @@ export default defineConfig({
         start_url: '/',
         categories: ['sports', 'utilities'],
         icons: [
-          // 1. SVG (Flexibilidade)
           {
             src: 'icon.svg',
             sizes: '192x192 512x512', 
             type: 'image/svg+xml',
             purpose: 'any maskable'
           },
-          // 2. PNG PWA 192x192 (Padrão Android)
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
           },
-          // 3. PNG PWA 512x512 (Alta Resolução)
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
@@ -84,4 +80,8 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    minify: 'esbuild', // Faster minification
+    sourcemap: false, // Do not expose source maps in production
+  }
 });

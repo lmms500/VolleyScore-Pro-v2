@@ -1,6 +1,8 @@
+
 import { useState, useCallback } from 'react';
 import { Player, Team, TeamId, RotationReport } from '../types';
 import { PLAYER_LIMIT_ON_COURT, PLAYERS_PER_TEAM } from '../constants';
+import { sanitizeInput } from '../utils/security';
 
 // Fallback generator
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -14,7 +16,7 @@ interface QueueState {
 
 interface DeletedPlayerRecord {
   player: Player;
-  originId: string; // 'A', 'B' or Queue Team ID
+  originId: string;
   timestamp: number;
 }
 
@@ -35,31 +37,25 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
 
   const createTeam = (name: string, players: Player[]): Team => ({
     id: generateId(),
-    name,
+    name: sanitizeInput(name),
     players
   });
 
   const createPlayer = (name: string): Player => ({
     id: generateId(),
-    name: name.trim(),
+    name: sanitizeInput(name),
     isFixed: false,
     fixedSide: null
   });
 
   const generateTeams = useCallback((namesList: string[]) => {
-    // 1. Create Player Objects
     const allPlayers: Player[] = namesList
       .filter(n => n.trim().length > 0)
       .map(name => createPlayer(name));
 
-    // 2. Sequential Distribution (No Shuffle)
-    // The list is processed in the exact order provided by the user.
-    
-    // 3. Distribute to Courts
     const teamA_Players = allPlayers.slice(0, PLAYER_LIMIT_ON_COURT);
     const teamB_Players = allPlayers.slice(PLAYER_LIMIT_ON_COURT, PLAYER_LIMIT_ON_COURT * 2);
     
-    // 4. Distribute Remainder to Queue as Teams
     const remainingPlayers = allPlayers.slice(PLAYER_LIMIT_ON_COURT * 2);
     const newQueue: Team[] = [];
     
@@ -78,45 +74,42 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
       queue: newQueue,
       lastReport: null
     });
-    setDeletedHistory([]); // Clear history on regenerate
+    setDeletedHistory([]); 
     _updateNames(newCourtA, newCourtB);
   }, [queueState.courtA, queueState.courtB]);
 
   const updateTeamName = useCallback((teamId: string, name: string) => {
+    const safeName = sanitizeInput(name);
     setQueueState(prev => {
       const newState = { ...prev };
       
       if (teamId === 'A' || teamId === prev.courtA.id) {
-          newState.courtA = { ...prev.courtA, name };
+          newState.courtA = { ...prev.courtA, name: safeName };
       } 
       else if (teamId === 'B' || teamId === prev.courtB.id) {
-          newState.courtB = { ...prev.courtB, name };
+          newState.courtB = { ...prev.courtB, name: safeName };
       } 
       else {
-          // Check Queue
           newState.queue = prev.queue.map(t => 
-              t.id === teamId ? { ...t, name } : t
+              t.id === teamId ? { ...t, name: safeName } : t
           );
       }
-      
       return newState;
     });
   }, []);
 
   const updatePlayerName = useCallback((playerId: string, newName: string) => {
+    const safeName = sanitizeInput(newName);
     setQueueState(prev => {
         const updatePlayerInList = (players: Player[]) => 
-            players.map(p => p.id === playerId ? { ...p, name: newName.trim() } : p);
+            players.map(p => p.id === playerId ? { ...p, name: safeName } : p);
 
-        // Try Court A
         if (prev.courtA.players.some(p => p.id === playerId)) {
             return { ...prev, courtA: { ...prev.courtA, players: updatePlayerInList(prev.courtA.players) }};
         }
-        // Try Court B
         if (prev.courtB.players.some(p => p.id === playerId)) {
             return { ...prev, courtB: { ...prev.courtB, players: updatePlayerInList(prev.courtB.players) }};
         }
-        // Try Queue
         const newQueue = prev.queue.map(team => ({
             ...team,
             players: updatePlayerInList(team.players)
@@ -148,12 +141,10 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
           return p;
       })};
 
-      // Search in Queue Teams as well
       const newQueue = found ? prev.queue : prev.queue.map(team => ({
           ...team,
           players: team.players.map(p => {
               if (p.id === playerId) {
-                  // Now allows fixing to queue team by passing team.id
                   return toggle(p, team.id);
               }
               return p;
@@ -167,33 +158,25 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
   // --- UNIT ROTATION LOGIC ---
   const getRotationPreview = useCallback((winnerId: TeamId): RotationReport | null => {
     const { courtA, courtB, queue } = queueState;
-    
-    // 1. Identify Loser (Whole team leaves)
     const loserSideId = winnerId === 'A' ? 'B' : 'A';
     const loserTeam = loserSideId === 'A' ? courtA : courtB;
     
-    // 2. Identify Incoming Team (Queue[0])
     if (queue.length === 0) return null;
 
     const nextTeamInLine = queue[0];
     let newTeamPlayers = [...nextTeamInLine.players];
     let stolenPlayers: Player[] = [];
     
-    // Temp Queue for manipulation
     let tempQueue = [...queue]; 
     tempQueue.shift(); 
     
-    // 3. Calculate Deficit
     const neededPlayers = PLAYER_LIMIT_ON_COURT - newTeamPlayers.length;
 
-    // 4. Stealing Logic
     if (neededPlayers > 0) {
         let stillNeeded = neededPlayers;
 
-        // PRIORITY 1: Steal from Donor
         if (tempQueue.length > 0) {
             const donorTeam = tempQueue[0];
-            // Respect isFixed: Fixed players in Queue cannot be stolen
             const donorCandidates = donorTeam.players.filter(p => !p.isFixed);
             const toSteal = donorCandidates.slice(0, stillNeeded);
             
@@ -208,7 +191,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
             }
         }
 
-        // PRIORITY 2: Steal from Loser (Recycling)
         if (stillNeeded > 0) {
              const loserCandidates = loserTeam.players.filter(p => !p.isFixed);
              const toSteal = loserCandidates.slice(0, stillNeeded);
@@ -221,7 +203,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
         }
     }
 
-    // 5. Prepare Loser Team for Queue
     const stolenIds = new Set(stolenPlayers.map(p => p.id));
     const loserPlayersGoingToQueue = loserTeam.players.filter(p => !stolenIds.has(p.id));
 
@@ -272,21 +253,21 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     });
   }, [getRotationPreview]);
 
-  // --- ADD / REMOVE / MOVE ---
-
   const addPlayer = useCallback((name: string, target: 'A' | 'B' | 'Queue') => {
+    const safeName = sanitizeInput(name);
+    if (!safeName) return;
+
     setQueueState(prev => {
       if (target === 'A' && prev.courtA.players.length >= PLAYER_LIMIT_ON_COURT) return prev;
       if (target === 'B' && prev.courtB.players.length >= PLAYER_LIMIT_ON_COURT) return prev;
       
-      const newPlayer = createPlayer(name);
+      const newPlayer = createPlayer(safeName);
       
       if (target === 'A') {
         return { ...prev, courtA: { ...prev.courtA, players: [...prev.courtA.players, newPlayer] } };
       } else if (target === 'B') {
         return { ...prev, courtB: { ...prev.courtB, players: [...prev.courtB.players, newPlayer] } };
       } else {
-        // Add to last queue team or create new
         const newState = { ...prev, queue: [...prev.queue] };
         if (newState.queue.length > 0) {
             const lastIdx = newState.queue.length - 1;
@@ -309,19 +290,16 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
       let deletedPlayer: Player | undefined;
       let originId: string = '';
 
-      // Check A
       if (prev.courtA.players.find(p => p.id === id)) {
           deletedPlayer = prev.courtA.players.find(p => p.id === id);
           if (deletedPlayer?.isFixed) return prev;
           originId = 'A';
       }
-      // Check B
       else if (prev.courtB.players.find(p => p.id === id)) {
           deletedPlayer = prev.courtB.players.find(p => p.id === id);
           if (deletedPlayer?.isFixed) return prev;
           originId = 'B';
       }
-      // Check Queue
       else {
           for (const team of prev.queue) {
               const p = team.players.find(pl => pl.id === id);
@@ -335,7 +313,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
 
       if (!deletedPlayer) return prev;
 
-      // Save to History
       setDeletedHistory(hist => [...hist, { player: deletedPlayer!, originId, timestamp: Date.now() }]);
 
       const filterPlayer = (p: Player) => p.id !== id;
@@ -371,14 +348,12 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
                 }
             } 
             else {
-                // Try to put back in specific queue team, else append
                 const queueIndex = qs.queue.findIndex(t => t.id === target);
                 if (queueIndex !== -1 && qs.queue[queueIndex].players.length < PLAYERS_PER_TEAM) {
                      const newQueue = [...qs.queue];
                      newQueue[queueIndex] = { ...newQueue[queueIndex], players: [...newQueue[queueIndex].players, player] };
                      return { ...qs, queue: newQueue };
                 } else {
-                    // Fallback: Add to end using AddPlayer logic equivalent
                     const newQueue = [...qs.queue];
                     if (newQueue.length > 0 && newQueue[newQueue.length-1].players.length < PLAYERS_PER_TEAM) {
                         newQueue[newQueue.length-1].players.push(player);
@@ -388,50 +363,37 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
                     return { ...qs, queue: newQueue };
                 }
             }
-            return qs; // If full, cannot restore
+            return qs; 
         });
 
         return history;
     });
   }, []);
 
-  const commitDeletions = useCallback(() => {
-    setDeletedHistory([]);
-  }, []);
-
+  const commitDeletions = useCallback(() => { setDeletedHistory([]); }, []);
   const updateRosters = useCallback((cA: Player[], cB: Player[], q: Player[]) => { }, []);
   
   const movePlayer = useCallback((playerId: string, fromId: string, toId: string) => {
     setQueueState(prev => {
-      
       const newState = { ...prev };
       
-      // 1. Identify Target Team and Check Limits
       let targetTeam: Team | null = null;
       if (toId === 'A') targetTeam = newState.courtA;
       else if (toId === 'B') targetTeam = newState.courtB;
-      else if (toId === 'Queue') {
-          // Generic 'Queue' target - handled later
-      } else {
+      else if (toId !== 'Queue') {
           targetTeam = newState.queue.find(t => t.id === toId) || null;
       }
 
-      // Check Limits for specific targets
-      if (targetTeam && targetTeam.players.length >= PLAYER_LIMIT_ON_COURT) {
-          return prev; // Cannot move, team full
-      }
+      if (targetTeam && targetTeam.players.length >= PLAYER_LIMIT_ON_COURT) return prev; 
 
-      // 2. Find and Remove Player from Source
       let player: Player | undefined;
 
-      // Helper to remove from queue
       const removeFromQueue = (pid: string, tid: string): Player | undefined => {
           for (let i = 0; i < newState.queue.length; i++) {
               if (newState.queue[i].id === tid) {
                   const found = newState.queue[i].players.find(p => p.id === pid);
                   if (found) {
                       newState.queue[i].players = newState.queue[i].players.filter(p => p.id !== pid);
-                      // If empty, remove the team ONLY if it's not the only one? No, remove it to clean up.
                       if (newState.queue[i].players.length === 0) newState.queue.splice(i, 1);
                       return found;
                   }
@@ -454,18 +416,9 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
 
       if (!player) return prev;
 
-      // 3. Update Fixed Side Logic
-      // If player was fixed, they should now be fixed to the NEW location,
-      // because isFixed implies "I want to stay HERE".
       if (player.isFixed) {
           if (toId === 'Queue') {
-              // If moving to generic queue, we don't know the ID yet, so we'll check later
-              // or it will be set when they land in a specific team.
-              // For safety, generic moves unfix if we don't know where they land.
-              // But 'toId' is usually specific if coming from drag-drop.
               player.fixedSide = null; 
-              // Actually, drag and drop usually provides a specific team ID for 'toId'.
-              // If 'Queue' is passed (from generic add?), it's rare for a move.
           } else {
               player.fixedSide = toId;
           }
@@ -473,28 +426,23 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
           player.fixedSide = null;
       }
 
-      // 4. Add to Destination
       if (toId === 'A') {
         newState.courtA.players = [...newState.courtA.players, player];
       } else if (toId === 'B') {
         newState.courtB.players = [...newState.courtB.players, player];
       } else if (targetTeam && toId !== 'Queue') {
-        // Specific Queue Team
         targetTeam.players = [...targetTeam.players, player];
-        // We need to update the queue array reference
         newState.queue = newState.queue.map(t => t.id === targetTeam!.id ? targetTeam! : t);
       } else {
-        // Generic 'Queue' (Add to End or Balance)
-        // If we land here, fixedSide might be lost or we need to capture ID.
         if (newState.queue.length > 0) {
             const lastTeam = newState.queue[newState.queue.length - 1];
             if (lastTeam.players.length < PLAYERS_PER_TEAM) {
                 lastTeam.players.push(player);
-                if (player.isFixed) player.fixedSide = lastTeam.id; // Correctly fix to this team
+                if (player.isFixed) player.fixedSide = lastTeam.id;
             } else {
                 const newTeam = createTeam(`Queue Team ${newState.queue.length + 1}`, [player]);
                 newState.queue.push(newTeam);
-                if (player.isFixed) player.fixedSide = newTeam.id; // Correctly fix to this team
+                if (player.isFixed) player.fixedSide = newTeam.id;
             }
         } else {
              const newTeam = createTeam(`Queue Team 1`, [player]);

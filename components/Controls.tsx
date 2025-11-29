@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { RotateCcw, ArrowLeftRight, Settings, Users, Undo2, Maximize2 } from 'lucide-react';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -12,7 +12,7 @@ interface ControlsProps {
   onToggleFullscreen: () => void;
 }
 
-export const Controls: React.FC<ControlsProps> = ({ onUndo, canUndo, onSwap, onSettings, onRoster, onReset, onToggleFullscreen }) => {
+export const Controls: React.FC<ControlsProps> = memo(({ onUndo, canUndo, onSwap, onSettings, onRoster, onReset, onToggleFullscreen }) => {
   const { t } = useTranslation();
 
   const iconBase = "p-3 md:p-4 rounded-full transition-all duration-200 active:scale-90 hover:scale-105 flex items-center justify-center";
@@ -59,4 +59,4 @@ export const Controls: React.FC<ControlsProps> = ({ onUndo, canUndo, onSwap, onS
       </div>
     </div>
   );
-};
+});

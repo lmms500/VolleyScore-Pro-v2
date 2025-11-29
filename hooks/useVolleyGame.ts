@@ -1,11 +1,12 @@
 
-
 import { useState, useCallback, useEffect } from 'react';
 import { GameState, TeamId, SetHistory, GameConfig, Team, Player, RotationReport } from '../types';
 import { DEFAULT_CONFIG, MIN_LEAD_TO_WIN, SETS_TO_WIN_MATCH } from '../constants';
 import { usePlayerQueue } from './usePlayerQueue'; 
+import { SecureStorage } from '../services/SecureStorage';
+import { sanitizeInput, isValidScoreOperation, isValidTimeoutRequest } from '../utils/security';
 
-const STORAGE_KEY = 'volleyscore_pro_v25_action_log';
+const STORAGE_KEY = 'action_log'; // Prefix added by SecureStorage
 
 const INITIAL_STATE: GameState = {
   teamAName: 'Home',
@@ -16,7 +17,7 @@ const INITIAL_STATE: GameState = {
   setsB: 0,
   currentSet: 1,
   history: [],
-  actionLog: [], // Initialize empty log
+  actionLog: [],
   isMatchOver: false,
   matchWinner: null,
   servingTeam: null,
@@ -37,11 +38,14 @@ export const useVolleyGame = () => {
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Sincroniza nomes com o gerenciador de fila
+  // Sync names with queue manager (Sanitized)
   const updateNamesFromQueue = useCallback((nameA: string, nameB: string) => {
       setState(prev => {
-          if (prev.teamAName !== nameA || prev.teamBName !== nameB) {
-              return { ...prev, teamAName: nameA, teamBName: nameB };
+          const safeNameA = sanitizeInput(nameA);
+          const safeNameB = sanitizeInput(nameB);
+          
+          if (prev.teamAName !== safeNameA || prev.teamBName !== safeNameB) {
+              return { ...prev, teamAName: safeNameA, teamBName: safeNameB };
           }
           return prev;
       });
@@ -49,12 +53,13 @@ export const useVolleyGame = () => {
 
   const queueManager = usePlayerQueue(updateNamesFromQueue);
 
-  // Sincroniza Estado da Fila -> Estado do Jogo
+  // Sync Queue State -> Game State
   useEffect(() => {
       const { courtA, courtB, queue, lastReport } = queueManager.queueState;
       setState(prev => {
           const reportToUse = lastReport || prev.rotationReport;
           
+          // Identity check to avoid render loops
           if (prev.teamARoster === courtA && prev.teamBRoster === courtB && prev.queue === queue && prev.rotationReport === reportToUse) return prev;
           
           return {
@@ -63,35 +68,42 @@ export const useVolleyGame = () => {
               teamBRoster: courtB,
               queue: queue,
               rotationReport: reportToUse, 
-              teamAName: courtA.name,
-              teamBName: courtB.name
+              teamAName: sanitizeInput(courtA.name),
+              teamBName: sanitizeInput(courtB.name)
           };
       });
   }, [queueManager.queueState]);
 
-  // Persistência
+  // Persistence: LOAD (Secure)
   useEffect(() => {
-    const loadGame = () => {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) { 
-        try { 
-            const parsed = JSON.parse(saved);
-            if(!parsed.config) parsed.config = DEFAULT_CONFIG;
-            if(!Array.isArray(parsed.queue)) parsed.queue = [];
-            // Migration for old saves without actionLog
-            if(!parsed.actionLog) parsed.actionLog = [];
-            setState(parsed); 
-        } catch (e) { 
-            console.error(e); 
-        } 
+    const loadGame = async () => {
+      const savedState = await SecureStorage.load<GameState>(STORAGE_KEY);
+      
+      if (savedState) { 
+        // Validation: Ensure config exists even if save is old
+        if(!savedState.config) savedState.config = DEFAULT_CONFIG;
+        if(!Array.isArray(savedState.queue)) savedState.queue = [];
+        if(!savedState.actionLog) savedState.actionLog = [];
+
+        // Deep Sanitization of loaded names to ensure no stored XSS payload executes
+        savedState.teamAName = sanitizeInput(savedState.teamAName);
+        savedState.teamBName = sanitizeInput(savedState.teamBName);
+        
+        // Clean obsolete actions
+        savedState.actionLog = savedState.actionLog.filter((action: any) => action.type !== 'TOGGLE_SERVE');
+        
+        setState(savedState); 
       }
       setIsLoaded(true);
     };
     loadGame();
   }, []);
 
+  // Persistence: SAVE (Secure)
   useEffect(() => {
-    if (isLoaded) localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (isLoaded) {
+        SecureStorage.save(STORAGE_KEY, state);
+    }
   }, [state, isLoaded]);
 
   // Timer
@@ -103,7 +115,7 @@ export const useVolleyGame = () => {
     return () => clearInterval(interval);
   }, [state.isTimerRunning, state.isMatchOver]);
 
-  // --- LÓGICA AVANÇADA DE PONTUAÇÃO ---
+  // --- SCORE LOGIC ---
 
   const isTieBreak = state.config.hasTieBreak && state.currentSet === state.config.maxSets;
   const pointsToWinCurrentSet = isTieBreak ? state.config.tieBreakPoints : state.config.pointsPerSet;
@@ -119,20 +131,23 @@ export const useVolleyGame = () => {
   const statusB = getGameStatus(state.scoreB, state.scoreA, state.setsB);
 
   const isDeuce = state.scoreA === state.scoreB && state.scoreA >= pointsToWinCurrentSet - 1;
-
-  // Derivação para saber se o jogo está "ativo" (já começou)
-  // Útil para impedir mudanças de configuração sem resetar.
   const isMatchActive = state.scoreA > 0 || state.scoreB > 0 || state.setsA > 0 || state.setsB > 0 || state.currentSet > 1;
 
   const addPoint = useCallback((team: TeamId) => {
+    // GUARD: Match Over
     if (state.isMatchOver) return;
+
     setState(prev => {
+      // GUARD: Max Score sanity check
+      if (prev.scoreA > 200 || prev.scoreB > 200) return prev;
+
       let newScoreA = team === 'A' ? prev.scoreA + 1 : prev.scoreA;
       let newScoreB = team === 'B' ? prev.scoreB + 1 : prev.scoreB;
       
       const target = (prev.config.hasTieBreak && prev.currentSet === prev.config.maxSets) ? prev.config.tieBreakPoints : prev.config.pointsPerSet;
       let enteringSuddenDeath = false;
 
+      // Logic: Sudden Death Trigger
       if (prev.config.deuceType === 'sudden_death_3pt' && !prev.inSuddenDeath) {
          if (newScoreA === target - 1 && newScoreB === target - 1) {
              newScoreA = 0;
@@ -150,7 +165,7 @@ export const useVolleyGame = () => {
            else if (newScoreB >= target && newScoreB >= newScoreA + MIN_LEAD_TO_WIN) setWinner = 'B';
       }
       
-      // If set is won, we don't push to actionLog (Undo across sets is disabled for simplicity)
+      // Set Won
       if (setWinner) {
           const newSetsA = setWinner === 'A' ? prev.setsA + 1 : prev.setsA;
           const newSetsB = setWinner === 'B' ? prev.setsB + 1 : prev.setsB;
@@ -174,7 +189,7 @@ export const useVolleyGame = () => {
               rotationReport: previewReport, 
               servingTeam: null, isTimerRunning: matchWinner ? false : true, timeoutsA: 0, timeoutsB: 0, 
               inSuddenDeath: false,
-              actionLog: [] // Clear log on set change
+              actionLog: []
           };
       }
       
@@ -191,30 +206,25 @@ export const useVolleyGame = () => {
   }, [state.isMatchOver, queueManager]);
 
   const subtractPoint = useCallback((team: TeamId) => {
-    // Manual subtraction does NOT go into the log (it's a correction, not an action flow)
     if (state.isMatchOver) return;
     setState(prev => {
-        if (team === 'A' && prev.scoreA === 0) return prev;
-        if (team === 'B' && prev.scoreB === 0) return prev;
+        // GUARD: No Negative Scores
+        if (!isValidScoreOperation(team === 'A' ? prev.scoreA : prev.scoreB, -1)) return prev;
+
         return { ...prev, scoreA: team === 'A' ? prev.scoreA - 1 : prev.scoreA, scoreB: team === 'B' ? prev.scoreB - 1 : prev.scoreB };
     });
   }, [state.isMatchOver]);
   
   const useTimeout = useCallback((team: TeamId) => setState(prev => {
+      // GUARD: Validate Timeout Request
+      if (team === 'A' && !isValidTimeoutRequest(prev.timeoutsA)) return prev;
+      if (team === 'B' && !isValidTimeoutRequest(prev.timeoutsB)) return prev;
+
       let newTimeoutsA = prev.timeoutsA;
       let newTimeoutsB = prev.timeoutsB;
-      let used = false;
 
-      if (team === 'A' && prev.timeoutsA < 2) {
-          newTimeoutsA = prev.timeoutsA + 1;
-          used = true;
-      }
-      if (team === 'B' && prev.timeoutsB < 2) {
-          newTimeoutsB = prev.timeoutsB + 1;
-          used = true;
-      }
-
-      if (!used) return prev;
+      if (team === 'A') newTimeoutsA++;
+      if (team === 'B') newTimeoutsB++;
 
       return { 
           ...prev, 
@@ -228,8 +238,6 @@ export const useVolleyGame = () => {
     if (state.isMatchOver) return; 
 
     setState(prev => {
-        // Strict undo logic: Only undo if there are actions in the log.
-        // Heuristic fallback has been removed to ensure data consistency.
         if (prev.actionLog.length === 0) return prev;
 
         const newLog = [...prev.actionLog];
@@ -250,17 +258,7 @@ export const useVolleyGame = () => {
                 actionLog: newLog,
                 scoreA: lastAction.team === 'A' ? Math.max(0, prev.scoreA - 1) : prev.scoreA,
                 scoreB: lastAction.team === 'B' ? Math.max(0, prev.scoreB - 1) : prev.scoreB,
-                // On undo point, we reset server to avoid confusion.
-                // Trade-off: User has to re-select server, but prevents invalid server state.
                 servingTeam: null 
-            };
-        }
-
-        if (lastAction.type === 'TOGGLE_SERVE') {
-            return {
-                ...prev,
-                actionLog: newLog,
-                servingTeam: lastAction.previousServer
             };
         }
 
@@ -282,19 +280,10 @@ export const useVolleyGame = () => {
 
   const toggleSides = useCallback(() => setState(prev => ({ ...prev, swappedSides: !prev.swappedSides })), []);
   
-  const toggleService = useCallback(() => {
-      setState(prev => {
-          // Logic: A -> B -> null -> A
-          const nextServer = prev.servingTeam === 'A' ? 'B' : (prev.servingTeam === 'B' ? null : 'A');
-          return { 
-              ...prev, 
-              servingTeam: nextServer,
-              actionLog: [...prev.actionLog, { type: 'TOGGLE_SERVE', previousServer: prev.servingTeam }]
-          };
-      });
+  const setServer = useCallback((team: TeamId) => {
+      setState(prev => ({ ...prev, servingTeam: team }));
   }, []);
 
-  // Safe Apply Settings: Can optionally enforce a reset
   const applySettings = useCallback((newConfig: GameConfig, shouldReset: boolean = false) => {
       setState(prev => {
           if (shouldReset) {
@@ -303,8 +292,8 @@ export const useVolleyGame = () => {
                 teamAName: prev.teamAName,
                 teamBName: prev.teamBName,
                 teamARoster: prev.teamARoster,
-                teamBRoster: prev.teamBRoster,
-                queue: prev.queue,
+                teamBRoster: prev.teamBRoster, 
+                queue: prev.queue, 
                 config: newConfig
               };
           }
@@ -321,7 +310,7 @@ export const useVolleyGame = () => {
   }, [state.matchWinner, queueManager]);
 
   return {
-    state, setState, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, toggleService, useTimeout, applySettings, 
+    state, setState, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, setServer, useTimeout, applySettings, 
     canUndo: state.actionLog.length > 0, 
     isMatchActive,
     generateTeams: queueManager.generateTeams,

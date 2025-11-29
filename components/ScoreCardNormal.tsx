@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Team, TeamId } from '../types';
 import { Volleyball, Zap } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
@@ -12,7 +12,7 @@ interface ScoreCardNormalProps {
   isServing: boolean;
   onAdd: () => void;
   onSubtract: () => void;
-  onToggleServe: () => void;
+  onSetServer: () => void;
   timeouts: number;
   onTimeout: () => void;
   isMatchPoint: boolean;
@@ -27,8 +27,8 @@ interface ScoreCardNormalProps {
   onInteractionEnd?: () => void;
 }
 
-export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
-  teamId, team, score, setsWon, isServing, onAdd, onSubtract, onToggleServe, timeouts, onTimeout, 
+export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
+  teamId, team, score, setsWon, isServing, onAdd, onSubtract, onSetServer, timeouts, onTimeout, 
   isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, reverseLayout, setsNeededToWin, colorTheme, 
   isLocked = false, onInteractionStart, onInteractionEnd
 }) => {
@@ -42,16 +42,12 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
       text: 'text-indigo-600 dark:text-indigo-400',
       bg: 'bg-indigo-500',
       shadow: 'shadow-indigo-500/50',
-      // Glow mais forte (0.6 opacity) e mais amplo
       glowRadial: 'bg-[radial-gradient(circle,rgba(99,102,241,0.6)_0%,rgba(99,102,241,0)_70%)]'
     },
     rose: {
-      // Increased saturation for consistency with Fullscreen mode (Vermelho Punch)
-      // Matches ScoreCardFullscreen: saturate-[1.75] brightness-125 in Dark Mode
       text: 'text-rose-600 dark:text-rose-500 saturate-[1.25] dark:saturate-[1.75] dark:brightness-125',
       bg: 'bg-rose-500 saturate-150',
       shadow: 'shadow-rose-500/50',
-      // Glow mais forte (0.6 opacity) e mais amplo
       glowRadial: 'bg-[radial-gradient(circle,rgba(244,63,94,0.6)_0%,rgba(244,63,94,0)_70%)]'
     }
   }[colorTheme];
@@ -75,8 +71,10 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
         <div className="flex flex-col items-center justify-center w-full flex-none order-1 mt-4">
             
             <div 
-                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={(e) => { e.stopPropagation(); onToggleServe(); }}
+                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity active:scale-95 duration-200"
+                onClick={(e) => { e.stopPropagation(); onSetServer(); }}
+                role="button"
+                aria-label={`Set serve to ${team?.name}`}
             >
                 <h2 
                     className="font-black uppercase text-center z-10 leading-none text-xl md:text-3xl text-slate-800 dark:text-slate-200 tracking-widest truncate max-w-[200px]"
@@ -129,18 +127,18 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
             style={{ touchAction: 'none' }}
             {...gestureHandlers}
         >
-            <div className="relative inline-flex items-center justify-center">
-                {/* Background Glow - Significantly Increased Size and Intensity */}
+            <div className="relative inline-flex items-center justify-center will-change-transform">
+                {/* Background Glow */}
                 <div 
                     className={`
                         absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                         w-[250%] h-[250%] rounded-full transition-opacity duration-700 ease-out 
                         ${theme.glowRadial} pointer-events-none mix-blend-screen blur-[60px] z-0
                         ${isServing ? 'opacity-100' : 'opacity-0'}
+                        will-change-[opacity]
                     `} 
                 />
                 
-                {/* Reduced font size slightly to accommodate larger glow and small screens */}
                 <span className={`
                     relative z-10 drop-shadow-2xl font-black leading-none tracking-[-0.08em] 
                     text-slate-900 dark:text-white outline-none select-none
@@ -187,4 +185,4 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = ({
       </div>
     </div>
   );
-};
+});

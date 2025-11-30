@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { HudPlacement } from '../hooks/useHudMeasure';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 
 interface MeasuredFullscreenHUDProps {
   placement: HudPlacement;
@@ -9,7 +10,42 @@ interface MeasuredFullscreenHUDProps {
   colorRight: 'indigo' | 'rose';
 }
 
-export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = ({
+const flipTransition = {
+  duration: 0.35,
+  ease: [0.22, 0.61, 0.36, 1] as const // Custom Bezier for premium feel
+};
+
+const flipVariants: Variants = {
+  initial: { rotateY: -90, opacity: 0, scale: 0.95 },
+  animate: { rotateY: 0, opacity: 1, scale: 1, transition: flipTransition },
+  exit: { rotateY: 90, opacity: 0, scale: 0.95, transition: flipTransition }
+};
+
+const SetNumber = memo(({ value, color }: { value: number, color: 'indigo' | 'rose' }) => {
+    const textColor = color === 'indigo' 
+        ? 'text-indigo-400 drop-shadow-[0_0_20px_rgba(99,102,241,0.5)]' 
+        : 'text-rose-500 drop-shadow-[0_0_20px_rgba(244,63,94,0.5)] brightness-125 saturate-150';
+
+    return (
+        <div className="w-[80px] flex justify-center items-center">
+            <motion.span
+                key={value}
+                initial={{ scale: 1 }}
+                animate={{ scale: [1, 1.25, 1] }} // Bounce effect (ScaleUpBounce)
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className={`font-black text-6xl leading-none tabular-nums ${textColor}`}
+                style={{ 
+                    textShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                    display: 'inline-block'
+                }}
+            >
+                {value}
+            </motion.span>
+        </div>
+    );
+});
+
+export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = memo(({
   placement,
   setsLeft, setsRight, 
   colorLeft, colorRight
@@ -17,43 +53,65 @@ export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = ({
   
   if (!placement.visible) return null;
 
-  const getTheme = (color: 'indigo' | 'rose') => ({
-      // Punchy saturation for rose to contrast against indigo
-      text: color === 'indigo' ? 'text-indigo-400' : 'text-rose-500 saturate-150 brightness-125',
-      glow: color === 'indigo' ? 'drop-shadow-[0_0_25px_rgba(99,102,241,0.5)]' : 'drop-shadow-[0_0_30px_rgba(244,63,94,0.8)]',
-  });
-
-  const themeLeft = getTheme(colorLeft);
-  const themeRight = getTheme(colorRight);
-
-  // System Look
-  const glassContainer = "bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/40";
+  // Key to trigger 3D Flip Animation when sides swap
+  const layoutKey = `${colorLeft}-${colorRight}`;
 
   return (
     <div 
         style={{
             position: 'fixed',
-            left: placement.left,
-            top: placement.top,
+            top: '50%',
+            left: '50%',
             transform: `translate(-50%, -50%) scale(${placement.scale})`,
-            width: 200, // Base width for layout context
-            pointerEvents: 'none',
             zIndex: 40,
+            pointerEvents: 'none',
+            perspective: '1000px', // Mandatory for 3D Flip
+            width: 'max-content',
+            height: 'max-content'
         }} 
-        className="flex items-center justify-center transition-transform duration-100 ease-linear"
+        className="flex items-center justify-center origin-center"
     >
-        {/* Sets Display - Ultra Glass */}
-        <div className={`flex items-center justify-center gap-6 px-6 py-2 rounded-3xl ${glassContainer}`}>
-            <span className={`font-black text-6xl leading-none ${themeLeft.text} ${themeLeft.glow}`}>
-                {setsLeft}
-            </span>
+        <AnimatePresence mode="wait">
+            <motion.div
+                key={layoutKey}
+                variants={flipVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                style={{ transformStyle: 'preserve-3d' }}
+                className="relative"
+            >
+                {/* Neo-Glass Container */}
+                <div className={`
+                    relative flex items-center justify-center gap-0 
+                    px-8 py-4 rounded-[2rem]
+                    bg-white/10 dark:bg-black/20 
+                    backdrop-blur-2xl border border-white/10 
+                    shadow-[0_0_40px_rgba(0,0,0,0.6)]
+                    overflow-hidden
+                    min-w-[260px] min-h-[110px]
+                    flex-shrink-0
+                `}>
+                    {/* Fixed Internal Glow */}
+                    <div 
+                        className="absolute inset-0 z-0 pointer-events-none mix-blend-overlay opacity-50"
+                        style={{
+                            background: 'radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 70%)'
+                        }}
+                    />
 
-            <div className="h-10 w-px bg-white/10"></div>
+                    {/* Content Layer */}
+                    <div className="relative z-10 flex items-center justify-center gap-2">
+                        <SetNumber value={setsLeft} color={colorLeft} />
 
-            <span className={`font-black text-6xl leading-none ${themeRight.text} ${themeRight.glow}`}>
-                {setsRight}
-            </span>
-        </div>
+                        {/* Divider */}
+                        <div className="h-12 w-[1px] bg-gradient-to-b from-transparent via-white/20 to-transparent mx-2" />
+
+                        <SetNumber value={setsRight} color={colorRight} />
+                    </div>
+                </div>
+            </motion.div>
+        </AnimatePresence>
     </div>
   );
-};
+});

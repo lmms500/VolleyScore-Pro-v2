@@ -41,6 +41,7 @@ export const Modal: React.FC<ModalProps> = ({
             exit="exit"
             variants={overlayVariants}
             onClick={handleBackdropClick}
+            style={{ willChange: 'opacity' }} // GPU Optimization
           />
           
           {/* Container */}
@@ -56,6 +57,7 @@ export const Modal: React.FC<ModalProps> = ({
             animate="visible"
             exit="exit"
             variants={modalVariants}
+            style={{ willChange: 'transform, opacity' }} // GPU Optimization
           >
             {/* Header */}
             <div className="p-6 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-black/[0.02] dark:bg-white/[0.02]">

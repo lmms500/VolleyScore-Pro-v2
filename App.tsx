@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -16,6 +17,7 @@ import { LayoutProvider } from './contexts/LayoutContext';
 import { useHudMeasure } from './hooks/useHudMeasure';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SuddenDeathOverlay } from './components/ui/CriticalPointAnimation';
+import { BackgroundGlow } from './components/ui/BackgroundGlow';
 
 // Lazy Loaded Heavy Modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -165,16 +167,10 @@ function App() {
       <LayoutProvider>
         <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative">
           
-          <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden will-change-transform">
-            <div className={`
-                absolute -top-[20%] -left-[20%] w-[80vw] h-[80vw] blur-[120px] rounded-full mix-blend-screen opacity-60 animate-pulse duration-[4000ms] transition-colors duration-1000
-                ${isSwapped ? 'bg-rose-600/20' : 'bg-indigo-600/20'}
-            `}></div>
-            <div className={`
-                absolute -bottom-[20%] -right-[20%] w-[80vw] h-[80vw] blur-[120px] rounded-full mix-blend-screen opacity-60 animate-pulse duration-[5000ms] transition-colors duration-1000
-                ${isSwapped ? 'bg-indigo-600/20' : 'bg-rose-600/20'}
-            `}></div>
-          </div>
+          <BackgroundGlow 
+            isSwapped={isSwapped} 
+            isFullscreen={isFullscreen} 
+          />
 
           <SuddenDeathOverlay active={state.inSuddenDeath} />
 

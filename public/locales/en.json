@@ -33,7 +33,7 @@
   },
   "status": {
     "sudden_death": "SUDDEN DEATH",
-    "advantage": "GOES TO 2",
+    "deuce_advantage": "ADVANTAGE DEUCE",
     "golden_point": "GOLDEN POINT",
     "match_point": "MATCH POINT",
     "set_point": "SET POINT",

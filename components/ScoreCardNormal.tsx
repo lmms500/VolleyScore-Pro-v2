@@ -89,8 +89,8 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
   } else if (isDeuce) {
       badgeConfig = { 
           icon: TrendingUp, 
-          text: t('status.advantage'), 
-          className: 'bg-slate-500/20 text-slate-600 dark:text-slate-300 border-slate-500/30',
+          text: t('status.deuce_advantage'), 
+          className: 'bg-slate-500/20 text-white border-slate-500/30 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]',
           animateIcon: false
       };
   }
@@ -118,7 +118,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
         layout
         transition={layoutTransition}
         className={`
-            flex flex-col flex-1 relative h-full transition-colors duration-500 select-none overflow-visible
+            flex flex-col flex-1 relative h-full transition-all duration-500 select-none
             ${orderClass} 
             ${isLocked ? 'opacity-90 grayscale-[0.2]' : ''}
             ${isServing ? 'z-20' : 'z-0'} 
@@ -130,20 +130,25 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
         {/* Header: Name, Sets, Serve */}
         <div className="flex flex-col items-center justify-center w-full flex-none order-1 mt-4 space-y-3">
             
-            <div 
+            <motion.div 
+                layout
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
                 className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity active:scale-95 duration-200 group"
                 onClick={(e) => { e.stopPropagation(); onSetServer(); }}
                 role="button"
                 aria-label={`Set serve to ${team?.name}`}
             >
-                <h2 
+                <motion.h2 
+                    layout
                     className="font-black uppercase text-center z-10 leading-none text-xl md:text-2xl text-slate-800 dark:text-slate-200 tracking-widest truncate max-w-[200px] group-hover:scale-105 transition-transform"
                 >
                     {team?.name || ''}
-                </h2>
-                <AnimatePresence>
+                </motion.h2>
+                <AnimatePresence mode="popLayout">
                   {isServing && (
                     <motion.div
+                      key="serving-indicator"
+                      layout // Enables layout animation during exit
                       initial={{ scale: 0, opacity: 0, rotate: -180 }}
                       animate={{ scale: 1, opacity: 1, rotate: 0 }}
                       exit={{ scale: 0, opacity: 0, rotate: 180 }}
@@ -158,7 +163,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                     </motion.div>
                   )}
                 </AnimatePresence>
-            </div>
+            </motion.div>
 
             {/* Sets Indicator - Glowing Dots */}
             <div className="flex gap-2">

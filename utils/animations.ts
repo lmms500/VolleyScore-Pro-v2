@@ -40,25 +40,30 @@ export const layoutTransition: Transition = {
 
 // --- REUSABLE VARIANTS ---
 
-// Modal / Drawer Slide Up
+// Modal / Drawer Slide Up - OPTIMIZED FOR GPU & PERF
 export const modalVariants: Variants = {
   hidden: { 
-    y: "100%", 
+    y: 20, // Minimal movement to reduce paint area
     opacity: 0,
-    scale: 0.95,
-    transition: { duration: 0.2 } // Fast exit
+    scale: 0.96, // Subtle depth scaling
+    transition: { duration: 0.2 } 
   },
   visible: { 
     y: 0, 
     opacity: 1,
     scale: 1,
-    transition: springHeavy
+    transition: {
+        type: "spring",
+        stiffness: 350,
+        damping: 35,
+        mass: 1
+    }
   },
   exit: { 
-    y: "40%", 
+    y: 15, // Subtle exit drop
     opacity: 0, 
-    scale: 0.95,
-    transition: { duration: 0.2, ease: "easeIn" }
+    scale: 0.98,
+    transition: { duration: 0.15, ease: "easeIn" }
   }
 };
 

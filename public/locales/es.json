@@ -33,7 +33,7 @@
   },
   "status": {
     "sudden_death": "MUERTE SÚBITA",
-    "advantage": "VA A 2",
+    "deuce_advantage": "VENTAJA DEUCE",
     "golden_point": "PUNTO DE ORO",
     "match_point": "MATCH POINT",
     "set_point": "SET POINT",

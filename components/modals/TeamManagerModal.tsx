@@ -271,7 +271,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
       </div>
 
       {view === 'input' ? (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="space-y-4"> {/* Removed animate-in classes for performance */}
             <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
                 <p className="text-xs text-indigo-700 dark:text-indigo-200 flex items-center gap-2"><ArrowRight size={14} />{t('teamManager.batchInputPrompt')}</p>
             </div>
@@ -281,7 +281,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-          <div className="flex flex-col md:grid md:grid-cols-3 gap-4 items-start animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 min-h-[60vh]">
+          <div className="flex flex-col md:grid md:grid-cols-3 gap-4 items-start pb-20 min-h-[60vh]"> {/* Removed animate-in classes for performance */}
             <TeamColumn id="A" team={courtA} onUpdateTeamName={onUpdateTeamName} onUpdatePlayerName={onUpdatePlayerName} onAddPlayer={(n) => onAddPlayer(n, 'A')} onToggleFixed={onToggleFixed} onRemove={onRemove} color="indigo" />
             <TeamColumn id="B" team={courtB} onUpdateTeamName={onUpdateTeamName} onUpdatePlayerName={onUpdatePlayerName} onAddPlayer={(n) => onAddPlayer(n, 'B')} onToggleFixed={onToggleFixed} onRemove={onRemove} color="rose" />
             

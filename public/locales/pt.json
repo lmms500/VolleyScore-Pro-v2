@@ -33,7 +33,7 @@
   },
   "status": {
     "sudden_death": "MORTE SÚBITA",
-    "advantage": "VAI A 2",
+    "deuce_advantage": "VANTAGEM DEUCE",
     "golden_point": "GOLDEN POINT",
     "match_point": "MATCH POINT",
     "set_point": "SET POINT",
@@ -125,7 +125,7 @@
     "batchInput": "Adicionar em Lote",
     "batchInputPrompt": "Cole os nomes abaixo (um por linha).",
     "batchInputPlaceholder": "João da Silva\nMaria Souza\n...",
-    "generateTeams": "Gerar Equipes",
+    "generateTeams": "Gerar Equipos",
     "queue": "Fila de Espera",
     "queueEmpty": "Fila vazia",
     "dragPlayersHere": "Arraste jogadores aqui",

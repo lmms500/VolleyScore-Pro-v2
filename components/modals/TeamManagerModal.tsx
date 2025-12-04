@@ -467,11 +467,9 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
     }
   };
 
-  // Logic to determine status of a profile ID in current game
   const getProfileStatus = (profileId: string): PlayerLocationStatus => {
       if (props.courtA.players.some(p => p.profileId === profileId)) return 'A';
       if (props.courtB.players.some(p => p.profileId === profileId)) return 'B';
-      // Check Queue
       for (const t of props.queue) {
           if (t.players.some(p => p.profileId === profileId)) return 'Queue';
       }
@@ -481,14 +479,9 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   return (
     <Modal isOpen={props.isOpen} onClose={props.onClose} title={t('teamManager.title')} maxWidth="max-w-[95vw] md:max-w-7xl">
       
-      {/* --- RESPONSIVE HEADER --- 
-          Corrected z-index and positioning to handle scroll overlap. 
-          Added -top-6 to account for Modal padding and solid background to mask content. 
-      */}
       <div className="sticky -top-6 z-50 bg-slate-100 dark:bg-[#0a0a0a] border-b border-black/5 dark:border-white/5 -mx-6 px-6 py-4 shadow-sm mb-4">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               
-              {/* Tab Switcher - Now Wrap Capable */}
               <div className="flex flex-wrap p-1 bg-slate-200/50 dark:bg-white/5 rounded-xl gap-1">
                 <button onClick={() => setActiveTab('roster')} className={`px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'roster' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
                     <List size={14} /> Roster
@@ -501,19 +494,20 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                 </button>
               </div>
 
-              {/* Actions - Flex Wrap with Gap */}
               {activeTab === 'roster' && (
                   <div className="flex flex-wrap items-center justify-end gap-2 w-full md:w-auto">
                       <div className="flex items-center bg-slate-200/50 dark:bg-white/5 rounded-lg p-1">
                           <button 
                              onClick={() => props.onSetRotationMode('standard')}
                              className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${props.rotationMode === 'standard' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500'}`}
+                             title="Rotation: Winner Stays, Loser to End. Gaps filled from next teams."
                           >
                               Standard
                           </button>
                           <button 
                              onClick={() => props.onSetRotationMode('balanced')}
                              className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${props.rotationMode === 'balanced' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500'}`}
+                             title="Rotation: Winner Stays. Gaps filled to match Winner's skill level."
                           >
                               Balanced
                           </button>
@@ -539,7 +533,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
         </div>
       )}
 
-      {/* Profiles Tab */}
       {activeTab === 'profiles' && (
           <div className="pb-12 animate-in fade-in slide-in-from-bottom-2">
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -564,7 +557,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
           </div>
       )}
 
-      {/* Roster Layout - Vertical on Mobile, Grid on Desktop */}
       {activeTab === 'roster' && (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
           
@@ -584,7 +576,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                 onAddPlayer={(n) => props.onAddPlayer(n, 'B')} 
             />
             
-            {/* Queue Column - Improved layout for narrow spaces */}
             <div className="w-full md:col-span-2 xl:col-span-1 bg-slate-100 dark:bg-white/[0.02] p-4 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col h-fit">
                 <h3 className="font-bold text-slate-500 dark:text-slate-400 mb-4 text-xs uppercase tracking-widest flex items-center gap-2 flex-none"><div className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-600"></div>{t('teamManager.queue')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-4">
@@ -618,7 +609,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
         </DndContext>
       )}
 
-       {/* Undo Toast */}
        <div 
          className={`
             fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] 

@@ -4,7 +4,7 @@ import { Player, Team, TeamId, RotationReport, RotationMode, PlayerProfile } fro
 import { PLAYER_LIMIT_ON_COURT, PLAYERS_PER_TEAM } from '../constants';
 import { sanitizeInput } from '../utils/security';
 import { usePlayerProfiles } from './usePlayerProfiles';
-import { balanceTeamsSnake, distributeStandard } from '../utils/balanceUtils';
+import { balanceTeamsSnake, distributeStandard, getStandardRotationResult, getBalancedRotationResult } from '../utils/balanceUtils';
 import { v4 as uuidv4 } from 'uuid';
 
 interface QueueState {
@@ -112,6 +112,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
         ];
 
         let result;
+        // NOTE: This balance button in UI is for "Global Reset/Redistribution", not the per-match rotation
         if (prev.mode === 'balanced') {
             result = balanceTeamsSnake(allPlayers, prev.courtA, prev.courtB);
         } else {
@@ -220,27 +221,36 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
   // --- ROTATION & MOVEMENT ---
 
   const getRotationPreview = useCallback((winnerId: TeamId): RotationReport | null => {
-    const { courtA, courtB, queue } = queueState;
-    if (queue.length === 0) return null;
+    const { courtA, courtB, queue, mode } = queueState;
+    if (queue.length === 0 && courtA.players.length >= PLAYER_LIMIT_ON_COURT && courtB.players.length >= PLAYER_LIMIT_ON_COURT) {
+       // If no queue, no rotation
+       return null;
+    }
 
-    const loserId = winnerId === 'A' ? 'B' : 'A';
-    const loserTeam = loserId === 'A' ? courtA : courtB;
-    const nextTeamInLine = queue[0];
-    
-    // Simple Rotation for now: Swap loser with queue head
-    // (Complex steal logic removed for clarity, easy to re-add)
-    let newQueue = [...queue];
-    newQueue.shift();
-    newQueue.push({ ...loserTeam, id: uuidv4() }); // Push loser to back
+    const winnerTeam = winnerId === 'A' ? courtA : courtB;
+    const loserTeam = winnerId === 'A' ? courtB : courtA;
 
-    return {
-      outgoingTeam: loserTeam,
-      incomingTeam: nextTeamInLine,
-      retainedPlayers: [], 
-      stolenPlayers: [],
-      queueAfterRotation: newQueue
-    };
-
+    // Use specific logic based on mode
+    if (mode === 'balanced') {
+        const result = getBalancedRotationResult(winnerTeam, loserTeam, queue);
+        return {
+            outgoingTeam: loserTeam,
+            incomingTeam: result.incomingTeam,
+            retainedPlayers: [], // In full mixing/filling, tracking retained is trivial (everyone not stolen)
+            stolenPlayers: result.stolenPlayers,
+            queueAfterRotation: result.queue
+        };
+    } else {
+        // Standard Logic (King of the Court + Fill gaps from end of queue)
+        const result = getStandardRotationResult(loserTeam, queue);
+        return {
+            outgoingTeam: loserTeam,
+            incomingTeam: result.incomingTeam,
+            retainedPlayers: [],
+            stolenPlayers: result.stolenPlayers,
+            queueAfterRotation: result.queue
+        };
+    }
   }, [queueState]);
 
   const rotateTeams = useCallback((winnerId: TeamId) => {
@@ -270,7 +280,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
       };
 
       setQueueState(prev => {
-          // If we add by name, check if profile exists to link it immediately
           const safeName = sanitizeInput(name);
           const profile = findProfileByName(safeName);
           
@@ -313,7 +322,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
        else originId = prev.courtA.players !== newA ? 'A' : 'B';
 
        if(!deletedPlayer && originId === 'Queue') {
-           // Queue search
            const newQueue = prev.queue.map(t => {
                const p = t.players.find(pl => pl.id === id);
                if(p) { deletedPlayer = p; return { ...t, players: t.players.filter(pl => pl.id !== id) }; }
@@ -348,7 +356,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
              const { player, originId } = record;
              if (originId === 'A') return { ...qs, courtA: { ...qs.courtA, players: [...qs.courtA.players, player] }};
              if (originId === 'B') return { ...qs, courtB: { ...qs.courtB, players: [...qs.courtB.players, player] }};
-             // Simple queue restore
              const newQueue = [...qs.queue];
              if(newQueue.length > 0) newQueue[newQueue.length -1].players.push(player);
              else newQueue.push(createTeam("Restored", [player]));
@@ -435,7 +442,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     savePlayerToProfile,
     revertPlayerChanges,
     deleteProfile,
-    upsertProfile, // Added this export
+    upsertProfile,
     profiles
   };
 };

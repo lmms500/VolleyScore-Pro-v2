@@ -33,6 +33,9 @@ const createTeamContainer = (id: string, name: string, players: Player[]): Team 
  * 1. Places Fixed (Locked) players into their teams first (Anchors).
  * 2. Sorts Free Agents by Skill (Desc).
  * 3. Assigns Free Agents to the team with the LOWEST current Total Skill.
+ * 
+ * This ensures that if one team has a locked high-skill player, 
+ * the algorithm fills the other team first to compensate.
  */
 export const balanceTeamsSnake = (
   allPlayers: Player[], 
@@ -43,7 +46,6 @@ export const balanceTeamsSnake = (
   const courtLimit = PLAYER_LIMIT_ON_COURT; // 6
 
   // 1. Separate Fixed (Anchors) vs Free Pool
-  // We trust currentCourtA/B to tell us WHERE they are fixed.
   const fixedInA = currentCourtA.players.filter(p => p.isFixed);
   const fixedInB = currentCourtB.players.filter(p => p.isFixed);
   
@@ -54,6 +56,7 @@ export const balanceTeamsSnake = (
   });
 
   // 2. Initialize Buckets with Anchors
+  // teamBuckets[0] = Team A, teamBuckets[1] = Team B, others = Queue
   const totalPlayers = fixedInA.length + fixedInB.length + pool.length;
   const totalTeamsNeeded = Math.ceil(totalPlayers / courtLimit);
   
@@ -62,6 +65,9 @@ export const balanceTeamsSnake = (
   if (totalTeamsNeeded > 1) teamBuckets[1] = [...fixedInB];
 
   // 3. Define Active Draft Buckets (Court A and Court B usually)
+  // Logic: We only "balance" the active courts. Overflow goes to queue.
+  // Unless we want to balance the entire queue too? 
+  // Standard practice: Balance A vs B for the match, rest go to queue.
   const activeBucketIndices = [0, 1].filter(i => i < totalTeamsNeeded);
 
   // 4. Weighted Distribution
@@ -71,9 +77,10 @@ export const balanceTeamsSnake = (
       
       if (validBuckets.length > 0) {
           // Find the WEAKEST bucket among valid ones
-          // Sort by Total Skill ASC to balance
+          // Sort by Total Skill ASC
           validBuckets.sort((a, b) => getTotalSkill(teamBuckets[a]) - getTotalSkill(teamBuckets[b]));
           
+          // Add to weakest
           const targetIndex = validBuckets[0];
           teamBuckets[targetIndex].push(player);
       } else {
@@ -108,59 +115,36 @@ export const balanceTeamsSnake = (
   return { courtA: newCourtA, courtB: newCourtB, queue: newQueue };
 };
 
-/**
- * Standard Distribution (Restore Order)
- * Respects Fixed Players as Anchors.
- * 1. Fixed players stay in their current courts.
- * 2. Non-fixed players are sorted by Original Index.
- * 3. Non-fixed players fill gaps in A, then B, then Queue.
- */
 export const distributeStandard = (
     allPlayers: Player[], 
     currentCourtA: Team, 
     currentCourtB: Team
   ): { courtA: Team, courtB: Team, queue: Team[] } => {
     
-    // 1. Identify Anchors
-    const anchorsA = currentCourtA.players.filter(p => p.isFixed);
-    const anchorsB = currentCourtB.players.filter(p => p.isFixed);
+    // For Standard Distribute (Reset), we respect Fixed players staying in their lane?
+    // Usually "Restore Order" implies purely index based. 
+    // However, if a player is LOCKED, they should probably stay put or return to their locked side.
+    // For now, implementing standard "Reset to Original Index" logic but keeping locked players if they match side?
+    // Simplest approach: Unfix everyone OR Ignore fix. 
+    // Given UI label "Restore Order", we assume purely index-based reset.
     
-    // 2. Identify Pool (Sorted by Index)
-    const pool = allPlayers
-        .filter(p => !p.isFixed)
-        .sort((a, b) => a.originalIndex - b.originalIndex);
+    const sorted = [...allPlayers].sort((a, b) => a.originalIndex - b.originalIndex);
     
-    // 3. Fill Court A
-    const playersA = [...anchorsA];
-    // Sort anchors by index just to be tidy within the fixed group? Optional.
-    // playersA.sort((a,b) => a.originalIndex - b.originalIndex); 
+    const teamAPlayers = sorted.slice(0, PLAYER_LIMIT_ON_COURT);
+    const teamBPlayers = sorted.slice(PLAYER_LIMIT_ON_COURT, PLAYER_LIMIT_ON_COURT * 2);
+    const remaining = sorted.slice(PLAYER_LIMIT_ON_COURT * 2);
     
-    while (playersA.length < PLAYER_LIMIT_ON_COURT && pool.length > 0) {
-        playersA.push(pool.shift()!);
-    }
-    // Re-sort A by index so fixed/non-fixed interleave naturally based on arrival order
-    playersA.sort((a,b) => a.originalIndex - b.originalIndex);
-
-    // 4. Fill Court B
-    const playersB = [...anchorsB];
-    while (playersB.length < PLAYER_LIMIT_ON_COURT && pool.length > 0) {
-        playersB.push(pool.shift()!);
-    }
-    playersB.sort((a,b) => a.originalIndex - b.originalIndex);
-
-    // 5. Create Queue
     const queueTeams: Team[] = [];
     let qIdx = 1;
-    
-    while (pool.length > 0) {
-        const chunk = pool.splice(0, PLAYERS_PER_TEAM);
+    for (let i = 0; i < remaining.length; i += PLAYERS_PER_TEAM) {
+        const chunk = remaining.slice(i, i + PLAYERS_PER_TEAM);
         queueTeams.push(createTeamContainer(uuidv4(), `Team ${qIdx + 2}`, chunk));
         qIdx++;
     }
   
     return {
-      courtA: { ...currentCourtA, players: playersA },
-      courtB: { ...currentCourtB, players: playersB },
+      courtA: { ...currentCourtA, players: teamAPlayers },
+      courtB: { ...currentCourtB, players: teamBPlayers },
       queue: queueTeams
     };
   };
@@ -175,82 +159,41 @@ export interface RotationResult {
 
 /**
  * Standard Rotation (Respects Locks):
- * 1. Loser -> Non-fixed players go to queue. Fixed players stay.
- * 2. Next team enters and merges with Fixed players.
- * 3. If merged team > 6, overflow players (non-fixed) go to end of queue.
- * 4. If merged team < 6, fill gaps by stealing from end of queue (skipping fixed).
+ * 1. Loser goes to end.
+ * 2. Next team enters.
+ * 3. Fill gaps by stealing from END of subsequent teams.
+ * 4. SKIP LOCKED PLAYERS when stealing.
  */
 export const getStandardRotationResult = (
     loserTeam: Team, 
     currentQueue: Team[]
 ): RotationResult => {
     const queue = currentQueue.map(t => ({...t, players: [...t.players]})); // Deep copy
+    const loser = { ...loserTeam, players: [...loserTeam.players], id: uuidv4() };
     
-    // 1. Split Loser Team
-    const anchors = loserTeam.players.filter(p => p.isFixed);
-    const leavers = loserTeam.players.filter(p => !p.isFixed);
-    
-    // Push leavers to end of queue
-    if (leavers.length > 0) {
-        queue.push({ ...loserTeam, players: leavers, id: uuidv4() });
-    }
+    // 1. Push loser to end
+    queue.push(loser);
 
-    // 2. Determine Incoming Base
-    // If queue is empty, incoming is just the anchors (logic handles refill below)
-    let incomingBase = queue.shift();
-    let incomingPlayers = incomingBase ? [...incomingBase.players] : [];
-    
-    // 3. Merge Anchors (They stay on court)
-    // We add anchors to the incoming team.
-    incomingPlayers.push(...anchors);
-    
-    // 4. Handle Overflow (If Incoming + Anchors > 6)
-    const overflow: Player[] = [];
-    while (incomingPlayers.length > PLAYER_LIMIT_ON_COURT) {
-        // Eject non-fixed players to make room for anchors
-        // We prefer to eject from the 'incoming' portion, preserving anchors.
-        // We take from the 'start' of the array (FIFO) if they were added first, 
-        // or look for non-fixed specifically.
-        const ejectIdx = incomingPlayers.findIndex(p => !p.isFixed);
-        if (ejectIdx !== -1) {
-            const [ejected] = incomingPlayers.splice(ejectIdx, 1);
-            overflow.push(ejected);
-        } else {
-            // Should theoretically not happen if logic is sound (cannot have >6 fixed players)
-            // But if so, just pop.
-            const [ejected] = incomingPlayers.splice(0, 1);
-            overflow.push(ejected);
-        }
-    }
+    // 2. Determine Incoming
+    const incomingTeam = queue.shift();
 
-    // If we had overflow, push them to the end of the queue (or create new team)
-    if (overflow.length > 0) {
-        // Find last queue team to append, or create new
-        if (queue.length > 0) {
-            queue[queue.length - 1].players.push(...overflow);
-        } else {
-            queue.push(createTeamContainer(uuidv4(), "Overflow", overflow));
-        }
+    if (!incomingTeam) {
+        return { incomingTeam: loser, queue: [], stolenPlayers: [] };
     }
-
-    // 5. Setup Incoming Container
-    const incomingTeam = { 
-        ...(incomingBase || loserTeam), 
-        id: uuidv4(),
-        players: incomingPlayers 
-    };
 
     const stolenPlayers: Player[] = [];
     
-    // 6. Fill gaps if needed (< 6 players)
+    // 3. Fill gaps if needed
     while (incomingTeam.players.length < PLAYER_LIMIT_ON_COURT) {
         let foundDonor = false;
 
         // Try to steal from the NEW queue (index 0 is the team AFTER incoming)
         for (const donorTeam of queue) {
             if (donorTeam.players.length > 0) {
-                // Find last NON-FIXED player (Steal from end)
+                
+                // CRITICAL CHANGE: Find last NON-FIXED player
                 let stolenIndex = -1;
+                // Iterate backwards
                 for (let i = donorTeam.players.length - 1; i >= 0; i--) {
                     if (!donorTeam.players[i].isFixed) {
                         stolenIndex = i;
@@ -263,11 +206,12 @@ export const getStandardRotationResult = (
                     incomingTeam.players.push(stolen);
                     stolenPlayers.push(stolen);
                     foundDonor = true;
-                    break;
+                    break; // Start loop again to check next need
                 }
             }
         }
-        if (!foundDonor) break; 
+
+        if (!foundDonor) break; // No more moveable players available
     }
 
     const cleanedQueue = queue.filter(t => t.players.length > 0);
@@ -281,10 +225,10 @@ export const getStandardRotationResult = (
 
 /**
  * Balanced Rotation (Respects Locks):
- * 1. Loser -> Non-fixed go to queue. Fixed stay.
- * 2. Next team enters + merges.
- * 3. Handle Overflow.
- * 4. Fill gaps by picking players from Queue (Non-Fixed) that MINIMIZE skill delta.
+ * 1. Loser goes to end.
+ * 2. Next team enters.
+ * 3. Fill gaps by picking players from Queue that MINIMIZE skill delta.
+ * 4. IGNORE LOCKED PLAYERS as candidates.
  */
 export const getBalancedRotationResult = (
     winnerTeam: Team,
@@ -292,47 +236,21 @@ export const getBalancedRotationResult = (
     currentQueue: Team[]
 ): RotationResult => {
     const queue = currentQueue.map(t => ({...t, players: [...t.players]}));
+    const loser = { ...loserTeam, players: [...loserTeam.players], id: uuidv4() };
     
-    // 1. Split Loser
-    const anchors = loserTeam.players.filter(p => p.isFixed);
-    const leavers = loserTeam.players.filter(p => !p.isFixed);
-    
-    if (leavers.length > 0) {
-        queue.push({ ...loserTeam, players: leavers, id: uuidv4() });
-    }
+    // 1. Push loser to end
+    queue.push(loser);
 
-    // 2. Merge Incoming
-    let incomingBase = queue.shift();
-    let incomingPlayers = incomingBase ? [...incomingBase.players] : [];
-    incomingPlayers.push(...anchors);
-
-    // 3. Overflow
-    const overflow: Player[] = [];
-    while (incomingPlayers.length > PLAYER_LIMIT_ON_COURT) {
-        const ejectIdx = incomingPlayers.findIndex(p => !p.isFixed);
-        if (ejectIdx !== -1) {
-            const [ejected] = incomingPlayers.splice(ejectIdx, 1);
-            overflow.push(ejected);
-        } else {
-            const [ejected] = incomingPlayers.splice(0, 1);
-            overflow.push(ejected);
-        }
+    // 2. Incoming Team
+    const incomingTeam = queue.shift();
+    if (!incomingTeam) {
+        return { incomingTeam: loser, queue: [], stolenPlayers: [] };
     }
-    if (overflow.length > 0) {
-        if (queue.length > 0) queue[queue.length - 1].players.push(...overflow);
-        else queue.push(createTeamContainer(uuidv4(), "Overflow", overflow));
-    }
-
-    const incomingTeam = { 
-        ...(incomingBase || loserTeam), 
-        id: uuidv4(),
-        players: incomingPlayers 
-    };
 
     const targetAvg = getNumericStrength(winnerTeam.players);
     const stolenPlayers: Player[] = [];
 
-    // 4. Fill Gaps (Balanced Draft)
+    // 3. Fill Gaps
     while (incomingTeam.players.length < PLAYER_LIMIT_ON_COURT) {
         let bestCandidate: { player: Player, teamIndex: number, playerIndex: number, delta: number } | null = null;
         
@@ -345,7 +263,7 @@ export const getBalancedRotationResult = (
             for (let pIdx = 0; pIdx < team.players.length; pIdx++) {
                 const player = team.players[pIdx];
                 
-                // Skip Locked Players in Queue (They cannot be stolen)
+                // CRITICAL CHECK: Skip Locked Players
                 if (player.isFixed) continue;
 
                 // Simulate adding this player
@@ -353,7 +271,12 @@ export const getBalancedRotationResult = (
                 const delta = Math.abs(newAvg - targetAvg);
 
                 if (!bestCandidate || delta < bestCandidate.delta) {
-                    bestCandidate = { player, teamIndex: tIdx, playerIndex: pIdx, delta };
+                    bestCandidate = {
+                        player,
+                        teamIndex: tIdx,
+                        playerIndex: pIdx,
+                        delta
+                    };
                 }
             }
         }
@@ -364,6 +287,7 @@ export const getBalancedRotationResult = (
             incomingTeam.players.push(movedPlayer);
             stolenPlayers.push(movedPlayer);
         } else {
+            // No valid candidates (everyone else might be locked)
             break; 
         }
     }

@@ -246,8 +246,9 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
             queueAfterRotation: result.queue
         };
     } else {
-        // Standard Logic (King of the Court + Fill gaps from end of queue)
-        const result = getStandardRotationResult(loserTeam, queue);
+        // Standard Logic (Winner Stays, Loser -> Queue, Queue -> Court)
+        // Fixed players stay with their SQUAD (Losers leave court), except in Balanced mode.
+        const result = getStandardRotationResult(winnerTeam, loserTeam, queue);
         return {
             outgoingTeam: loserTeam,
             incomingTeam: result.incomingTeam,
@@ -410,11 +411,10 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
   
   const togglePlayerFixed = useCallback((playerId: string) => {
       setQueueState(prev => {
-          let side: 'A' | 'B' | null = null;
-          if (prev.courtA.players.some(p => p.id === playerId)) side = 'A';
-          else if (prev.courtB.players.some(p => p.id === playerId)) side = 'B';
-          
-          const toggle = (list: Player[]) => list.map(p => p.id === playerId ? { ...p, isFixed: !p.isFixed, fixedSide: !p.isFixed ? side : null } : p);
+          // Simplification: In V2, "Fixed" means locked to the SQUAD (Team structure), not strictly the COURT SIDE.
+          // This allows standard rotation to move fixed players to the queue without breaking their team.
+          // In Balanced Mode, "Fixed" still acts as an anchor to the court side.
+          const toggle = (list: Player[]) => list.map(p => p.id === playerId ? { ...p, isFixed: !p.isFixed } : p);
           
           return {
               ...prev,

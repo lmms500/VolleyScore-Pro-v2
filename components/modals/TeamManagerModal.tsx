@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
+
+import React, { useState, useMemo, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Team, Player } from '../../types';
-import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban, Scale, Activity } from 'lucide-react';
+import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban, Scale, Activity, Sparkles, UserCheck, Database, Search, Save } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -45,6 +46,52 @@ interface TeamManagerModalProps {
   onCommitDeletions: () => void;
   deletedCount: number;
 }
+
+// --- PLAYER MEMORY SYSTEM ---
+const PLAYER_PROFILES_KEY = 'volleyscore_player_profiles';
+
+const usePlayerProfiles = () => {
+  const [profiles, setProfiles] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(PLAYER_PROFILES_KEY);
+      if (stored) {
+        setProfiles(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Failed to load player profiles", e);
+    }
+  }, []);
+
+  const saveProfile = useCallback((name: string, skill: number) => {
+    const normalizedKey = name.trim().toLowerCase();
+    if (!normalizedKey) return;
+
+    setProfiles(prev => {
+      const updated = { ...prev, [normalizedKey]: skill };
+      localStorage.setItem(PLAYER_PROFILES_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const removeProfile = useCallback((name: string) => {
+      const normalizedKey = name.trim().toLowerCase();
+      setProfiles(prev => {
+          const updated = { ...prev };
+          delete updated[normalizedKey];
+          localStorage.setItem(PLAYER_PROFILES_KEY, JSON.stringify(updated));
+          return updated;
+      });
+  }, []);
+
+  const getProfileSkill = useCallback((name: string): number | null => {
+    const normalizedKey = name.trim().toLowerCase();
+    return profiles[normalizedKey] || null;
+  }, [profiles]);
+
+  return { profiles, saveProfile, removeProfile, getProfileSkill };
+};
 
 // --- HELPER: Colors & Gradients ---
 const getSkillColorHex = (level: number) => {
@@ -239,29 +286,80 @@ const SkillBadge: React.FC<{ skill: number; onChange: (newSkill: number) => void
   );
 };
 
-const AddPlayerInput: React.FC<{ onAdd: (name: string, skill: number) => void; disabled?: boolean }> = ({ onAdd, disabled }) => {
+const AddPlayerInput: React.FC<{ 
+    onAdd: (name: string, skill: number) => void; 
+    disabled?: boolean;
+    profiles: Record<string, number>;
+    onSaveProfile: (name: string, skill: number) => void;
+    listId?: string;
+    placeholderText?: string;
+    buttonLabel?: React.ReactNode;
+    startOpen?: boolean;
+}> = ({ onAdd, disabled, profiles, onSaveProfile, listId = "player-profiles-list", placeholderText, buttonLabel, startOpen = false }) => {
     const { t } = useTranslation();
-    const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(startOpen);
     const [name, setName] = useState('');
     const [skill, setSkill] = useState(5);
+    const [profileFound, setProfileFound] = useState(false);
     const inputRef = React.useRef<HTMLInputElement>(null);
 
     useEffect(() => { if(isOpen) inputRef.current?.focus(); }, [isOpen]);
 
-    const submit = () => {
-        if(name.trim()) { onAdd(name.trim(), skill); setName(''); setSkill(5); }
-        setIsOpen(false);
+    // Profile Autocomplete Logic
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setName(val);
+        
+        const normalized = val.trim().toLowerCase();
+        if (profiles[normalized]) {
+            setSkill(profiles[normalized]);
+            setProfileFound(true);
+        } else {
+            setProfileFound(false);
+        }
     };
+
+    const submit = () => {
+        if(name.trim()) { 
+            onSaveProfile(name.trim(), skill); // Save for next time
+            onAdd(name.trim(), skill); 
+            setName(''); 
+            setSkill(5); 
+            setProfileFound(false);
+            if (!startOpen) setIsOpen(false);
+        }
+    };
+
+    // Memoized suggestions for datalist
+    const suggestions = useMemo(() => Object.keys(profiles).sort(), [profiles]);
 
     if (isOpen && !disabled) {
         return (
             <div className="flex flex-col mt-2 px-1 animate-in fade-in slide-in-from-top-1 bg-white/5 dark:bg-black/20 p-3 rounded-xl border border-black/5 dark:border-white/5 shadow-inner">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-3 relative">
                     <input ref={inputRef}
                         className="flex-1 bg-transparent border-b border-black/10 dark:border-white/10 px-1 py-1 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-indigo-500 font-bold placeholder:font-medium"
-                        placeholder={t('teamManager.addPlayerPlaceholder')} value={name} onChange={e => setName(e.target.value)}
-                        onKeyDown={e => { if(e.key === 'Enter') submit(); if(e.key === 'Escape') setIsOpen(false); }}
+                        placeholder={placeholderText || t('teamManager.addPlayerPlaceholder')} 
+                        value={name} 
+                        onChange={handleNameChange}
+                        onKeyDown={e => { if(e.key === 'Enter') submit(); if(e.key === 'Escape' && !startOpen) setIsOpen(false); }}
+                        list={listId}
+                        autoComplete="off"
                     />
+                    
+                    <datalist id={listId}>
+                        {suggestions.map(p => <option key={p} value={p.charAt(0).toUpperCase() + p.slice(1)} />)}
+                    </datalist>
+
+                    {profileFound && (
+                        <div className="absolute right-9 top-1/2 -translate-y-1/2 animate-in fade-in zoom-in">
+                             <div className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 dark:text-indigo-300 rounded-md px-1.5 py-0.5 flex items-center gap-1">
+                                <Sparkles size={10} />
+                                <span className="text-[9px] font-bold">{skill}</span>
+                             </div>
+                        </div>
+                    )}
+
                     <button onClick={submit} className="p-1.5 bg-indigo-500 rounded-lg hover:bg-indigo-400 text-white shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform"><Plus size={14} /></button>
                 </div>
                 
@@ -283,7 +381,7 @@ const AddPlayerInput: React.FC<{ onAdd: (name: string, skill: number) => void; d
     return (
         <button onClick={() => !disabled && setIsOpen(true)} disabled={disabled}
             className={`mt-2 w-full py-2 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-transparent transition-all ${disabled ? 'text-slate-500 dark:text-slate-600 cursor-not-allowed opacity-50' : 'text-slate-500 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 hover:border-black/5 dark:hover:border-white/5'}`} >
-            {disabled ? (<><Ban size={12} /> {t('teamManager.rosterFull')}</>) : (<><Plus size={12} /> {t('teamManager.addPlayer')}</>)}
+            {disabled ? (<><Ban size={12} /> {t('teamManager.rosterFull')}</>) : (buttonLabel || <><Plus size={12} /> {t('teamManager.addPlayer')}</>)}
         </button>
     );
 };
@@ -328,7 +426,49 @@ const PlayerCard: React.FC<{ player: Player; locationId: string; onToggleFixed: 
   );
 };
 
-const TeamColumn: React.FC<{ id: string; team: Team; onUpdateTeamName: (id: string, name: string) => void; onUpdatePlayerName: (pid: string, n: string) => void; onUpdateSkill: (id: string, s: number) => void; onAddPlayer: (name: string, skill: number) => void; onToggleFixed: (playerId: string, teamId?: string) => void; onRemove: (id: string) => void; color: 'indigo' | 'rose' | 'slate'; }> = ({ id, team, onUpdateTeamName, onUpdatePlayerName, onUpdateSkill, onAddPlayer, onToggleFixed, onRemove, color }) => {
+// --- PROFILE ROW COMPONENT (For the Profiles Tab) ---
+const ProfileRow: React.FC<{ 
+    name: string; 
+    skill: number; 
+    onDelete: (name: string) => void;
+    onUpdateSkill: (name: string, skill: number) => void;
+}> = ({ name, skill, onDelete, onUpdateSkill }) => {
+    // Capitalize display
+    const displayName = name.charAt(0).toUpperCase() + name.slice(1);
+
+    return (
+        <div className="flex items-center justify-between p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+             <div className="flex items-center gap-3">
+                 <SkillBadge skill={skill} onChange={(s) => onUpdateSkill(name, s)} />
+                 <div>
+                     <span className="block text-sm font-bold text-slate-800 dark:text-slate-200">{displayName}</span>
+                 </div>
+             </div>
+             
+             <button 
+                onClick={() => onDelete(name)}
+                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                title="Delete Profile"
+             >
+                 <Trash2 size={16} />
+             </button>
+        </div>
+    );
+};
+
+const TeamColumn: React.FC<{ 
+    id: string; 
+    team: Team; 
+    onUpdateTeamName: (id: string, name: string) => void; 
+    onUpdatePlayerName: (pid: string, n: string) => void; 
+    onUpdateSkill: (id: string, s: number) => void; 
+    onAddPlayer: (name: string, skill: number) => void; 
+    onToggleFixed: (playerId: string, teamId?: string) => void; 
+    onRemove: (id: string) => void; 
+    color: 'indigo' | 'rose' | 'slate';
+    profiles: Record<string, number>;
+    onSaveProfile: (name: string, skill: number) => void;
+}> = ({ id, team, onUpdateTeamName, onUpdatePlayerName, onUpdateSkill, onAddPlayer, onToggleFixed, onRemove, color, profiles, onSaveProfile }) => {
   const { t } = useTranslation();
   const isFull = team.players.length >= 6;
   const { setNodeRef, isOver } = useSortable({ id: id, data: { type: 'container' } });
@@ -369,7 +509,7 @@ const TeamColumn: React.FC<{ id: string; team: Team; onUpdateTeamName: (id: stri
           ))}
         </SortableContextFixed>
       </div>
-      <AddPlayerInput onAdd={onAddPlayer} disabled={isFull} />
+      <AddPlayerInput onAdd={onAddPlayer} disabled={isFull} profiles={profiles} onSaveProfile={onSaveProfile} listId={`datalist-${id}`} />
     </div>
   );
 };
@@ -379,9 +519,13 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const [rawNames, setRawNames] = useState('');
-  const [view, setView] = useState<'roster' | 'input'>('roster');
+  const [view, setView] = useState<'roster' | 'input' | 'profiles'>('roster');
   const [activePlayer, setActivePlayer] = useState<Player | null>(null);
   const [undoVisible, setUndoVisible] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Initialize Player Memory
+  const { profiles, saveProfile, removeProfile } = usePlayerProfiles();
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }), useSensor(KeyboardSensor));
   
@@ -447,6 +591,8 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
   const handleGenerate = () => {
     const names = rawNames.split('\n').map(n => n.trim()).filter(n => n);
     if (names.length > 0) {
+      // NOTE: We could also apply player memory here if we parsed names one by one
+      // For now, keeping simple as requested by original logic
       onGenerate(names);
       setRawNames('');
       setView('roster');
@@ -491,14 +637,46 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
       onUpdateRosters(newA, newB, []);
   };
   
+  // Handlers to intercept updates and persist them to profile memory
+  const handleUpdateName = (id: string, name: string) => {
+    onUpdatePlayerName(id, name);
+    // Persist new name with current skill
+    const player = playersById.get(id);
+    if (player) {
+       saveProfile(name, player.skillLevel || 5);
+    }
+  };
+
+  const handleUpdateSkill = (id: string, skill: number) => {
+    onUpdatePlayerSkill(id, skill);
+    // Persist new skill with current name
+    const player = playersById.get(id);
+    if (player) {
+       saveProfile(player.name, skill);
+    }
+  };
+
+  const filteredProfiles = useMemo(() => {
+     return Object.entries(profiles)
+        .filter(([name]) => name.toLowerCase().includes(searchTerm.toLowerCase()))
+        .sort((a, b) => a[0].localeCompare(b[0]));
+  }, [profiles, searchTerm]);
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('teamManager.title')} maxWidth="max-w-5xl">
       <div className="flex p-1 bg-black/5 dark:bg-white/5 rounded-xl mb-6 border border-black/5 dark:border-white/5">
-        <button onClick={() => setView('roster')} className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${view === 'roster' ? 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white shadow-lg' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>{t('teamManager.currentRoster')}</button>
-        <button onClick={() => setView('input')} className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${view === 'input' ? 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white shadow-lg' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>{t('teamManager.batchInput')}</button>
+        <button onClick={() => setView('roster')} className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${view === 'roster' ? 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white shadow-lg' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
+            <UserCheck size={14} /> {t('teamManager.currentRoster')}
+        </button>
+        <button onClick={() => setView('profiles')} className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${view === 'profiles' ? 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white shadow-lg' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
+            <Database size={14} /> Profiles
+        </button>
+        <button onClick={() => setView('input')} className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${view === 'input' ? 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white shadow-lg' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
+            <GripVertical size={14} /> {t('teamManager.batchInput')}
+        </button>
       </div>
 
-      {view === 'input' ? (
+      {view === 'input' && (
         <div className="space-y-4"> 
             <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
                 <p className="text-xs text-indigo-700 dark:text-indigo-200 flex items-center gap-2"><ArrowRight size={14} />{t('teamManager.batchInputPrompt')}</p>
@@ -507,7 +685,62 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
                placeholder={t('teamManager.batchInputPlaceholder')} value={rawNames} onChange={e => setRawNames(e.target.value)} />
             <Button onClick={handleGenerate} className="w-full" size="lg"><Shuffle size={18} /> {t('teamManager.generateTeams')}</Button>
         </div>
-      ) : (
+      )}
+      
+      {view === 'profiles' && (
+          <div className="space-y-6">
+              <div className="bg-black/[0.02] dark:bg-white/[0.02] p-4 rounded-2xl border border-black/5 dark:border-white/5">
+                  <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <Plus size={14} /> Create New Profile
+                  </h3>
+                  <AddPlayerInput 
+                      onAdd={(name, skill) => { /* Only saves to profile, nothing else needed here */ }} 
+                      profiles={profiles} 
+                      onSaveProfile={saveProfile} 
+                      startOpen={true}
+                      placeholderText="Enter Name to Create/Update..."
+                      buttonLabel="Add to Database"
+                  />
+              </div>
+
+              <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                     <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <Database size={14} /> Saved Profiles ({Object.keys(profiles).length})
+                     </h3>
+                     <div className="relative">
+                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Search..." 
+                            className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-full pl-8 pr-3 py-1 text-xs outline-none focus:border-indigo-500/50 text-slate-700 dark:text-slate-200 w-32 focus:w-48 transition-all"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
+                      {filteredProfiles.length === 0 && (
+                          <div className="col-span-full py-8 text-center text-slate-400 italic text-xs">
+                              No profiles found. Add one above.
+                          </div>
+                      )}
+                      {filteredProfiles.map(([key, skill]) => (
+                          <ProfileRow 
+                              key={key} 
+                              name={key} 
+                              skill={skill} 
+                              onDelete={removeProfile} 
+                              onUpdateSkill={saveProfile}
+                          />
+                      ))}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {view === 'roster' && (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
           
           <div className="flex justify-center mb-6">
@@ -523,18 +756,42 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = ({
           </div>
 
           <div className="flex flex-col md:grid md:grid-cols-3 gap-4 items-start pb-20 min-h-[60vh]">
-            <TeamColumn id="A" team={courtA} onUpdateTeamName={onUpdateTeamName} onUpdatePlayerName={onUpdatePlayerName} onUpdateSkill={onUpdatePlayerSkill} onAddPlayer={(n, s) => onAddPlayer(n, 'A', s)} onToggleFixed={onToggleFixed} onRemove={onRemove} color="indigo" />
-            <TeamColumn id="B" team={courtB} onUpdateTeamName={onUpdateTeamName} onUpdatePlayerName={onUpdatePlayerName} onUpdateSkill={onUpdatePlayerSkill} onAddPlayer={(n, s) => onAddPlayer(n, 'B', s)} onToggleFixed={onToggleFixed} onRemove={onRemove} color="rose" />
+            <TeamColumn 
+                id="A" team={courtA} 
+                onUpdateTeamName={onUpdateTeamName} 
+                onUpdatePlayerName={handleUpdateName} 
+                onUpdateSkill={handleUpdateSkill} 
+                onAddPlayer={(n, s) => onAddPlayer(n, 'A', s)} onToggleFixed={onToggleFixed} onRemove={onRemove} 
+                color="indigo" 
+                profiles={profiles} onSaveProfile={saveProfile}
+            />
+            <TeamColumn 
+                id="B" team={courtB} 
+                onUpdateTeamName={onUpdateTeamName} 
+                onUpdatePlayerName={handleUpdateName} 
+                onUpdateSkill={handleUpdateSkill} 
+                onAddPlayer={(n, s) => onAddPlayer(n, 'B', s)} onToggleFixed={onToggleFixed} onRemove={onRemove} 
+                color="rose" 
+                profiles={profiles} onSaveProfile={saveProfile}
+            />
             
             <div className="w-full bg-black/[0.02] dark:bg-white/[0.02] p-4 rounded-2xl border border-black/5 dark:border-white/5 flex flex-col h-fit">
                 <h3 className="font-bold text-slate-500 dark:text-slate-400 mb-3 text-xs uppercase tracking-widest flex items-center gap-2 flex-none"><div className="w-2 h-2 rounded-full bg-slate-500 dark:bg-slate-600"></div>{t('teamManager.queue')}</h3>
                 <div className="overflow-y-auto custom-scrollbar pr-1 space-y-4 max-h-[60vh]">
                   {queue.length === 0 && <span className="text-xs text-slate-500 dark:text-slate-600 italic px-2">{t('teamManager.queueEmpty')}</span>}
                   {queue.map(team => (
-                    <TeamColumn key={team.id} id={team.id} team={team} onUpdateTeamName={onUpdateTeamName} onUpdatePlayerName={onUpdatePlayerName} onUpdateSkill={onUpdatePlayerSkill} onAddPlayer={_ => {}} onToggleFixed={onToggleFixed} onRemove={onRemove} color="slate" />
+                    <TeamColumn key={team.id} id={team.id} team={team} 
+                        onUpdateTeamName={onUpdateTeamName} 
+                        onUpdatePlayerName={handleUpdateName} 
+                        onUpdateSkill={handleUpdateSkill} 
+                        onAddPlayer={_ => {}} onToggleFixed={onToggleFixed} onRemove={onRemove} 
+                        color="slate" profiles={profiles} onSaveProfile={saveProfile} 
+                    />
                   ))}
                 </div>
-                <div className="pt-2 border-t border-black/5 dark:border-white/5 mt-4"><AddPlayerInput onAdd={(n, s) => onAddPlayer(n, 'Queue', s)} /></div>
+                <div className="pt-2 border-t border-black/5 dark:border-white/5 mt-4">
+                    <AddPlayerInput onAdd={(n, s) => onAddPlayer(n, 'Queue', s)} profiles={profiles} onSaveProfile={saveProfile} listId="datalist-queue" />
+                </div>
             </div>
           </div>
           {createPortal(

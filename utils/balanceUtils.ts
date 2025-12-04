@@ -43,7 +43,7 @@ export const balanceTeamsSnake = (
   const courtLimit = PLAYER_LIMIT_ON_COURT; // 6
 
   // 1. Separate Fixed (Anchors) vs Free Pool
-  // We trust currentCourtA/B to tell us WHERE they are fixed.
+  // We strictly respect where fixed players currently are.
   const fixedInA = currentCourtA.players.filter(p => p.isFixed);
   const fixedInB = currentCourtB.players.filter(p => p.isFixed);
   
@@ -132,9 +132,6 @@ export const distributeStandard = (
     
     // 3. Fill Court A
     const playersA = [...anchorsA];
-    // Sort anchors by index just to be tidy within the fixed group? Optional.
-    // playersA.sort((a,b) => a.originalIndex - b.originalIndex); 
-    
     while (playersA.length < PLAYER_LIMIT_ON_COURT && pool.length > 0) {
         playersA.push(pool.shift()!);
     }

@@ -1,10 +1,11 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Team, Player, RotationMode, PlayerProfile } from '../../types';
 import { calculateTeamStrength } from '../../utils/balanceUtils';
-import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List, UserPlus, Shield, PlayCircle } from 'lucide-react';
+import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List, UserPlus, Shield, PlayCircle, Lock } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -22,6 +23,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '../../contexts/LanguageContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const SortableContextFixed = SortableContext as any;
 const DragOverlayFixed = DragOverlay as any;
@@ -250,13 +252,20 @@ const PlayerCard: React.FC<{
   });
 
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, touchAction: 'none' };
+  const isFixed = player.isFixed;
 
   return (
-    <div ref={setNodeRef} style={style} className={`group relative flex items-center justify-between p-2 rounded-xl border transition-all ${player.isFixed ? 'bg-indigo-500/10 border-indigo-500/30 cursor-not-allowed' : 'bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/20 shadow-sm'}`}>
+    <div ref={setNodeRef} style={style} className={`
+        group relative flex items-center justify-between p-2 rounded-xl border transition-all duration-300
+        ${isFixed 
+            ? 'bg-amber-500/10 border-amber-500/40 shadow-sm shadow-amber-500/10 ring-1 ring-amber-500/20' 
+            : 'bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/20 shadow-sm'
+        }
+    `}>
       
       {/* Left Section: Grip + Name/Stars (Responsive flex-1) */}
       <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1.5 -ml-1 text-slate-400 dark:text-slate-600 touch-none flex-shrink-0">
+        <div {...attributes} {...listeners} className={`cursor-grab active:cursor-grabbing p-1.5 -ml-1 touch-none flex-shrink-0 ${isFixed ? 'cursor-not-allowed opacity-50' : 'text-slate-400 dark:text-slate-600'}`}>
           <GripVertical size={16} />
         </div>
         
@@ -279,8 +288,20 @@ const PlayerCard: React.FC<{
         
         <div className="w-px h-5 bg-black/10 dark:bg-white/10 mx-1"></div>
 
-        <button onClick={() => onToggleFixed(player.id)} onPointerDown={e => e.stopPropagation()} className={`p-1.5 rounded-lg transition-all ${player.isFixed ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/40' : 'bg-transparent text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`} title={player.isFixed ? t('teamManager.unlockPlayer') : t('teamManager.lockPlayer')}>
-            <Pin size={14} fill={player.isFixed ? "currentColor" : "none"} />
+        <button onClick={() => onToggleFixed(player.id)} onPointerDown={e => e.stopPropagation()} 
+            className={`
+                p-1.5 rounded-lg transition-all relative
+                ${isFixed ? 'bg-amber-500 text-amber-900 shadow-md shadow-amber-500/20' : 'bg-transparent text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}
+            `} 
+            title={isFixed ? t('teamManager.unlockPlayer') : t('teamManager.lockPlayer')}
+        >
+            {isFixed ? <Lock size={14} fill="currentColor" /> : <Pin size={14} />}
+            {isFixed && (
+                <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+            )}
         </button>
         <button onClick={() => onRemove(player.id)} onPointerDown={e => e.stopPropagation()} className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors">
           <Trash2 size={14} />

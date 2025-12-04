@@ -1,5 +1,4 @@
-
-import { Player, Team } from '../types';
+import { Player, Team, RotationReport } from '../types';
 import { PLAYER_LIMIT_ON_COURT } from '../constants';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -26,37 +25,57 @@ const createTeamContainer = (id: string, name: string, players: Player[]): Team 
   players
 });
 
+// Simple internal logger
+class RotationLogger {
+    logs: string[] = [];
+    
+    log(msg: string) {
+        this.logs.push(`[INFO] ${msg}`);
+    }
+    
+    warn(msg: string) {
+        this.logs.push(`[WARN] ${msg}`);
+    }
+
+    get() { return this.logs; }
+}
+
 // --- ALGORITHMS ---
 
 /**
  * Global Balanced Draft (Weighted Snake Logic)
  * Used for "Balanced Mode" where individual skill matters more than team cohesion.
  * Here, "Fixed" acts as an Anchor to the Court (King of the Court style).
- * 
- * UPDATE: Prioritizes filling "Full Teams" (6 players) first to maximize complete squads.
  */
 export const balanceTeamsSnake = (
   allPlayers: Player[], 
   currentCourtA: Team, 
   currentCourtB: Team,
   currentQueue: Team[]
-): { courtA: Team, courtB: Team, queue: Team[] } => {
+): { courtA: Team, courtB: Team, queue: Team[], logs?: string[] } => {
   
+  const logger = new RotationLogger();
+  logger.log(`Starting Balance (Snake). Total Players: ${allPlayers.length}`);
+
   const courtLimit = PLAYER_LIMIT_ON_COURT; 
 
   // 1. Identify Anchors (Players who cannot move)
   const currentStructure = [currentCourtA, currentCourtB, ...currentQueue];
-  const anchors = currentStructure.map(team => team.players.filter(p => p.isFixed));
+  const anchors = currentStructure.map((team, idx) => {
+      const fixed = team.players.filter(p => p.isFixed);
+      if (fixed.length > 0) logger.log(`Team ${idx} (${team.name}) has ${fixed.length} fixed players.`);
+      return fixed;
+  });
 
   // 2. Identify Pool (Everyone else)
   const fixedIds = new Set(anchors.flat().map(p => p.id));
   const pool = allPlayers
     .filter(p => !fixedIds.has(p.id))
     .sort((a, b) => b.skillLevel - a.skillLevel); // Sort by Skill High -> Low
+  
+  logger.log(`Pool size (non-fixed): ${pool.length}`);
 
   // 3. Determine Buckets Needed
-  // We want to maximize COMPLETE teams.
-  // E.g., 20 players -> 3 full teams (18) + 1 remainder (2).
   const totalCount = allPlayers.length;
   const numFullTeams = Math.floor(totalCount / courtLimit); 
   const totalTeamsNeeded = Math.ceil(totalCount / courtLimit);
@@ -72,9 +91,6 @@ export const balanceTeamsSnake = (
       let bestBucketIdx = -1;
       let minTotalSkill = Infinity;
 
-      // Logic: Only target "Priority Buckets" (Indices 0 to numFullTeams-1) 
-      // if they have space. Otherwise, target "Overflow Buckets".
-      
       const targetIndices: number[] = [];
       let priorityHasSpace = false;
 
@@ -87,23 +103,15 @@ export const balanceTeamsSnake = (
       }
 
       if (priorityHasSpace) {
-          // Fill Priority Buckets (Balancing among them)
           for(let i = 0; i < numFullTeams; i++) {
               if (buckets[i] && buckets[i].length < courtLimit) {
                   targetIndices.push(i);
               }
           }
       } else {
-          // All Priority Buckets full. Fill Overflow Buckets.
-          // If numFullTeams is 0 (e.g. 5 players), we treat all buckets as overflow from start.
           for(let i = numFullTeams; i < buckets.length; i++) {
-               // We include index 'i' even if full? 
-               // Standard logic: try to find non-full. If all full, we overfill?
-               // The requiredBuckets calc ensures we usually have space.
-               // But if we have huge overflow, we just target all remainder buckets.
                targetIndices.push(i);
           }
-          // If numFullTeams=0, we start at index 0
           if (numFullTeams === 0) {
                for(let i = 0; i < buckets.length; i++) targetIndices.push(i);
           }
@@ -112,9 +120,7 @@ export const balanceTeamsSnake = (
       // Find the best bucket among the targets (Lowest Skill -> Snake Draft effect)
       for (const i of targetIndices) {
           if (!buckets[i]) continue;
-          
           const currentSkill = getTotalSkill(buckets[i]);
-          
           if (currentSkill < minTotalSkill) {
               minTotalSkill = currentSkill;
               bestBucketIdx = i;
@@ -124,7 +130,6 @@ export const balanceTeamsSnake = (
       if (bestBucketIdx !== -1) {
           buckets[bestBucketIdx].push(player);
       } else {
-          // Fallback (e.g. severe math edge case), just put in last bucket
           buckets[buckets.length - 1].push(player);
       }
   }
@@ -145,7 +150,7 @@ export const balanceTeamsSnake = (
       }
   }
 
-  return { courtA: newCourtA, courtB: newCourtB, queue: newQueue };
+  return { courtA: newCourtA, courtB: newCourtB, queue: newQueue, logs: logger.get() };
 };
 
 /**
@@ -156,8 +161,11 @@ export const distributeStandard = (
     currentCourtA: Team, 
     currentCourtB: Team,
     currentQueue: Team[]
-  ): { courtA: Team, courtB: Team, queue: Team[] } => {
+  ): { courtA: Team, courtB: Team, queue: Team[], logs?: string[] } => {
     
+    const logger = new RotationLogger();
+    logger.log(`Restoring Standard Order. Players: ${allPlayers.length}`);
+
     // 1. Identify Anchors
     const currentStructure = [currentCourtA, currentCourtB, ...currentQueue];
     const anchors = currentStructure.map(t => t.players.filter(p => p.isFixed));
@@ -168,6 +176,8 @@ export const distributeStandard = (
         .filter(p => !fixedIds.has(p.id))
         .sort((a, b) => a.originalIndex - b.originalIndex);
     
+    logger.log(`Found ${fixedIds.size} fixed players. ${pool.length} to distribute.`);
+
     // 3. Setup Buckets
     let maxAnchorIndex = -1;
     anchors.forEach((list, idx) => {
@@ -204,113 +214,109 @@ export const distributeStandard = (
         }
     }
   
-    return { courtA: newCourtA, courtB: newCourtB, queue: newQueue };
+    return { courtA: newCourtA, courtB: newCourtB, queue: newQueue, logs: logger.get() };
   };
 
-// --- ROTATION LOGIC ---
-
-export interface RotationResult {
-    incomingTeam: Team;
-    queue: Team[];
-    stolenPlayers: Player[];
-}
 
 /**
  * Standard Rotation (Squad Logic):
- * 1. Winner Team: Stays on Court (Intact).
- * 2. Loser Team: Goes to END of Queue (Intact).
- * 3. Incoming Team: Enters from START of Queue.
- * 4. Gap Filling:
- *    - If Incoming Team < 6 players:
- *    - Scans Queue teams starting from [0].
- *    - Steals ONLY non-fixed players.
- *    - Skips players/teams that are Fixed.
  */
 export const getStandardRotationResult = (
     winnerTeam: Team, // Needed to ensure we don't mess with them
     loserTeam: Team, 
     currentQueue: Team[]
-): RotationResult => {
+): RotationReport => {
+    const logger = new RotationLogger();
+    logger.log(`Standard Rotation Initiated.`);
+    logger.log(`Winner: ${winnerTeam.name}, Loser: ${loserTeam.name}`);
+
     // Deep copy queue to avoid mutation
     const queue = currentQueue.map(t => ({...t, players: [...t.players]}));
     
     // 1. Loser Team goes to END of queue
-    // In Standard Mode, "Fixed" means locked to the SQUAD, not the COURT.
-    // So even fixed players leave the court with their losing team.
     queue.push({ 
         ...loserTeam, 
-        id: uuidv4(), // New ID to prevent key conflicts, but same players
+        id: uuidv4(), 
         players: [...loserTeam.players] 
     });
+    logger.log(`Moved loser ${loserTeam.name} to end of queue.`);
 
     // 2. Identify Incoming Team
     if (queue.length === 0) {
-        // Fallback if no queue
-        return { incomingTeam: loserTeam, queue: [], stolenPlayers: [] };
+        logger.warn(`No teams in queue. Rotation aborted/looped.`);
+        return { incomingTeam: loserTeam, queueAfterRotation: [], stolenPlayers: [], outgoingTeam: loserTeam, retainedPlayers: [], logs: logger.get() };
     }
 
     const incomingTeam = queue.shift()!;
+    logger.log(`Incoming Team: ${incomingTeam.name} (${incomingTeam.players.length} players)`);
+
     const stolenPlayers: Player[] = [];
     const TARGET_SIZE = PLAYER_LIMIT_ON_COURT;
 
     // 3. Fill Gaps in Incoming Team (The "Steal" Logic)
     if (incomingTeam.players.length < TARGET_SIZE) {
+        logger.log(`Incoming team needs ${TARGET_SIZE - incomingTeam.players.length} more players.`);
         
         // Iterate through queue teams to find donors
         for (const donorTeam of queue) {
             if (incomingTeam.players.length >= TARGET_SIZE) break;
             if (donorTeam.players.length === 0) continue;
 
-            // Find valid candidates: MUST NOT BE FIXED
-            // We iterate backwards to steal from the end of the donor list (LIFO stealing)
-            // This preserves the "Core" of the donor team at the top of their list.
             const candidates = [];
+            // LIFO Stealing (Take from end)
             for(let i = donorTeam.players.length - 1; i >= 0; i--) {
                 const p = donorTeam.players[i];
                 if (!p.isFixed) {
                     candidates.push({ player: p, index: i });
+                } else {
+                    logger.log(`Skipped ${p.name} (Fixed) in donor team ${donorTeam.name}`);
                 }
             }
 
-            // Move candidates to incoming
             for (const candidate of candidates) {
                 if (incomingTeam.players.length >= TARGET_SIZE) break;
 
-                // Remove from donor
                 donorTeam.players.splice(candidate.index, 1);
-                
-                // Add to incoming
                 incomingTeam.players.push(candidate.player);
                 stolenPlayers.push(candidate.player);
+                logger.log(`Stole ${candidate.player.name} from ${donorTeam.name}`);
             }
         }
+    } else {
+        logger.log(`Incoming team is full.`);
     }
 
-    // 4. Cleanup Empty Teams in Queue
     const finalQueue = queue.filter(t => t.players.length > 0);
 
     return {
+        outgoingTeam: loserTeam,
         incomingTeam,
-        queue: finalQueue,
-        stolenPlayers
+        retainedPlayers: [], // In standard mode, we treat whole squads. Retained tracking is less relevant inside the logic unless partial.
+        queueAfterRotation: finalQueue,
+        stolenPlayers,
+        logs: logger.get()
     };
 };
 
 /**
  * Balanced Rotation:
- * Fills gaps by picking players that minimize skill difference.
  */
 export const getBalancedRotationResult = (
     winnerTeam: Team,
     loserTeam: Team,
     currentQueue: Team[]
-): RotationResult => {
+): RotationReport => {
+    const logger = new RotationLogger();
+    logger.log("Balanced Rotation Initiated.");
+
     const queue = currentQueue.map(t => ({...t, players: [...t.players]}));
     
     // 1. Split Loser (Anchors stay, Leavers go)
     const anchors = loserTeam.players.filter(p => p.isFixed);
     const leavers = loserTeam.players.filter(p => !p.isFixed);
     
+    logger.log(`Loser ${loserTeam.name}: ${anchors.length} fixed (stay), ${leavers.length} leaving.`);
+
     if (leavers.length > 0) {
         queue.push({ ...loserTeam, players: leavers, id: uuidv4() });
     }
@@ -319,8 +325,11 @@ export const getBalancedRotationResult = (
     let incomingBase = queue.shift();
     let incomingPlayers = incomingBase ? [...incomingBase.players] : [];
     
+    logger.log(`Base Incoming Team: ${incomingBase?.name || 'None'}`);
+
     // In Balanced Mode, Anchors STAY on the court side
     incomingPlayers.push(...anchors);
+    logger.log(`Added ${anchors.length} anchors from losing team to incoming.`);
 
     // 3. Overflow
     const overflow: Player[] = [];
@@ -335,6 +344,7 @@ export const getBalancedRotationResult = (
         }
     }
     if (overflow.length > 0) {
+        logger.log(`${overflow.length} players overflowed from incoming team.`);
         if (queue.length > 0) queue[queue.length - 1].players.push(...overflow);
         else queue.push(createTeamContainer(uuidv4(), "Overflow", overflow));
     }
@@ -359,8 +369,6 @@ export const getBalancedRotationResult = (
             const team = queue[tIdx];
             for (let pIdx = 0; pIdx < team.players.length; pIdx++) {
                 const player = team.players[pIdx];
-                
-                // In Balanced Mode, we respect locks in queue too
                 if (player.isFixed) continue;
 
                 const newAvg = (currentSum + player.skillLevel) / nextCount;
@@ -377,7 +385,9 @@ export const getBalancedRotationResult = (
             const [movedPlayer] = sourceTeam.players.splice(bestCandidate.playerIndex, 1);
             incomingTeam.players.push(movedPlayer);
             stolenPlayers.push(movedPlayer);
+            logger.log(`Drafted ${movedPlayer.name} (Level ${movedPlayer.skillLevel}) to balance skill.`);
         } else {
+            logger.warn("Could not find candidate to fill gap.");
             break; 
         }
     }
@@ -385,8 +395,11 @@ export const getBalancedRotationResult = (
     const cleanedQueue = queue.filter(t => t.players.length > 0);
 
     return {
+        outgoingTeam: loserTeam,
         incomingTeam,
-        queue: cleanedQueue,
-        stolenPlayers
+        retainedPlayers: anchors,
+        queueAfterRotation: cleanedQueue,
+        stolenPlayers,
+        logs: logger.get()
     };
 };

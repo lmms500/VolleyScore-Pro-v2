@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { Player, Team, TeamId, RotationReport, RotationMode, PlayerProfile } from '../types';
 import { PLAYER_LIMIT_ON_COURT, PLAYERS_PER_TEAM } from '../constants';
@@ -243,7 +242,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
             incomingTeam: result.incomingTeam,
             retainedPlayers: [], // In full mixing/filling, tracking retained is trivial (everyone not stolen)
             stolenPlayers: result.stolenPlayers,
-            queueAfterRotation: result.queue
+            queueAfterRotation: result.queueAfterRotation
         };
     } else {
         // Standard Logic (Winner Stays, Loser -> Queue, Queue -> Court)
@@ -254,7 +253,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
             incomingTeam: result.incomingTeam,
             retainedPlayers: [],
             stolenPlayers: result.stolenPlayers,
-            queueAfterRotation: result.queue
+            queueAfterRotation: result.queueAfterRotation
         };
     }
   }, [queueState]);

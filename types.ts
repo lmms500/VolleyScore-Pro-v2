@@ -58,6 +58,7 @@ export interface RotationReport {
   retainedPlayers: Player[]; 
   stolenPlayers: Player[]; 
   queueAfterRotation: Team[]; 
+  logs?: string[]; // Debug logs for rotation logic
 }
 
 export type ActionLog = 

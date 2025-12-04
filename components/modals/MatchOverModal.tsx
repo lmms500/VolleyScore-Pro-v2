@@ -1,9 +1,11 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameState } from '../../types';
-import { Trophy, RefreshCw, ArrowRight, UserPlus, ShieldAlert, Users, RotateCcw } from 'lucide-react';
+import { Trophy, RefreshCw, ArrowRight, UserPlus, ShieldAlert, Users, RotateCcw, Terminal, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface MatchOverModalProps {
   isOpen: boolean;
@@ -14,6 +16,7 @@ interface MatchOverModalProps {
 
 export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, onRotate, onReset }) => {
   const { t } = useTranslation();
+  const [showLogs, setShowLogs] = useState(false);
   const winnerName = state.matchWinner === 'A' ? state.teamAName : state.teamBName;
   const isA = state.matchWinner === 'A';
   const report = state.rotationReport;
@@ -21,6 +24,7 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   const stolenIds = new Set(report?.stolenPlayers.map(p => p.id) || []);
   const coreSquad = report?.incomingTeam.players.filter(p => !stolenIds.has(p.id)) || [];
   const reinforcements = report?.stolenPlayers || [];
+  const logs = report?.logs || [];
 
   return (
     <Modal 
@@ -99,6 +103,37 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
                         </div>
                     )}
                 </div>
+
+                {/* VISUAL DEBUG LOGS */}
+                {logs.length > 0 && (
+                    <div className="mt-4">
+                        <button 
+                            onClick={() => setShowLogs(!showLogs)} 
+                            className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-black/5 dark:bg-white/5 rounded-lg border border-black/5 dark:border-white/5"
+                        >
+                            <span className="flex items-center gap-2"><Terminal size={12} /> Rotation Logic Logs</span>
+                            {showLogs ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        </button>
+                        <AnimatePresence>
+                            {showLogs && (
+                                <motion.div 
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="mt-2 bg-slate-950 text-slate-300 p-3 rounded-lg font-mono text-[9px] leading-relaxed max-h-40 overflow-y-auto custom-scrollbar text-left shadow-inner border border-white/10">
+                                        {logs.map((log, idx) => (
+                                            <div key={idx} className={`mb-1 ${log.includes('[WARN]') ? 'text-amber-400' : 'text-slate-400'}`}>
+                                                {log}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
             </div>
         )}
 

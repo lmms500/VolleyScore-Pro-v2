@@ -112,11 +112,11 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
         ];
 
         let result;
-        // NOTE: This balance button in UI is for "Global Reset/Redistribution", not the per-match rotation
+        // Global Balance now accepts Queue to preserve locked players within queue teams
         if (prev.mode === 'balanced') {
-            result = balanceTeamsSnake(allPlayers, prev.courtA, prev.courtB);
+            result = balanceTeamsSnake(allPlayers, prev.courtA, prev.courtB, prev.queue);
         } else {
-            result = distributeStandard(allPlayers, prev.courtA, prev.courtB);
+            result = distributeStandard(allPlayers, prev.courtA, prev.courtB, prev.queue);
         }
 
         return {
@@ -135,8 +135,13 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     const allNewPlayers = validNames.map((name, idx) => createPlayer(name, idx));
 
     setQueueState(prev => {
-        // When generating from scratch, we usually default to standard distribution initially
-        const result = distributeStandard(allNewPlayers, prev.courtA, prev.courtB);
+        // IMPORTANT: We pass EMPTY teams to distributeStandard here.
+        // This ensures that "Restore Order" (Standard Distribution) sees ZERO anchors/locked players
+        // effectively forcing a complete wipe of the old roster and locks, replacing them with new data.
+        const cleanA = { ...prev.courtA, players: [] };
+        const cleanB = { ...prev.courtB, players: [] };
+        
+        const result = distributeStandard(allNewPlayers, cleanA, cleanB, []);
         
         _updateNames(result.courtA, result.courtB);
 

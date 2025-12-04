@@ -30,78 +30,91 @@ const createTeamContainer = (id: string, name: string, players: Player[]): Team 
 
 /**
  * Global Balanced Draft (Weighted Anchor Logic)
- * 1. Places Fixed (Locked) players into their teams first (Anchors).
+ * 1. Identifies Fixed (Locked) players in Courts AND Queue (Anchors).
  * 2. Sorts Free Agents by Skill (Desc).
  * 3. Assigns Free Agents to the team with the LOWEST current Total Skill.
  */
 export const balanceTeamsSnake = (
   allPlayers: Player[], 
   currentCourtA: Team, 
-  currentCourtB: Team
+  currentCourtB: Team,
+  currentQueue: Team[]
 ): { courtA: Team, courtB: Team, queue: Team[] } => {
   
   const courtLimit = PLAYER_LIMIT_ON_COURT; // 6
 
-  // 1. Separate Fixed (Anchors) vs Free Pool
-  // We strictly respect where fixed players currently are.
-  const fixedInA = currentCourtA.players.filter(p => p.isFixed);
-  const fixedInB = currentCourtB.players.filter(p => p.isFixed);
+  // 1. Identify Anchors for every possible slot
+  // Mapped indices: 0=A, 1=B, 2=Q0, 3=Q1...
+  const currentStructure = [currentCourtA, currentCourtB, ...currentQueue];
   
-  // Pool contains non-fixed players, Sorted by Skill DESC
-  const pool = allPlayers.filter(p => !p.isFixed).sort((a, b) => {
-    if (b.skillLevel !== a.skillLevel) return b.skillLevel - a.skillLevel;
-    return a.originalIndex - b.originalIndex; // Stable sort fallback
+  // Extract locked players for each existing bucket
+  const anchors: Player[][] = currentStructure.map(team => team.players.filter(p => p.isFixed));
+  
+  // 2. Identify Pool (Non-fixed)
+  const fixedIds = new Set<string>();
+  anchors.flat().forEach(p => fixedIds.add(p.id));
+  
+  const pool = allPlayers
+    .filter(p => !fixedIds.has(p.id))
+    .sort((a, b) => {
+        if (b.skillLevel !== a.skillLevel) return b.skillLevel - a.skillLevel;
+        return a.originalIndex - b.originalIndex; // Stable sort fallback
+    });
+
+  // 3. Determine needed buckets
+  // We need enough buckets to hold all players, BUT we also need to respect existing anchor positions.
+  // (e.g. if Queue 5 has a lock, we need buckets up to index 7 (0,1 + 5))
+  let maxAnchorIndex = -1;
+  anchors.forEach((list, idx) => {
+      if (list.length > 0) maxAnchorIndex = idx;
   });
-
-  // 2. Initialize Buckets with Anchors
-  const totalPlayers = fixedInA.length + fixedInB.length + pool.length;
-  const totalTeamsNeeded = Math.ceil(totalPlayers / courtLimit);
   
-  const teamBuckets: Player[][] = Array.from({ length: totalTeamsNeeded }, () => []);
-  teamBuckets[0] = [...fixedInA];
-  if (totalTeamsNeeded > 1) teamBuckets[1] = [...fixedInB];
+  const totalPlayers = allPlayers.length;
+  const calculatedTeamsNeeded = Math.ceil(totalPlayers / courtLimit);
+  // We need at least 2 teams (Courts A & B) even if empty
+  const totalBucketsNeeded = Math.max(2, calculatedTeamsNeeded, maxAnchorIndex + 1);
 
-  // 3. Define Active Draft Buckets (Court A and Court B usually)
-  const activeBucketIndices = [0, 1].filter(i => i < totalTeamsNeeded);
+  // 4. Initialize Buckets with Anchors
+  // Note: We clone the anchor arrays to avoid mutation issues
+  const buckets: Player[][] = Array.from({ length: totalBucketsNeeded }, (_, i) => [...(anchors[i] || [])]);
 
-  // 4. Weighted Distribution
+  // 5. Weighted Distribution (Snake/Best-Fit) for the pool
   for (const player of pool) {
-      // Find valid buckets (those not full)
-      const validBuckets = activeBucketIndices.filter(i => teamBuckets[i].length < courtLimit);
+      // Find valid bucket indices (those that are not full)
+      const validIndices = buckets.map((b, i) => i).filter(i => buckets[i].length < courtLimit);
       
-      if (validBuckets.length > 0) {
-          // Find the WEAKEST bucket among valid ones
-          // Sort by Total Skill ASC to balance
-          validBuckets.sort((a, b) => getTotalSkill(teamBuckets[a]) - getTotalSkill(teamBuckets[b]));
-          
-          const targetIndex = validBuckets[0];
-          teamBuckets[targetIndex].push(player);
-      } else {
-          // Both courts full, push to Queue buckets
-          let placedInQueue = false;
-          for (let i = 2; i < totalTeamsNeeded; i++) {
-              if (teamBuckets[i].length < courtLimit) {
-                  teamBuckets[i].push(player);
-                  placedInQueue = true;
-                  break;
-              }
-          }
-          // If all allocated buckets full (edge case), extend
-          if (!placedInQueue) {
-              const newIdx = teamBuckets.length;
-              teamBuckets[newIdx] = [player];
-          }
+      if (validIndices.length === 0) {
+          // All existing buckets full? Create a new one.
+          buckets.push([player]);
+          continue;
       }
+
+      // Prioritize filling active Courts (0 & 1) first if they have space
+      const courtsWithSpace = validIndices.filter(i => i < 2);
+      const queuesWithSpace = validIndices.filter(i => i >= 2);
+      
+      let candidates = courtsWithSpace.length > 0 ? courtsWithSpace : queuesWithSpace;
+      
+      // Sort candidates by current Total Skill (Ascending) -> Fill weakest team first
+      candidates.sort((a, b) => getTotalSkill(buckets[a]) - getTotalSkill(buckets[b]));
+      
+      const targetBucketIndex = candidates[0];
+      buckets[targetBucketIndex].push(player);
   }
 
-  // 5. Reconstruct Teams
-  const newCourtA = { ...currentCourtA, players: teamBuckets[0] || [] };
-  const newCourtB = { ...currentCourtB, players: teamBuckets[1] || [] };
+  // 6. Reconstruct Teams
+  const newCourtA = { ...currentCourtA, players: buckets[0] || [] };
+  const newCourtB = { ...currentCourtB, players: buckets[1] || [] };
   
   const newQueue: Team[] = [];
-  for (let i = 2; i < teamBuckets.length; i++) {
-      if (teamBuckets[i] && teamBuckets[i].length > 0) {
-          newQueue.push(createTeamContainer(uuidv4(), `Team ${i + 1}`, teamBuckets[i]));
+  // Buckets 2+ correspond to Queue teams
+  for (let i = 2; i < buckets.length; i++) {
+      if (buckets[i] && buckets[i].length > 0) {
+          // Try to preserve existing Team ID/Name if available for this slot
+          const existingQTeam = currentQueue[i - 2]; 
+          const tId = existingQTeam ? existingQTeam.id : uuidv4();
+          const tName = existingQTeam ? existingQTeam.name : `Team ${i + 1}`;
+          newQueue.push({ id: tId, name: tName, players: buckets[i] });
       }
   }
 
@@ -110,55 +123,77 @@ export const balanceTeamsSnake = (
 
 /**
  * Standard Distribution (Restore Order)
- * Respects Fixed Players as Anchors.
- * 1. Fixed players stay in their current courts.
+ * Respects Fixed Players as Anchors in ALL positions (A, B, Queue).
+ * 1. Fixed players stay in their current courts/queue slots.
  * 2. Non-fixed players are sorted by Original Index.
- * 3. Non-fixed players fill gaps in A, then B, then Queue.
+ * 3. Non-fixed players fill gaps in A, then B, then Queue linearly.
  */
 export const distributeStandard = (
     allPlayers: Player[], 
     currentCourtA: Team, 
-    currentCourtB: Team
+    currentCourtB: Team,
+    currentQueue: Team[]
   ): { courtA: Team, courtB: Team, queue: Team[] } => {
     
     // 1. Identify Anchors
-    const anchorsA = currentCourtA.players.filter(p => p.isFixed);
-    const anchorsB = currentCourtB.players.filter(p => p.isFixed);
+    const currentStructure = [currentCourtA, currentCourtB, ...currentQueue];
+    const anchors = currentStructure.map(t => t.players.filter(p => p.isFixed));
     
     // 2. Identify Pool (Sorted by Index)
+    const fixedIds = new Set(anchors.flat().map(p => p.id));
     const pool = allPlayers
-        .filter(p => !p.isFixed)
+        .filter(p => !fixedIds.has(p.id))
         .sort((a, b) => a.originalIndex - b.originalIndex);
     
-    // 3. Fill Court A
-    const playersA = [...anchorsA];
-    while (playersA.length < PLAYER_LIMIT_ON_COURT && pool.length > 0) {
-        playersA.push(pool.shift()!);
-    }
-    // Re-sort A by index so fixed/non-fixed interleave naturally based on arrival order
-    playersA.sort((a,b) => a.originalIndex - b.originalIndex);
-
-    // 4. Fill Court B
-    const playersB = [...anchorsB];
-    while (playersB.length < PLAYER_LIMIT_ON_COURT && pool.length > 0) {
-        playersB.push(pool.shift()!);
-    }
-    playersB.sort((a,b) => a.originalIndex - b.originalIndex);
-
-    // 5. Create Queue
-    const queueTeams: Team[] = [];
-    let qIdx = 1;
+    // 3. Setup Buckets
+    // Determine max index needed by anchors
+    let maxAnchorIndex = -1;
+    anchors.forEach((list, idx) => {
+        if (list.length > 0) maxAnchorIndex = idx;
+    });
     
-    while (pool.length > 0) {
-        const chunk = pool.splice(0, PLAYERS_PER_TEAM);
-        queueTeams.push(createTeamContainer(uuidv4(), `Team ${qIdx + 2}`, chunk));
-        qIdx++;
+    // Initial buckets with anchors
+    const buckets = Array.from({length: maxAnchorIndex + 1}, (_, i) => [...(anchors[i] || [])]);
+    
+    // Ensure at least Court A and B exist
+    while(buckets.length < 2) buckets.push([]);
+
+    // 4. Fill Buckets Linearly
+    // We fill bucket 0, then 1, then 2...
+    let currentBucketIdx = 0;
+    
+    while(pool.length > 0) {
+        // Ensure bucket exists
+        if (!buckets[currentBucketIdx]) buckets[currentBucketIdx] = [];
+        
+        // If current bucket full, move to next
+        if (buckets[currentBucketIdx].length >= PLAYER_LIMIT_ON_COURT) {
+            currentBucketIdx++;
+            continue;
+        }
+        
+        // Add player
+        buckets[currentBucketIdx].push(pool.shift()!);
+    }
+
+    // 5. Reconstruct
+    const newCourtA = { ...currentCourtA, players: buckets[0] || [] };
+    const newCourtB = { ...currentCourtB, players: buckets[1] || [] };
+    
+    const newQueue: Team[] = [];
+    for (let i = 2; i < buckets.length; i++) {
+        if (buckets[i] && buckets[i].length > 0) {
+            const existingQTeam = currentQueue[i - 2];
+            const tId = existingQTeam ? existingQTeam.id : uuidv4();
+            const tName = existingQTeam ? existingQTeam.name : `Team ${i + 1}`;
+            newQueue.push({ id: tId, name: tName, players: buckets[i] });
+        }
     }
   
     return {
-      courtA: { ...currentCourtA, players: playersA },
-      courtB: { ...currentCourtB, players: playersB },
-      queue: queueTeams
+      courtA: newCourtA,
+      courtB: newCourtB,
+      queue: newQueue
     };
   };
 
@@ -205,16 +240,11 @@ export const getStandardRotationResult = (
     const overflow: Player[] = [];
     while (incomingPlayers.length > PLAYER_LIMIT_ON_COURT) {
         // Eject non-fixed players to make room for anchors
-        // We prefer to eject from the 'incoming' portion, preserving anchors.
-        // We take from the 'start' of the array (FIFO) if they were added first, 
-        // or look for non-fixed specifically.
         const ejectIdx = incomingPlayers.findIndex(p => !p.isFixed);
         if (ejectIdx !== -1) {
             const [ejected] = incomingPlayers.splice(ejectIdx, 1);
             overflow.push(ejected);
         } else {
-            // Should theoretically not happen if logic is sound (cannot have >6 fixed players)
-            // But if so, just pop.
             const [ejected] = incomingPlayers.splice(0, 1);
             overflow.push(ejected);
         }
@@ -222,7 +252,6 @@ export const getStandardRotationResult = (
 
     // If we had overflow, push them to the end of the queue (or create new team)
     if (overflow.length > 0) {
-        // Find last queue team to append, or create new
         if (queue.length > 0) {
             queue[queue.length - 1].players.push(...overflow);
         } else {
@@ -243,7 +272,7 @@ export const getStandardRotationResult = (
     while (incomingTeam.players.length < PLAYER_LIMIT_ON_COURT) {
         let foundDonor = false;
 
-        // Try to steal from the NEW queue (index 0 is the team AFTER incoming)
+        // Try to steal from the NEW queue
         for (const donorTeam of queue) {
             if (donorTeam.players.length > 0) {
                 // Find last NON-FIXED player (Steal from end)

@@ -18,6 +18,7 @@ import { useHudMeasure } from './hooks/useHudMeasure';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SuddenDeathOverlay } from './components/ui/CriticalPointAnimation';
 import { BackgroundGlow } from './components/ui/BackgroundGlow';
+import { motion, LayoutGroup } from 'framer-motion';
 
 // Lazy Loaded Heavy Modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -276,52 +277,67 @@ function App() {
                       />
                     </>
                  ) : (
-                    <>
-                      <ScoreCardNormal
-                          teamId="A"
-                          team={state.teamARoster}
-                          score={state.scoreA}
-                          setsWon={state.setsA}
-                          isServing={state.servingTeam === 'A'}
-                          onAdd={handleAddA}
-                          onSubtract={handleSubA}
-                          onSetServer={handleSetServerA}
-                          timeouts={state.timeoutsA}
-                          onTimeout={handleTimeoutA}
-                          isMatchPoint={game.isMatchPointA}
-                          isSetPoint={game.isSetPointA}
-                          isDeuce={game.isDeuce}
-                          inSuddenDeath={state.inSuddenDeath}
-                          reverseLayout={isSwapped}
-                          setsNeededToWin={game.setsNeededToWin}
-                          colorTheme="indigo"
-                          isLocked={interactingTeam !== null && interactingTeam !== 'A'}
-                          onInteractionStart={handleInteractionStartA}
-                          onInteractionEnd={handleInteractionEnd}
-                      />
-                      <ScoreCardNormal
-                          teamId="B"
-                          team={state.teamBRoster}
-                          score={state.scoreB}
-                          setsWon={state.setsB}
-                          isServing={state.servingTeam === 'B'}
-                          onAdd={handleAddB}
-                          onSubtract={handleSubB}
-                          onSetServer={handleSetServerB}
-                          timeouts={state.timeoutsB}
-                          onTimeout={handleTimeoutB}
-                          isMatchPoint={game.isMatchPointB}
-                          isSetPoint={game.isSetPointB}
-                          isDeuce={game.isDeuce}
-                          inSuddenDeath={state.inSuddenDeath}
-                          reverseLayout={isSwapped}
-                          setsNeededToWin={game.setsNeededToWin}
-                          colorTheme="rose"
-                          isLocked={interactingTeam !== null && interactingTeam !== 'B'}
-                          onInteractionStart={handleInteractionStartB}
-                          onInteractionEnd={handleInteractionEnd}
-                      />
-                    </>
+                    <LayoutGroup>
+                      {/* Team A Wrapper */}
+                      <motion.div 
+                        layout 
+                        key="card-wrapper-A"
+                        className={`flex-1 w-full h-full flex flex-col ${isSwapped ? 'order-last' : 'order-first'}`}
+                        transition={{ type: "spring", stiffness: 250, damping: 25 }}
+                      >
+                        <ScoreCardNormal
+                            teamId="A"
+                            team={state.teamARoster}
+                            score={state.scoreA}
+                            setsWon={state.setsA}
+                            isServing={state.servingTeam === 'A'}
+                            onAdd={handleAddA}
+                            onSubtract={handleSubA}
+                            onSetServer={handleSetServerA}
+                            timeouts={state.timeoutsA}
+                            onTimeout={handleTimeoutA}
+                            isMatchPoint={game.isMatchPointA}
+                            isSetPoint={game.isSetPointA}
+                            isDeuce={game.isDeuce}
+                            inSuddenDeath={state.inSuddenDeath}
+                            setsNeededToWin={game.setsNeededToWin}
+                            colorTheme="indigo"
+                            isLocked={interactingTeam !== null && interactingTeam !== 'A'}
+                            onInteractionStart={handleInteractionStartA}
+                            onInteractionEnd={handleInteractionEnd}
+                        />
+                      </motion.div>
+
+                      {/* Team B Wrapper */}
+                      <motion.div 
+                        layout 
+                        key="card-wrapper-B"
+                        className={`flex-1 w-full h-full flex flex-col ${isSwapped ? 'order-first' : 'order-last'}`}
+                        transition={{ type: "spring", stiffness: 250, damping: 25 }}
+                      >
+                        <ScoreCardNormal
+                            teamId="B"
+                            team={state.teamBRoster}
+                            score={state.scoreB}
+                            setsWon={state.setsB}
+                            isServing={state.servingTeam === 'B'}
+                            onAdd={handleAddB}
+                            onSubtract={handleSubB}
+                            onSetServer={handleSetServerB}
+                            timeouts={state.timeoutsB}
+                            onTimeout={handleTimeoutB}
+                            isMatchPoint={game.isMatchPointB}
+                            isSetPoint={game.isSetPointB}
+                            isDeuce={game.isDeuce}
+                            inSuddenDeath={state.inSuddenDeath}
+                            setsNeededToWin={game.setsNeededToWin}
+                            colorTheme="rose"
+                            isLocked={interactingTeam !== null && interactingTeam !== 'B'}
+                            onInteractionStart={handleInteractionStartB}
+                            onInteractionEnd={handleInteractionEnd}
+                        />
+                      </motion.div>
+                    </LayoutGroup>
                  )}
     
                  {isFullscreen && (

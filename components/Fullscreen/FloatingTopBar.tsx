@@ -52,7 +52,7 @@ const fluidTransition = {
 };
 
 const itemAppearVariant: Variants = {
-  hidden: { opacity: 0, scale: 0.8 },
+  hidden: { opacity: 0, scale: 0.9 },
   visible: { 
     opacity: 1, 
     scale: 1,
@@ -60,7 +60,7 @@ const itemAppearVariant: Variants = {
   },
   exit: { 
     opacity: 0, 
-    scale: 0.8,
+    scale: 0.9,
     transition: { duration: 0.15, ease: "easeIn" }
   }
 };
@@ -68,8 +68,6 @@ const itemAppearVariant: Variants = {
 // --- SUB-COMPONENTS ---
 
 const TimeoutDots = memo<{ count: number; color: 'indigo' | 'rose' }>(({ count, color }) => {
-  const activeClass = color === 'indigo' ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]';
-  
   return (
     <div className="flex gap-1.5 mt-1.5">
         {[1, 2].map(i => {
@@ -126,7 +124,6 @@ const TeamInfoStealth = memo<{
   const { t } = useTranslation();
   const hasBadge = isMatchPoint || isSetPoint;
 
-  // The wrapper ensures the serve icon pushes the text smoothly instead of jumping
   return (
     <motion.div 
       layout
@@ -169,17 +166,17 @@ const TeamInfoStealth = memo<{
         </AnimatePresence>
       </motion.div>
 
-      {/* Badge Row - Fluid Expansion */}
+      {/* Badge Row - Fixed using mode="wait" to prevent layout thrashing */}
       <div className={`flex ${align === 'right' ? 'justify-end' : 'justify-start'} overflow-visible`}>
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="wait">
           {hasBadge && (
             <motion.div
               key="badge"
-              layout
+              // Removed 'layout' prop here to prevent conflict with AnimatePresence height animation
               initial={{ height: 0, opacity: 0, marginTop: 0 }} 
               animate={{ height: "auto", opacity: 1, marginTop: 4 }} 
               exit={{ height: 0, opacity: 0, marginTop: 0 }}
-              transition={{ duration: 0.3, ease: "circOut" }}
+              transition={{ duration: 0.2, ease: "circOut" }}
               className={`origin-top overflow-hidden`}
             >
                 <div className={`
@@ -214,23 +211,21 @@ const CenterDisplayStealth = memo<{
   let key = 'timer';
   let content = null;
 
-  // Reusable Pill Component with Layout
+  // Reusable Pill Component WITHOUT 'layout' prop on the root to avoid conflicts
   const StatusPill = ({ icon: Icon, text, colorClass, borderClass, bgClass, animateIcon }: any) => (
-      <motion.div 
-         layout
+      <div 
          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border backdrop-blur-md ${borderClass} ${bgClass} shadow-lg`}
       >
            <motion.div 
              animate={animateIcon}
              transition={{ duration: 1.5, repeat: Infinity }}
-             layout
            >
               <Icon size={14} className={colorClass} strokeWidth={2.5} />
            </motion.div>
-           <motion.span layout className={`text-[10px] font-black uppercase tracking-widest leading-none ${colorClass} whitespace-nowrap`}>
+           <span className={`text-[10px] font-black uppercase tracking-widest leading-none ${colorClass} whitespace-nowrap`}>
              {text}
-           </motion.span>
-      </motion.div>
+           </span>
+      </div>
   );
 
   if (inSuddenDeath) {
@@ -248,39 +243,39 @@ const CenterDisplayStealth = memo<{
     />;
   } else {
     content = (
-      <motion.button 
-        layout
+      <button 
         onClick={onToggleTimer} 
         className="flex flex-col items-center group py-1 select-none min-w-[80px]"
       >
-        <motion.span layout className={`font-mono text-xl font-bold tabular-nums leading-none tracking-tight transition-colors ${isTimerRunning ? 'text-white drop-shadow-md' : 'text-slate-500'}`}>
+        <span className={`font-mono text-xl font-bold tabular-nums leading-none tracking-tight transition-colors ${isTimerRunning ? 'text-white drop-shadow-md' : 'text-slate-500'}`}>
             {formatTime(time)}
-        </motion.span>
-        <motion.span layout className={`text-[9px] font-bold uppercase tracking-[0.2em] mt-1 flex items-center gap-1.5 ${isTieBreak ? 'text-amber-400' : 'text-slate-500 group-hover:text-slate-300'}`}>
+        </span>
+        <span className={`text-[9px] font-bold uppercase tracking-[0.2em] mt-1 flex items-center gap-1.5 ${isTieBreak ? 'text-amber-400' : 'text-slate-500 group-hover:text-slate-300'}`}>
             {isTieBreak ? <Scale size={10} /> : <Hash size={10} />}
             {isTieBreak ? 'TIE' : `SET ${currentSet}`}
-        </motion.span>
-      </motion.button>
+        </span>
+      </button>
     );
   }
 
   return (
-    <motion.div layout className="flex items-center justify-center h-full relative z-10 min-w-[60px]">
-      <AnimatePresence mode="popLayout" custom={key}>
+    // Fixed container size logic by removing 'layout' from this wrapper and using mode="wait"
+    <div className="flex items-center justify-center h-full relative z-10 min-w-[60px]">
+      <AnimatePresence mode="wait" custom={key} initial={false}>
         <motion.div
           key={key}
-          layout
+          // Removed 'layout' prop here. The parent container (FloatingTopBar) handles the width animation.
+          // Having 'layout' here while using AnimatePresence causes the "exploding width" bug during rapid updates.
           variants={itemAppearVariant}
           initial="hidden"
           animate="visible"
           exit="exit"
-          // This ensures the container resizes smoothly when content flips
-          className="will-change-transform"
+          className="will-change-transform flex justify-center w-full"
         >
           {content}
         </motion.div>
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 });
 
@@ -299,7 +294,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
             transition={fluidTransition.layout}
             className={`
                 pointer-events-auto
-                w-auto max-w-[98vw]
+                w-auto max-w-[98vw] sm:max-w-lg
                 ${glassContainer}
                 rounded-2xl
                 p-2
@@ -311,7 +306,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
             }}
         >
             {/* Left Side */}
-            <motion.div layout className="flex items-center gap-2 md:gap-4 pl-2">
+            <motion.div layout className="flex items-center gap-2 md:gap-4 pl-2 shrink-0">
                 <TeamInfoStealth 
                     name={props.teamNameA} 
                     color={props.colorA} 
@@ -334,7 +329,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
             {/* Center Dynamic Display */}
             <motion.div 
                 layout 
-                className="bg-black/20 rounded-xl px-2 py-1 border border-white/5 min-w-[90px] flex justify-center"
+                className="bg-black/20 rounded-xl px-2 py-1 border border-white/5 min-w-[90px] flex justify-center shrink-0"
             >
                 <CenterDisplayStealth 
                     time={props.time}
@@ -348,7 +343,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
             </motion.div>
 
             {/* Right Side */}
-            <motion.div layout className="flex items-center gap-2 md:gap-4 pr-2 flex-row-reverse">
+            <motion.div layout className="flex items-center gap-2 md:gap-4 pr-2 flex-row-reverse shrink-0">
                 <TeamInfoStealth 
                     name={props.teamNameB} 
                     color={props.colorB} 

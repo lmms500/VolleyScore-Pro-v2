@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -111,7 +112,7 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
                             onClick={() => setShowLogs(!showLogs)} 
                             className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-black/5 dark:bg-white/5 rounded-lg border border-black/5 dark:border-white/5"
                         >
-                            <span className="flex items-center gap-2"><Terminal size={12} /> Rotation Logic Logs</span>
+                            <span className="flex items-center gap-2"><Terminal size={12} /> {t('matchOver.debugLogs')}</span>
                             {showLogs ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                         </button>
                         <AnimatePresence>

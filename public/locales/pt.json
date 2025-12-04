@@ -7,6 +7,11 @@
     "pt": "Português (Brasil)",
     "es": "Español"
   },
+  "common": {
+    "done": "Pronto",
+    "full": "Cheio",
+    "add": "Add"
+  },
   "controls": {
     "undo": "Desfazer",
     "swap": "Trocar Lados",
@@ -117,7 +122,8 @@
       "none": "Nenhum",
       "reinforcements": "Reforços",
       "source": "Roubados / Reciclados"
-    }
+    },
+    "debugLogs": "Logs da Lógica de Rotação"
   },
   "teamManager": {
     "title": "Gerenciador de Equipes",
@@ -135,6 +141,44 @@
     "lockPlayer": "Fixar Jogador",
     "unlockPlayer": "Liberar Jogador",
     "playerRemoved": "Jogador removido",
-    "undo": "DESFAZER"
+    "undo": "DESFAZER",
+    "teamLabel": "Equipe",
+    "tabs": {
+      "roster": "Elenco",
+      "profiles": "Perfis",
+      "batch": "Em Lote"
+    },
+    "modes": {
+      "standard": "Padrão",
+      "standardTooltip": "Rotação: Vencedor Fica, Perdedor vai para o Fim. Vagas preenchidas pelas próximas equipes.",
+      "balanced": "Balanceado",
+      "balancedTooltip": "Rotação: Vencedor Fica. Vagas preenchidas para equilibrar com o nível do Vencedor."
+    },
+    "actions": {
+      "restoreOrder": "Restaurar Ordem",
+      "globalBalance": "Balanço Global",
+      "addToA": "Add para A",
+      "addToB": "Add para B",
+      "addToQueue": "Add para Fila"
+    },
+    "sync": {
+      "synced": "Sincronizado",
+      "desynced": "Alterações não Salvas",
+      "unlinked": "Sem Perfil",
+      "updateTooltip": "Atualizar Perfil",
+      "createTooltip": "Criar Perfil",
+      "revertTooltip": "Reverter para dados do Perfil"
+    },
+    "location": {
+      "courtA": "Quadra A",
+      "courtB": "Quadra B",
+      "queue": "Na Fila"
+    },
+    "emptyProfiles": "Nenhum perfil salvo ainda. Sincronize jogadores na aba Elenco para criar perfis."
+  },
+  "errors": {
+    "genericTitle": "Algo deu errado",
+    "genericMessage": "A aplicação encontrou um erro inesperado. Pedimos desculpas pelo inconveniente.",
+    "reload": "Recarregar App"
   }
 }

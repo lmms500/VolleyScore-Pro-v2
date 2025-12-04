@@ -81,6 +81,7 @@ const SkillSelector: React.FC<{ level: number, onChange: (l: number) => void }> 
 };
 
 const SyncIndicator: React.FC<{ player: Player, profiles: Map<string, PlayerProfile>, onSave: () => void, onRevert: () => void }> = ({ player, profiles, onSave, onRevert }) => {
+    const { t } = useTranslation();
     const profile = player.profileId ? profiles.get(player.profileId) : undefined;
     
     let status: 'synced' | 'desynced' | 'unlinked' = 'unlinked';
@@ -90,9 +91,9 @@ const SyncIndicator: React.FC<{ player: Player, profiles: Map<string, PlayerProf
     }
 
     const config = {
-        synced: { color: 'bg-emerald-500', icon: CheckCircle2, text: 'Synced' },
-        desynced: { color: 'bg-amber-500', icon: AlertCircle, text: 'Unsaved Changes' },
-        unlinked: { color: 'bg-slate-300 dark:bg-slate-600', icon: User, text: 'No Profile' }
+        synced: { color: 'bg-emerald-500', icon: CheckCircle2, text: t('teamManager.sync.synced') },
+        desynced: { color: 'bg-amber-500', icon: AlertCircle, text: t('teamManager.sync.desynced') },
+        unlinked: { color: 'bg-slate-300 dark:bg-slate-600', icon: User, text: t('teamManager.sync.unlinked') }
     }[status];
 
     return (
@@ -104,7 +105,7 @@ const SyncIndicator: React.FC<{ player: Player, profiles: Map<string, PlayerProf
                      <button 
                         onClick={(e) => { e.stopPropagation(); onSave(); }}
                         className={`p-1.5 rounded-md text-white shadow-sm hover:scale-105 transition-all ${status === 'desynced' ? 'bg-amber-500 hover:bg-amber-400' : 'bg-slate-400 hover:bg-slate-500 dark:bg-slate-600 dark:hover:bg-slate-500'}`}
-                        title={status === 'desynced' ? "Update Profile" : "Create Profile"}
+                        title={status === 'desynced' ? t('teamManager.sync.updateTooltip') : t('teamManager.sync.createTooltip')}
                      >
                          <Save size={12} />
                      </button>
@@ -112,7 +113,7 @@ const SyncIndicator: React.FC<{ player: Player, profiles: Map<string, PlayerProf
                          <button 
                             onClick={(e) => { e.stopPropagation(); onRevert(); }}
                             className="p-1.5 rounded-md bg-white/10 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                            title="Revert to Profile Data"
+                            title={t('teamManager.sync.revertTooltip')}
                          >
                              <Undo2 size={12} />
                          </button>
@@ -170,12 +171,13 @@ const ProfileCard: React.FC<{
     onAddToGame: (target: 'A' | 'B' | 'Queue') => void;
     status: PlayerLocationStatus;
 }> = ({ profile, onUpdate, onDelete, onAddToGame, status }) => {
+    const { t } = useTranslation();
     
     // Configuração Visual baseada no Status
     const statusConfig = {
-        A: { bg: 'bg-indigo-500/10 border-indigo-500/20', text: 'text-indigo-600 dark:text-indigo-400', label: 'Court A' },
-        B: { bg: 'bg-rose-500/10 border-rose-500/20', text: 'text-rose-600 dark:text-rose-400', label: 'Court B' },
-        Queue: { bg: 'bg-slate-500/10 border-slate-500/20', text: 'text-slate-600 dark:text-slate-400', label: 'In Queue' },
+        A: { bg: 'bg-indigo-500/10 border-indigo-500/20', text: 'text-indigo-600 dark:text-indigo-400', label: t('teamManager.location.courtA') },
+        B: { bg: 'bg-rose-500/10 border-rose-500/20', text: 'text-rose-600 dark:text-rose-400', label: t('teamManager.location.courtB') },
+        Queue: { bg: 'bg-slate-500/10 border-slate-500/20', text: 'text-slate-600 dark:text-slate-400', label: t('teamManager.location.queue') },
         null: { bg: 'bg-transparent', text: '', label: '' }
     }[status || 'null'];
 
@@ -208,13 +210,13 @@ const ProfileCard: React.FC<{
                      </span>
                  ) : (
                      <div className="flex gap-1">
-                         <Button size="sm" onClick={() => onAddToGame('A')} className="h-7 px-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border-indigo-500/20" title="Add to A">
+                         <Button size="sm" onClick={() => onAddToGame('A')} className="h-7 px-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border-indigo-500/20" title={t('teamManager.actions.addToA')}>
                              A
                          </Button>
-                         <Button size="sm" onClick={() => onAddToGame('B')} className="h-7 px-2 bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white border-rose-500/20" title="Add to B">
+                         <Button size="sm" onClick={() => onAddToGame('B')} className="h-7 px-2 bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white border-rose-500/20" title={t('teamManager.actions.addToB')}>
                              B
                          </Button>
-                         <Button size="sm" onClick={() => onAddToGame('Queue')} className="h-7 px-2 bg-slate-500/10 text-slate-600 hover:bg-slate-500 hover:text-white border-slate-500/20" title="Add to Queue">
+                         <Button size="sm" onClick={() => onAddToGame('Queue')} className="h-7 px-2 bg-slate-500/10 text-slate-600 hover:bg-slate-500 hover:text-white border-slate-500/20" title={t('teamManager.actions.addToQueue')}>
                              Q
                          </Button>
                      </div>
@@ -335,14 +337,14 @@ const AddPlayerInput: React.FC<{ onAdd: (name: string) => void; disabled?: boole
                     />
                     <button onClick={submit} className="p-1.5 bg-indigo-500 rounded-lg hover:bg-indigo-400 text-white shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform"><Plus size={16} /></button>
                 </div>
-                <button onClick={() => setIsOpen(false)} className="text-[10px] text-slate-400 mt-2 hover:text-slate-600 text-center uppercase font-bold tracking-wider">Done</button>
+                <button onClick={() => setIsOpen(false)} className="text-[10px] text-slate-400 mt-2 hover:text-slate-600 text-center uppercase font-bold tracking-wider">{t('common.done')}</button>
             </div>
         );
     }
     return (
         <button onClick={() => !disabled && setIsOpen(true)} disabled={disabled}
             className={`mt-2 w-full py-2 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest rounded-xl border border-dashed transition-all ${disabled ? 'border-slate-200 dark:border-slate-800 text-slate-400 cursor-not-allowed' : 'border-slate-300 dark:border-slate-700 text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'}`} >
-            {disabled ? (<><Ban size={14} /> Full</>) : (<><Plus size={14} /> Add</>)}
+            {disabled ? (<><Ban size={14} /> {t('common.full')}</>) : (<><Plus size={14} /> {t('common.add')}</>)}
         </button>
     );
 };
@@ -379,7 +381,7 @@ const TeamColumn: React.FC<{
         <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className={`w-1.5 h-6 rounded-full flex-shrink-0 ${theme[color].glow}`}></div>
             <div className="flex flex-col min-w-0 flex-1">
-                <span className={`text-[9px] font-bold uppercase tracking-wider opacity-60 ${theme[color].text}`}>Team</span>
+                <span className={`text-[9px] font-bold uppercase tracking-wider opacity-60 ${theme[color].text}`}>{t('teamManager.teamLabel')}</span>
                 <EditableTitle name={team.name} onSave={n => onUpdateTeamName(id, n)} className={`font-black uppercase tracking-tight text-sm ${theme[color].text}`} />
             </div>
         </div>
@@ -505,13 +507,13 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
               
               <div className="flex flex-wrap p-1 bg-slate-200/50 dark:bg-white/5 rounded-xl gap-1">
                 <button onClick={() => setActiveTab('roster')} className={`px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'roster' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
-                    <List size={14} /> Roster
+                    <List size={14} /> {t('teamManager.tabs.roster')}
                 </button>
                 <button onClick={() => setActiveTab('profiles')} className={`px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'profiles' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
-                    <User size={14} /> Profiles
+                    <User size={14} /> {t('teamManager.tabs.profiles')}
                 </button>
                 <button onClick={() => setActiveTab('input')} className={`px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'input' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
-                    <Upload size={14} /> Batch
+                    <Upload size={14} /> {t('teamManager.tabs.batch')}
                 </button>
               </div>
 
@@ -521,16 +523,16 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                           <button 
                              onClick={() => props.onSetRotationMode('standard')}
                              className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${props.rotationMode === 'standard' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500'}`}
-                             title="Rotation: Winner Stays, Loser to End. Gaps filled from next teams."
+                             title={t('teamManager.modes.standardTooltip')}
                           >
-                              Standard
+                              {t('teamManager.modes.standard')}
                           </button>
                           <button 
                              onClick={() => props.onSetRotationMode('balanced')}
                              className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${props.rotationMode === 'balanced' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500'}`}
-                             title="Rotation: Winner Stays. Gaps filled to match Winner's skill level."
+                             title={t('teamManager.modes.balancedTooltip')}
                           >
-                              Balanced
+                              {t('teamManager.modes.balanced')}
                           </button>
                       </div>
 
@@ -539,7 +541,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                         onClick={props.onBalanceTeams}
                         className={`whitespace-nowrap ${props.rotationMode === 'balanced' ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'}`}
                       >
-                         {props.rotationMode === 'balanced' ? <><Shuffle size={14} /> Global Balance</> : <><RefreshCw size={14} /> Restore Order</>}
+                         {props.rotationMode === 'balanced' ? <><Shuffle size={14} /> {t('teamManager.actions.globalBalance')}</> : <><RefreshCw size={14} /> {t('teamManager.actions.restoreOrder')}</>}
                       </Button>
                   </div>
               )}
@@ -572,7 +574,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                </div>
                {props.profiles.size === 0 && (
                    <div className="text-center py-20 text-slate-400 italic">
-                       No profiles saved yet. Sync players in the Roster tab to create profiles.
+                       {t('teamManager.emptyProfiles')}
                    </div>
                )}
           </div>

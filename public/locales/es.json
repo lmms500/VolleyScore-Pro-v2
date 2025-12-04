@@ -7,6 +7,11 @@
     "pt": "Português (Brasil)",
     "es": "Español"
   },
+  "common": {
+    "done": "Listo",
+    "full": "Lleno",
+    "add": "Añadir"
+  },
   "controls": {
     "undo": "Deshacer",
     "swap": "Cambiar Lados",
@@ -117,7 +122,8 @@
       "none": "Ninguno",
       "reinforcements": "Refuerzos",
       "source": "Robados / Reciclados"
-    }
+    },
+    "debugLogs": "Registros de Lógica de Rotación"
   },
   "teamManager": {
     "title": "Gestión de Equipos",
@@ -135,6 +141,44 @@
     "lockPlayer": "Fijar Jugador",
     "unlockPlayer": "Desfijar Jugador",
     "playerRemoved": "Jugador eliminado",
-    "undo": "DESHACER"
+    "undo": "DESHACER",
+    "teamLabel": "Equipo",
+    "tabs": {
+      "roster": "Plantilla",
+      "profiles": "Perfiles",
+      "batch": "Por Lotes"
+    },
+    "modes": {
+      "standard": "Estándar",
+      "standardTooltip": "Rotación: El Ganador se Queda, Perdedor al Final. Huecos llenados por siguientes equipos.",
+      "balanced": "Equilibrado",
+      "balancedTooltip": "Rotación: El Ganador se Queda. Huecos llenados para igualar nivel del Ganador."
+    },
+    "actions": {
+      "restoreOrder": "Restaurar Orden",
+      "globalBalance": "Balance Global",
+      "addToA": "Añadir a A",
+      "addToB": "Añadir a B",
+      "addToQueue": "Añadir a Cola"
+    },
+    "sync": {
+      "synced": "Sincronizado",
+      "desynced": "Cambios sin Guardar",
+      "unlinked": "Sin Perfil",
+      "updateTooltip": "Actualizar Perfil",
+      "createTooltip": "Crear Perfil",
+      "revertTooltip": "Revertir a datos de Perfil"
+    },
+    "location": {
+      "courtA": "Cancha A",
+      "courtB": "Cancha B",
+      "queue": "En Cola"
+    },
+    "emptyProfiles": "No hay perfiles guardados aún. Sincroniza jugadores en la pestaña Plantilla para crear perfiles."
+  },
+  "errors": {
+    "genericTitle": "Algo salió mal",
+    "genericMessage": "La aplicación encontró un error inesperado. Disculpe las molestias.",
+    "reload": "Recargar App"
   }
 }

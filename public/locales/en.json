@@ -7,6 +7,11 @@
     "pt": "Português (Brasil)",
     "es": "Español"
   },
+  "common": {
+    "done": "Done",
+    "full": "Full",
+    "add": "Add"
+  },
   "controls": {
     "undo": "Undo",
     "swap": "Swap Sides",
@@ -117,7 +122,8 @@
       "none": "None",
       "reinforcements": "Reinforcements",
       "source": "Stolen / Recycled"
-    }
+    },
+    "debugLogs": "Rotation Logic Logs"
   },
   "teamManager": {
     "title": "Squad Management",
@@ -135,6 +141,44 @@
     "lockPlayer": "Lock Player",
     "unlockPlayer": "Unlock Player",
     "playerRemoved": "Player removed",
-    "undo": "UNDO"
+    "undo": "UNDO",
+    "teamLabel": "Team",
+    "tabs": {
+      "roster": "Roster",
+      "profiles": "Profiles",
+      "batch": "Batch"
+    },
+    "modes": {
+      "standard": "Standard",
+      "standardTooltip": "Rotation: Winner Stays, Loser to End. Gaps filled from next teams.",
+      "balanced": "Balanced",
+      "balancedTooltip": "Rotation: Winner Stays. Gaps filled to match Winner's skill level."
+    },
+    "actions": {
+      "restoreOrder": "Restore Order",
+      "globalBalance": "Global Balance",
+      "addToA": "Add to A",
+      "addToB": "Add to B",
+      "addToQueue": "Add to Queue"
+    },
+    "sync": {
+      "synced": "Synced",
+      "desynced": "Unsaved Changes",
+      "unlinked": "No Profile",
+      "updateTooltip": "Update Profile",
+      "createTooltip": "Create Profile",
+      "revertTooltip": "Revert to Profile Data"
+    },
+    "location": {
+      "courtA": "Court A",
+      "courtB": "Court B",
+      "queue": "In Queue"
+    },
+    "emptyProfiles": "No profiles saved yet. Sync players in the Roster tab to create profiles."
+  },
+  "errors": {
+    "genericTitle": "Something went wrong",
+    "genericMessage": "The application encountered an unexpected error. We apologize for the inconvenience.",
+    "reload": "Reload App"
   }
 }

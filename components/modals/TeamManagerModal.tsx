@@ -4,7 +4,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Team, Player, RotationMode, PlayerProfile } from '../../types';
 import { calculateTeamStrength } from '../../utils/balanceUtils';
-import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List } from 'lucide-react';
+import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List, UserPlus, Shield, PlayCircle } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -52,7 +52,10 @@ interface TeamManagerModalProps {
   deletedCount: number;
   profiles: Map<string, PlayerProfile>;
   deleteProfile?: (id: string) => void;
+  upsertProfile?: (name: string, skill: number, id?: string) => PlayerProfile;
 }
+
+type PlayerLocationStatus = 'A' | 'B' | 'Queue' | null;
 
 // --- SUB-COMPONENTS ---
 
@@ -149,11 +152,83 @@ const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; cla
     );
   }
   return (
-      <div className={`flex items-center gap-2 group cursor-pointer ${className}`} onClick={() => setIsEditing(true)}>
+      <div className={`flex items-center gap-2 group cursor-pointer min-w-0 ${className}`} onClick={() => setIsEditing(true)}>
           <span className="truncate">{name}</span>
           <Edit2 size={10} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 flex-shrink-0" />
       </div>
   );
+};
+
+// --- PROFILE CARD COMPONENT ---
+
+const ProfileCard: React.FC<{
+    profile: PlayerProfile;
+    onUpdate: (name: string, skill: number) => void;
+    onDelete: () => void;
+    onAddToGame: (target: 'A' | 'B' | 'Queue') => void;
+    status: PlayerLocationStatus;
+}> = ({ profile, onUpdate, onDelete, onAddToGame, status }) => {
+    
+    // Configuração Visual baseada no Status
+    const statusConfig = {
+        A: { bg: 'bg-indigo-500/10 border-indigo-500/20', text: 'text-indigo-600 dark:text-indigo-400', label: 'Court A' },
+        B: { bg: 'bg-rose-500/10 border-rose-500/20', text: 'text-rose-600 dark:text-rose-400', label: 'Court B' },
+        Queue: { bg: 'bg-slate-500/10 border-slate-500/20', text: 'text-slate-600 dark:text-slate-400', label: 'In Queue' },
+        null: { bg: 'bg-transparent', text: '', label: '' }
+    }[status || 'null'];
+
+    return (
+        <div className={`
+            group flex items-center justify-between p-3 rounded-xl 
+            bg-white/60 dark:bg-white/5 border 
+            transition-all shadow-sm
+            ${status ? statusConfig.bg : 'border-black/5 dark:border-white/5 hover:border-indigo-500/30'}
+        `}>
+             <div className="flex flex-col min-w-0 flex-1 pr-3">
+                 <EditableTitle 
+                    name={profile.name} 
+                    onSave={(val) => onUpdate(val, profile.skillLevel)} 
+                    isPlayer={true} 
+                    className="font-bold text-sm text-slate-800 dark:text-slate-200" 
+                 />
+                 <div className="mt-1">
+                    <SkillSelector 
+                        level={profile.skillLevel} 
+                        onChange={(l) => onUpdate(profile.name, l)} 
+                    />
+                 </div>
+             </div>
+             
+             <div className="flex items-center gap-2">
+                 {status ? (
+                     <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border ${statusConfig.text} ${statusConfig.bg}`}>
+                        {statusConfig.label}
+                     </span>
+                 ) : (
+                     <div className="flex gap-1">
+                         <Button size="sm" onClick={() => onAddToGame('A')} className="h-7 px-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border-indigo-500/20" title="Add to A">
+                             A
+                         </Button>
+                         <Button size="sm" onClick={() => onAddToGame('B')} className="h-7 px-2 bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white border-rose-500/20" title="Add to B">
+                             B
+                         </Button>
+                         <Button size="sm" onClick={() => onAddToGame('Queue')} className="h-7 px-2 bg-slate-500/10 text-slate-600 hover:bg-slate-500 hover:text-white border-slate-500/20" title="Add to Queue">
+                             Q
+                         </Button>
+                     </div>
+                 )}
+                 
+                 <div className="w-px h-6 bg-black/10 dark:bg-white/10 mx-0.5"></div>
+                 
+                 <button 
+                    onClick={onDelete} 
+                    className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                 >
+                     <Trash2 size={14} />
+                 </button>
+             </div>
+        </div>
+    );
 };
 
 const PlayerCard: React.FC<{ 
@@ -179,7 +254,8 @@ const PlayerCard: React.FC<{
   return (
     <div ref={setNodeRef} style={style} className={`group relative flex items-center justify-between p-2 rounded-xl border transition-all ${player.isFixed ? 'bg-indigo-500/10 border-indigo-500/30 cursor-not-allowed' : 'bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/20 shadow-sm'}`}>
       
-      <div className="flex items-center gap-2 overflow-hidden flex-1">
+      {/* Left Section: Grip + Name/Stars (Responsive flex-1) */}
+      <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
         <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1.5 -ml-1 text-slate-400 dark:text-slate-600 touch-none flex-shrink-0">
           <GripVertical size={16} />
         </div>
@@ -192,7 +268,8 @@ const PlayerCard: React.FC<{
         </div>
       </div>
       
-      <div className="flex items-center gap-1 flex-shrink-0">
+      {/* Right Section: Actions (Fixed width, does not shrink) */}
+      <div className="flex items-center gap-1 flex-shrink-0 ml-1">
         <SyncIndicator 
             player={player} 
             profiles={profiles} 
@@ -231,7 +308,7 @@ const AddPlayerInput: React.FC<{ onAdd: (name: string) => void; disabled?: boole
             <div className="flex flex-col mt-2 px-1 animate-in fade-in slide-in-from-top-1 bg-white dark:bg-slate-900 p-2 rounded-xl border border-black/5 dark:border-white/10 shadow-lg ring-1 ring-black/5">
                 <div className="flex items-center gap-2">
                     <input ref={inputRef}
-                        className="flex-1 bg-transparent border-b border-black/10 dark:border-white/10 px-1 py-1 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-indigo-500 font-medium placeholder:text-slate-400"
+                        className="flex-1 bg-transparent border-b border-black/10 dark:border-white/10 px-1 py-1 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-indigo-500 font-medium placeholder:text-slate-400 min-w-0"
                         placeholder={t('teamManager.addPlayerPlaceholder')} value={name} onChange={e => setName(e.target.value)}
                         onKeyDown={e => { if(e.key === 'Enter') submit(); if(e.key === 'Escape') setIsOpen(false); }}
                     />
@@ -277,16 +354,16 @@ const TeamColumn: React.FC<{
 
   return (
     <div ref={setNodeRef} className={`flex flex-col w-full h-fit ${theme[color].bg} p-3 rounded-2xl ${theme[color].border} border transition-all duration-300 ${isOver && !isFull ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900' : ''}`}>
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-black/5 dark:border-white/5">
-        <div className="flex items-center gap-2 max-w-[65%]">
-            <div className={`w-1.5 h-6 rounded-full ${theme[color].glow}`}></div>
-            <div className="flex flex-col min-w-0">
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-black/5 dark:border-white/5 gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className={`w-1.5 h-6 rounded-full flex-shrink-0 ${theme[color].glow}`}></div>
+            <div className="flex flex-col min-w-0 flex-1">
                 <span className={`text-[9px] font-bold uppercase tracking-wider opacity-60 ${theme[color].text}`}>Team</span>
                 <EditableTitle name={team.name} onSave={n => onUpdateTeamName(id, n)} className={`font-black uppercase tracking-tight text-sm ${theme[color].text}`} />
             </div>
         </div>
         
-        <div className="flex flex-col items-end">
+        <div className="flex flex-col items-end flex-shrink-0">
             <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white dark:bg-black/20 ${theme[color].text} flex items-center gap-1 shadow-sm border border-black/5 dark:border-white/5 mb-0.5`}>
                 <Star size={10} className="fill-current" /> {teamStrength}
             </div>
@@ -390,38 +467,53 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
     }
   };
 
+  // Logic to determine status of a profile ID in current game
+  const getProfileStatus = (profileId: string): PlayerLocationStatus => {
+      if (props.courtA.players.some(p => p.profileId === profileId)) return 'A';
+      if (props.courtB.players.some(p => p.profileId === profileId)) return 'B';
+      // Check Queue
+      for (const t of props.queue) {
+          if (t.players.some(p => p.profileId === profileId)) return 'Queue';
+      }
+      return null;
+  };
+
   return (
     <Modal isOpen={props.isOpen} onClose={props.onClose} title={t('teamManager.title')} maxWidth="max-w-[95vw] md:max-w-7xl">
       
-      {/* --- RESPONSIVE HEADER --- */}
-      <div className="sticky top-0 z-20 bg-slate-100/95 dark:bg-[#0a0a0a]/95 backdrop-blur-xl border-b border-black/5 dark:border-white/5 -mx-6 px-4 md:px-6 pt-0 pb-4 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2">
-              {/* Tab Switcher */}
-              <div className="flex p-1 bg-slate-200/50 dark:bg-white/5 rounded-xl overflow-x-auto no-scrollbar snap-x">
-                <button onClick={() => setActiveTab('roster')} className={`px-3 md:px-4 py-2 rounded-lg font-bold text-[10px] md:text-xs uppercase tracking-wider transition-all flex-shrink-0 flex items-center gap-2 snap-start ${activeTab === 'roster' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
+      {/* --- RESPONSIVE HEADER --- 
+          Corrected z-index and positioning to handle scroll overlap. 
+          Added -top-6 to account for Modal padding and solid background to mask content. 
+      */}
+      <div className="sticky -top-6 z-50 bg-slate-100 dark:bg-[#0a0a0a] border-b border-black/5 dark:border-white/5 -mx-6 px-6 py-4 shadow-sm mb-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              
+              {/* Tab Switcher - Now Wrap Capable */}
+              <div className="flex flex-wrap p-1 bg-slate-200/50 dark:bg-white/5 rounded-xl gap-1">
+                <button onClick={() => setActiveTab('roster')} className={`px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'roster' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
                     <List size={14} /> Roster
                 </button>
-                <button onClick={() => setActiveTab('profiles')} className={`px-3 md:px-4 py-2 rounded-lg font-bold text-[10px] md:text-xs uppercase tracking-wider transition-all flex-shrink-0 flex items-center gap-2 snap-start ${activeTab === 'profiles' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
+                <button onClick={() => setActiveTab('profiles')} className={`px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'profiles' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
                     <User size={14} /> Profiles
                 </button>
-                <button onClick={() => setActiveTab('input')} className={`px-3 md:px-4 py-2 rounded-lg font-bold text-[10px] md:text-xs uppercase tracking-wider transition-all flex-shrink-0 flex items-center gap-2 snap-start ${activeTab === 'input' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
+                <button onClick={() => setActiveTab('input')} className={`px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'input' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
                     <Upload size={14} /> Batch
                 </button>
               </div>
 
-              {/* Actions */}
+              {/* Actions - Flex Wrap with Gap */}
               {activeTab === 'roster' && (
                   <div className="flex flex-wrap items-center justify-end gap-2 w-full md:w-auto">
                       <div className="flex items-center bg-slate-200/50 dark:bg-white/5 rounded-lg p-1">
                           <button 
                              onClick={() => props.onSetRotationMode('standard')}
-                             className={`px-2 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all ${props.rotationMode === 'standard' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500'}`}
+                             className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${props.rotationMode === 'standard' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500'}`}
                           >
                               Standard
                           </button>
                           <button 
                              onClick={() => props.onSetRotationMode('balanced')}
-                             className={`px-2 py-1.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all ${props.rotationMode === 'balanced' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500'}`}
+                             className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${props.rotationMode === 'balanced' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500'}`}
                           >
                               Balanced
                           </button>
@@ -430,9 +522,9 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                       <Button 
                         size="sm" 
                         onClick={props.onBalanceTeams}
-                        className={`flex-1 md:flex-initial whitespace-nowrap min-w-[120px] ${props.rotationMode === 'balanced' ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'}`}
+                        className={`whitespace-nowrap ${props.rotationMode === 'balanced' ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'}`}
                       >
-                         {props.rotationMode === 'balanced' ? <><Shuffle size={14} /> Auto-Balance</> : <><RefreshCw size={14} /> Restore Order</>}
+                         {props.rotationMode === 'balanced' ? <><Shuffle size={14} /> Global Balance</> : <><RefreshCw size={14} /> Restore Order</>}
                       </Button>
                   </div>
               )}
@@ -440,18 +532,43 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
       </div>
 
       {activeTab === 'input' && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 pt-4 px-1 pb-10"> 
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 px-1 pb-10"> 
             <textarea className="w-full h-64 bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono text-sm resize-none custom-scrollbar"
                placeholder={t('teamManager.batchInputPlaceholder')} value={rawNames} onChange={e => setRawNames(e.target.value)} />
             <Button onClick={handleGenerate} className="w-full" size="lg"><Shuffle size={18} /> {t('teamManager.generateTeams')}</Button>
         </div>
       )}
 
+      {/* Profiles Tab */}
+      {activeTab === 'profiles' && (
+          <div className="pb-12 animate-in fade-in slide-in-from-bottom-2">
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {Array.from(props.profiles.values())
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(profile => (
+                       <ProfileCard 
+                          key={profile.id}
+                          profile={profile}
+                          onUpdate={(n, s) => props.upsertProfile && props.upsertProfile(n, s, profile.id)}
+                          onDelete={() => props.deleteProfile && props.deleteProfile(profile.id)}
+                          onAddToGame={(target) => props.onAddPlayer(profile.name, target)}
+                          status={getProfileStatus(profile.id)}
+                       />
+                  ))}
+               </div>
+               {props.profiles.size === 0 && (
+                   <div className="text-center py-20 text-slate-400 italic">
+                       No profiles saved yet. Sync players in the Roster tab to create profiles.
+                   </div>
+               )}
+          </div>
+      )}
+
       {/* Roster Layout - Vertical on Mobile, Grid on Desktop */}
       {activeTab === 'roster' && (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
           
-          <div className="flex flex-col md:grid md:grid-cols-2 xl:grid-cols-3 gap-6 items-start pb-24 pt-4 px-1 min-h-[60vh]">
+          <div className="flex flex-col md:grid md:grid-cols-2 xl:grid-cols-3 gap-6 items-start pb-24 px-1 min-h-[60vh]">
             
             <TeamColumn 
                 id="A" team={props.courtA} color="indigo"
@@ -467,11 +584,11 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                 onAddPlayer={(n) => props.onAddPlayer(n, 'B')} 
             />
             
-            {/* Queue Column - Wraps on medium screens */}
+            {/* Queue Column - Improved layout for narrow spaces */}
             <div className="w-full md:col-span-2 xl:col-span-1 bg-slate-100 dark:bg-white/[0.02] p-4 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col h-fit">
                 <h3 className="font-bold text-slate-500 dark:text-slate-400 mb-4 text-xs uppercase tracking-widest flex items-center gap-2 flex-none"><div className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-600"></div>{t('teamManager.queue')}</h3>
-                <div className="space-y-4">
-                  {props.queue.length === 0 && <div className="text-center py-8 text-slate-400 italic text-sm border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">{t('teamManager.queueEmpty')}</div>}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-4">
+                  {props.queue.length === 0 && <div className="text-center py-8 text-slate-400 italic text-sm border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl col-span-full">{t('teamManager.queueEmpty')}</div>}
                   {props.queue.map(team => (
                     <TeamColumn 
                         key={team.id} id={team.id} team={team} color="slate"

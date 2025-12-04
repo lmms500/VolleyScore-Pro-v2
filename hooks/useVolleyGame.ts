@@ -131,12 +131,10 @@ export const useVolleyGame = () => {
   const isDeuce = state.scoreA === state.scoreB && state.scoreA >= pointsToWinCurrentSet - 1;
   const isMatchActive = state.scoreA > 0 || state.scoreB > 0 || state.setsA > 0 || state.setsB > 0 || state.currentSet > 1;
 
-  // Optimized Actions: Using functional updates to keep callbacks stable
-  // This allows passing these functions to memoized components without breaking memoization
+  // Optimized Actions
   
   const addPoint = useCallback((team: TeamId) => {
     setState(prev => {
-      // GUARD: Match Over or Score Limit
       if (prev.isMatchOver) return prev;
       if (prev.scoreA > 200 || prev.scoreB > 200) return prev;
 
@@ -146,7 +144,6 @@ export const useVolleyGame = () => {
       const target = (prev.config.hasTieBreak && prev.currentSet === prev.config.maxSets) ? prev.config.tieBreakPoints : prev.config.pointsPerSet;
       let enteringSuddenDeath = false;
 
-      // Logic: Sudden Death Trigger
       if (prev.config.deuceType === 'sudden_death_3pt' && !prev.inSuddenDeath) {
          if (newScoreA === target - 1 && newScoreB === target - 1) {
              newScoreA = 0;
@@ -164,7 +161,6 @@ export const useVolleyGame = () => {
            else if (newScoreB >= target && newScoreB >= newScoreA + MIN_LEAD_TO_WIN) setWinner = 'B';
       }
       
-      // Set Won
       if (setWinner) {
           const newSetsA = setWinner === 'A' ? prev.setsA + 1 : prev.setsA;
           const newSetsB = setWinner === 'B' ? prev.setsB + 1 : prev.setsB;
@@ -173,7 +169,6 @@ export const useVolleyGame = () => {
           const matchWinner = newSetsA === setsNeeded ? 'A' : (newSetsB === setsNeeded ? 'B' : null);
           
           let previewReport = null;
-          // Note: accessing external ref/hook inside setState callback is safe for stable hooks
           if (matchWinner) {
               previewReport = queueManager.getRotationPreview(matchWinner);
           }
@@ -203,7 +198,7 @@ export const useVolleyGame = () => {
           actionLog: [...prev.actionLog, { type: 'POINT', team }] 
       };
     });
-  }, [queueManager]); // queueManager dependency is unavoidable but stable enough
+  }, [queueManager]);
 
   const subtractPoint = useCallback((team: TeamId) => {
     setState(prev => {
@@ -300,7 +295,6 @@ export const useVolleyGame = () => {
   }, []);
 
   const rotateTeams = useCallback(() => {
-    // Note: matchWinner needs to be read from state current value during execution
     if (!state.matchWinner) return;
     queueManager.rotateTeams(state.matchWinner);
     setState(prev => ({
@@ -329,6 +323,8 @@ export const useVolleyGame = () => {
     balanceTeams: queueManager.balanceTeams,
     savePlayerToProfile: queueManager.savePlayerToProfile,
     revertPlayerChanges: queueManager.revertPlayerChanges,
+    deleteProfile: queueManager.deleteProfile, // Passthrough
+    upsertProfile: queueManager.upsertProfile, // Passthrough
     rotationMode: queueManager.queueState.mode,
     profiles: queueManager.profiles,
 

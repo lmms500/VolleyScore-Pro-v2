@@ -1,6 +1,7 @@
 
 import { Player, Team } from '../types';
 import { PLAYER_LIMIT_ON_COURT, PLAYERS_PER_TEAM } from '../constants';
+import { v4 as uuidv4 } from 'uuid';
 
 // --- HELPER FUNCTIONS ---
 
@@ -10,32 +11,20 @@ export const calculateTeamStrength = (players: Player[]): string => {
   return (sum / players.length).toFixed(1);
 };
 
-const chunkPlayersIntoTeams = (players: Player[], startId: number): Team[] => {
-  const teams: Team[] = [];
-  let currentId = startId;
-  
-  for (let i = 0; i < players.length; i += PLAYERS_PER_TEAM) {
-    const chunk = players.slice(i, i + PLAYERS_PER_TEAM);
-    teams.push({
-      id: `Queue Team ${currentId}`,
-      name: `Queue Team ${currentId}`,
-      players: chunk
-    });
-    currentId++;
-  }
-  return teams;
-};
+const createTeamContainer = (id: string, name: string, players: Player[]): Team => ({
+  id,
+  name,
+  players
+});
 
 // --- ALGORITHMS ---
 
 /**
- * Global Snake Draft with Locks
+ * Global Balanced Draft (Prioritizing Full Teams)
  * 
- * 1. Respects `isFixed` players (they stay in their current team).
- * 2. Gathers all non-fixed players into a pool.
- * 3. Sorts pool by Skill Level (Desc).
- * 4. Distributes pool to fill A, then B, then Queue using a snake pattern (A, B, B, A) 
- *    to minimize skill gap between Court A and Court B.
+ * 1. Calcula quantos times COMPLETOS (6 jogadores) é possível formar.
+ * 2. Seleciona os melhores jogadores para preencher esses times e faz o Snake Draft entre eles.
+ * 3. Os jogadores excedentes (restante) vão para o último time, que ficará incompleto e com nível inferior.
  */
 export const balanceTeamsSnake = (
   allPlayers: Player[], 
@@ -43,85 +32,135 @@ export const balanceTeamsSnake = (
   currentCourtB: Team
 ): { courtA: Team, courtB: Team, queue: Team[] } => {
   
-  const courtLimit = PLAYER_LIMIT_ON_COURT;
+  const courtLimit = PLAYER_LIMIT_ON_COURT; // 6
 
-  // 1. Identify Fixed vs Pool
+  // 1. Separar Fixos e Pool
   const fixedInA = currentCourtA.players.filter(p => p.isFixed);
   const fixedInB = currentCourtB.players.filter(p => p.isFixed);
   
-  // Note: We currently don't support "Fixed in Queue", so anyone in queue or non-fixed in courts goes to pool
-  // But if we did, we would filter them here.
-  const pool = allPlayers.filter(p => !p.isFixed);
-
-  // 2. Sort Pool by Skill
-  pool.sort((a, b) => {
+  // Pool contém todos que NÃO são fixos, ordenados por Skill (Decrescente) -> Index (Crescente)
+  const pool = allPlayers.filter(p => !p.isFixed).sort((a, b) => {
     if (b.skillLevel !== a.skillLevel) return b.skillLevel - a.skillLevel;
-    // Secondary sort by Original Index to maintain some stability/seniority
     return a.originalIndex - b.originalIndex;
   });
 
-  // 3. Prepare Targets
-  const newTeamA = [...fixedInA];
-  const newTeamB = [...fixedInB];
-  const newQueue: Player[] = [];
+  const totalPlayers = fixedInA.length + fixedInB.length + pool.length;
 
-  // 4. Snake Draft Distribution
-  // We determine who needs players
+  // Quantos times COMPLETOS conseguimos formar?
+  const fullTeamsCount = Math.floor(totalPlayers / courtLimit);
   
-  // While we have players in the pool...
-  let poolIndex = 0;
+  // Total de times necessários (incluindo o incompleto)
+  const totalTeamsNeeded = Math.ceil(totalPlayers / courtLimit);
 
-  // Phase 1: Fill Courts
-  while (poolIndex < pool.length) {
-    const player = pool[poolIndex];
-    const needsA = newTeamA.length < courtLimit;
-    const needsB = newTeamB.length < courtLimit;
+  // Definimos quais "Buckets" (times) participarão do Draft de Elite.
+  // Se temos 20 jogadores -> 3 times completos. Buckets 0, 1, 2 participam do snake. Bucket 3 pega a sobra.
+  // Se temos < 6 jogadores, garantimos pelo menos 1 bucket ativo para preencher o time A.
+  const activeDraftBucketCount = Math.max(1, fullTeamsCount);
 
-    if (!needsA && !needsB) {
-      // Both courts full, remainder goes to queue
-      newQueue.push(player);
-      poolIndex++;
-      continue;
+  // Inicializar Buckets
+  const teamBuckets: Player[][] = Array.from({ length: totalTeamsNeeded }, () => []);
+  teamBuckets[0] = [...fixedInA];
+  if (totalTeamsNeeded > 1) teamBuckets[1] = [...fixedInB];
+
+  // Calcular quantos jogadores do Pool cabem nos Buckets Ativos (Times Completos)
+  let slotsInActiveBuckets = 0;
+  for (let i = 0; i < activeDraftBucketCount; i++) {
+      if (!teamBuckets[i]) teamBuckets[i] = [];
+      const currentCount = teamBuckets[i].length;
+      slotsInActiveBuckets += Math.max(0, courtLimit - currentCount);
+  }
+
+  // Dividir o Pool: Elite (para times completos) vs Overflow (para o time incompleto)
+  const draftPool = pool.slice(0, slotsInActiveBuckets);
+  const overflowPool = pool.slice(slotsInActiveBuckets);
+
+  // 2. Distribuição Snake APENAS nos Times Completos (Elite)
+  let asc = true;
+  let teamIdx = 0;
+
+  for (const player of draftPool) {
+    let placed = false;
+    let attempts = 0;
+
+    while (!placed && attempts < activeDraftBucketCount * 2) {
+        if (!teamBuckets[teamIdx]) teamBuckets[teamIdx] = [];
+
+        if (teamBuckets[teamIdx].length < courtLimit) {
+            teamBuckets[teamIdx].push(player);
+            placed = true;
+        } else {
+            // Se o bucket atual está cheio (por fixos), move o ponteiro
+            if (asc) {
+                teamIdx++;
+                if (teamIdx >= activeDraftBucketCount) { teamIdx = activeDraftBucketCount - 1; asc = false; }
+            } else {
+                teamIdx--;
+                if (teamIdx < 0) { teamIdx = 0; asc = true; }
+            }
+        }
+        attempts++;
     }
-
-    // Smart Selection Logic (Snake-ish)
-    // If both need players, compare current count or strength. 
-    // Simple heuristic: Alternate filling to keep counts even, favoring A then B.
     
-    if (needsA && !needsB) {
-      newTeamA.push(player);
-    } else if (!needsA && needsB) {
-      newTeamB.push(player);
-    } else {
-      // Both need players. 
-      // Snake logic based on current filling cycle relative to empty slots might be complex.
-      // Simple toggle based on how many "non-fixed" we have added?
-      // Let's use total size parity.
-      if (newTeamA.length <= newTeamB.length) {
-         newTeamA.push(player);
-      } else {
-         newTeamB.push(player);
-      }
+    // Avança o ponteiro Snake
+    if (placed) {
+        if (asc) {
+            teamIdx++;
+            if (teamIdx >= activeDraftBucketCount) {
+                teamIdx = activeDraftBucketCount - 1;
+                asc = false;
+            }
+        } else {
+            teamIdx--;
+            if (teamIdx < 0) {
+                teamIdx = 0;
+                asc = true;
+            }
+        }
     }
-    poolIndex++;
+  }
+
+  // 3. Distribuição do Overflow (Sobra) nos times restantes
+  // Começa preenchendo o primeiro bucket que não é um "Full Team" (ou se todos forem full, não faz nada)
+  let overflowBucketIdx = activeDraftBucketCount;
+
+  for (const player of overflowPool) {
+      // Garante que o bucket existe
+      if (!teamBuckets[overflowBucketIdx]) teamBuckets[overflowBucketIdx] = [];
+
+      // Se por acaso o bucket de overflow encher (edge case), vai para o próximo
+      if (teamBuckets[overflowBucketIdx].length >= courtLimit) {
+          overflowBucketIdx++;
+          if (!teamBuckets[overflowBucketIdx]) teamBuckets[overflowBucketIdx] = [];
+      }
+      
+      teamBuckets[overflowBucketIdx].push(player);
+  }
+
+  // 4. Reconstrói os Objetos de Time
+  const newCourtA = { ...currentCourtA, players: teamBuckets[0] || [] };
+  const newCourtB = { ...currentCourtB, players: teamBuckets[1] || [] };
+  
+  const newQueue: Team[] = [];
+  for (let i = 2; i < teamBuckets.length; i++) {
+      if (teamBuckets[i] && teamBuckets[i].length > 0) {
+          newQueue.push(createTeamContainer(
+              uuidv4(), // Novo ID para evitar conflitos de chave
+              `Team ${i + 1}`,
+              teamBuckets[i]
+          ));
+      }
   }
 
   return {
-    courtA: { ...currentCourtA, players: newTeamA },
-    courtB: { ...currentCourtB, players: newTeamB },
-    queue: chunkPlayersIntoTeams(newQueue, 1)
+    courtA: newCourtA,
+    courtB: newCourtB,
+    queue: newQueue
   };
 };
 
 /**
- * Standard Strategy (Restore Order)
- * Resets strictly by `originalIndex`.
- * Ignores `isFixed` property (Reset overrides locks usually, or we could preserve them, 
- * but "Restore Order" usually implies a hard reset to arrival list).
- * 
- * Update: To be safe/UX friendly, if someone is Fixed, we generally want them to STAY fixed visually,
- * but "Restore Order" implies strictly chronological. We will respect locks IF they are in the valid range?
- * No, "Restore Order" is usually an "Emergency Reset". We will ignore locks to ensure true original state.
+ * Standard Distribution
+ * Respeita apenas a ordem de chegada (Original Index).
  */
 export const distributeStandard = (
     allPlayers: Player[], 
@@ -134,15 +173,20 @@ export const distributeStandard = (
 
     const teamAPlayers = sorted.slice(0, PLAYER_LIMIT_ON_COURT);
     const teamBPlayers = sorted.slice(PLAYER_LIMIT_ON_COURT, PLAYER_LIMIT_ON_COURT * 2);
-    const queuePlayers = sorted.slice(PLAYER_LIMIT_ON_COURT * 2);
-  
-    // We strip isFixed status on a hard reset? 
-    // Optional: map(p => ({...p, isFixed: false})) if we want to clear locks.
-    // For now, we keep the flags but move the players.
+    
+    const remaining = sorted.slice(PLAYER_LIMIT_ON_COURT * 2);
+    const queueTeams: Team[] = [];
+    
+    let qIdx = 1;
+    for (let i = 0; i < remaining.length; i += PLAYERS_PER_TEAM) {
+        const chunk = remaining.slice(i, i + PLAYERS_PER_TEAM);
+        queueTeams.push(createTeamContainer(uuidv4(), `Team ${qIdx + 2}`, chunk));
+        qIdx++;
+    }
   
     return {
       courtA: { ...currentCourtA, players: teamAPlayers },
       courtB: { ...currentCourtB, players: teamBPlayers },
-      queue: chunkPlayersIntoTeams(queuePlayers, 1)
+      queue: queueTeams
     };
   };

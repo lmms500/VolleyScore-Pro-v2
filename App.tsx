@@ -53,7 +53,9 @@ function App() {
     setRotationMode,
     balanceTeams,
     savePlayerToProfile,
-    revertPlayerChanges
+    revertPlayerChanges,
+    upsertProfile,
+    deleteProfile
   } = game;
 
   const { t } = useTranslation();
@@ -433,6 +435,8 @@ function App() {
                 onCommitDeletions={commitDeletions}
                 deletedCount={game.deletedCount}
                 profiles={game.profiles}
+                upsertProfile={upsertProfile} // Pass down
+                deleteProfile={deleteProfile} // Pass down
               />
             )}
 

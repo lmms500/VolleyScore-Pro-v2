@@ -270,7 +270,11 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
       };
 
       setQueueState(prev => {
-          const newPlayer = createPlayer(name, getMaxIndex(prev) + 1);
+          // If we add by name, check if profile exists to link it immediately
+          const safeName = sanitizeInput(name);
+          const profile = findProfileByName(safeName);
+          
+          const newPlayer = createPlayer(safeName, getMaxIndex(prev) + 1, profile);
           
           if (target === 'A' && prev.courtA.players.length < PLAYER_LIMIT_ON_COURT) {
               return { ...prev, courtA: { ...prev.courtA, players: [...prev.courtA.players, newPlayer] } };
@@ -430,7 +434,8 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     balanceTeams,
     savePlayerToProfile,
     revertPlayerChanges,
-    deleteProfile, 
+    deleteProfile,
+    upsertProfile, // Added this export
     profiles
   };
 };

@@ -19,12 +19,28 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  
   const { scale, registerElement } = useLayoutManager();
   const { ref, width, height } = useElementSize<HTMLDivElement>();
 
   useEffect(() => {
     registerElement('controls', width, height);
   }, [width, height, registerElement]);
+
+  // Auto-minimize Logic
+  useEffect(() => {
+    // If already minimized or user is interacting (hovering), do nothing
+    if (isMinimized || isHovering) return;
+
+    const AUTO_HIDE_DELAY = 4000; // 4 seconds
+
+    const timer = setTimeout(() => {
+      setIsMinimized(true);
+    }, AUTO_HIDE_DELAY);
+
+    return () => clearTimeout(timer);
+  }, [isMinimized, isHovering]);
 
   // System Look Styles
   const glassContainer = "bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/40";
@@ -37,6 +53,8 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
       ref={ref}
       style={{ transform: `translateX(-50%) scale(${scale})` }}
       className="fixed bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] left-1/2 z-50 origin-bottom flex flex-col items-center"
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
     >
       <AnimatePresence mode="wait" initial={false}>
         {!isMinimized ? (

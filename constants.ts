@@ -1,3 +1,4 @@
+
 import { GameConfig } from './types';
 
 export const DEFAULT_CONFIG: GameConfig = {
@@ -5,7 +6,8 @@ export const DEFAULT_CONFIG: GameConfig = {
   pointsPerSet: 25, // Sets 1-4 are 25 points
   hasTieBreak: true,
   tieBreakPoints: 15, // 5th set is 15 points
-  deuceType: 'standard'
+  deuceType: 'standard',
+  rotationMode: 'standard'
 };
 
 export const MIN_LEAD_TO_WIN = 2;

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -44,10 +45,15 @@ function App() {
     movePlayer, 
     updateTeamName, 
     updatePlayerName,
+    updatePlayerSkill,
     addPlayer, 
     undoRemovePlayer, 
     commitDeletions, 
-    rotateTeams 
+    rotateTeams,
+    setRotationMode,
+    balanceTeams,
+    savePlayerToProfile,
+    revertPlayerChanges
   } = game;
 
   const { t } = useTranslation();
@@ -409,17 +415,24 @@ function App() {
                 courtA={state.teamARoster}
                 courtB={state.teamBRoster}
                 queue={state.queue}
+                rotationMode={game.rotationMode}
+                onSetRotationMode={setRotationMode}
+                onBalanceTeams={balanceTeams}
                 onGenerate={generateTeams}
                 onToggleFixed={togglePlayerFixed}
                 onRemove={removePlayer}
                 onMove={movePlayer}
                 onUpdateTeamName={updateTeamName}
                 onUpdatePlayerName={updatePlayerName}
+                onUpdatePlayerSkill={updatePlayerSkill}
+                onSaveProfile={savePlayerToProfile}
+                onRevertProfile={revertPlayerChanges}
                 onAddPlayer={addPlayer}
                 onUndoRemove={undoRemovePlayer}
                 canUndoRemove={game.hasDeletedPlayers}
                 onCommitDeletions={commitDeletions}
                 deletedCount={game.deletedCount}
+                profiles={game.profiles}
               />
             )}
 

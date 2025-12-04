@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -42,9 +40,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     onClose();
   };
 
-  const setPresetFIVB = () => setLocalConfig({ maxSets: 5, pointsPerSet: 25, hasTieBreak: true, tieBreakPoints: 15, deuceType: 'standard' });
-  const setPresetBeach = () => setLocalConfig({ maxSets: 3, pointsPerSet: 21, hasTieBreak: true, tieBreakPoints: 15, deuceType: 'standard' });
-  const setPresetSegunda = () => setLocalConfig({ maxSets: 1, pointsPerSet: 15, hasTieBreak: false, tieBreakPoints: 15, deuceType: 'sudden_death_3pt' });
+  const setPresetFIVB = () => setLocalConfig(prev => ({ ...prev, maxSets: 5, pointsPerSet: 25, hasTieBreak: true, tieBreakPoints: 15, deuceType: 'standard' }));
+  const setPresetBeach = () => setLocalConfig(prev => ({ ...prev, maxSets: 3, pointsPerSet: 21, hasTieBreak: true, tieBreakPoints: 15, deuceType: 'standard' }));
+  const setPresetSegunda = () => setLocalConfig(prev => ({ ...prev, maxSets: 1, pointsPerSet: 15, hasTieBreak: false, tieBreakPoints: 15, deuceType: 'sudden_death_3pt' }));
 
   const isFIVB = localConfig.maxSets === 5 && localConfig.pointsPerSet === 25 && localConfig.hasTieBreak === true && localConfig.deuceType === 'standard';
   const isBeach = localConfig.maxSets === 3 && localConfig.pointsPerSet === 21 && localConfig.hasTieBreak === true && localConfig.deuceType === 'standard';

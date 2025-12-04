@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { GameState, TeamId, SetHistory, GameConfig, Team, Player, RotationReport } from '../types';
 import { DEFAULT_CONFIG, MIN_LEAD_TO_WIN, SETS_TO_WIN_MATCH } from '../constants';
@@ -315,6 +316,7 @@ export const useVolleyGame = () => {
     rotateTeams,
     updateTeamName: queueManager.updateTeamName,
     updatePlayerName: queueManager.updatePlayerName,
+    updatePlayerSkill: queueManager.updatePlayerSkill,
     movePlayer: queueManager.movePlayer,
     removePlayer: queueManager.removePlayer,
     addPlayer: queueManager.addPlayer,
@@ -323,7 +325,13 @@ export const useVolleyGame = () => {
     togglePlayerFixed: queueManager.togglePlayerFixed,
     commitDeletions: queueManager.commitDeletions,
     deletedCount: queueManager.deletedCount,
-    
+    setRotationMode: queueManager.setRotationMode,
+    balanceTeams: queueManager.balanceTeams,
+    savePlayerToProfile: queueManager.savePlayerToProfile,
+    revertPlayerChanges: queueManager.revertPlayerChanges,
+    rotationMode: queueManager.queueState.mode,
+    profiles: queueManager.profiles,
+
     isTieBreak,
     isMatchPointA: statusA.isMatchPoint,
     isSetPointA: statusA.isSetPoint,

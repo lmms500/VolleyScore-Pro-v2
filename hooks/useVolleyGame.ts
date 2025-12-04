@@ -1,3 +1,5 @@
+
+
 import { useState, useCallback, useEffect } from 'react';
 import { GameState, TeamId, SetHistory, GameConfig, Team, Player, RotationReport } from '../types';
 import { DEFAULT_CONFIG, MIN_LEAD_TO_WIN, SETS_TO_WIN_MATCH } from '../constants';
@@ -300,10 +302,6 @@ export const useVolleyGame = () => {
 
   const rotateTeams = useCallback(() => {
     // Note: matchWinner needs to be read from state current value during execution
-    // Since we are outside setState, we need 'state' dependency, OR refactor logic.
-    // However, rotateTeams is called ONCE at match end, so stability is less critical than addPoint.
-    // To make it purely stable, we can move logic inside setState, but side effects (queueManager.rotateTeams) need care.
-    // Better approach for this one: allow state read, it triggers rarely.
     if (!state.matchWinner) return;
     queueManager.rotateTeams(state.matchWinner);
     setState(prev => ({
@@ -320,6 +318,7 @@ export const useVolleyGame = () => {
     rotateTeams,
     updateTeamName: queueManager.updateTeamName,
     updatePlayerName: queueManager.updatePlayerName,
+    updatePlayerSkill: queueManager.updatePlayerSkill,
     movePlayer: queueManager.movePlayer,
     removePlayer: queueManager.removePlayer,
     addPlayer: queueManager.addPlayer,

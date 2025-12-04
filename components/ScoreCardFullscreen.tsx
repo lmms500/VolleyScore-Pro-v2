@@ -1,10 +1,10 @@
+
 import React, { useState, memo, useMemo, useRef } from 'react';
 import { TeamId } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { ScoreTicker } from './ui/ScoreTicker';
 import { motion } from 'framer-motion';
 import { layoutTransition, pulseHeartbeat } from '../utils/animations';
-import { TrackingGlow } from './ui/TrackingGlow';
 
 interface ScoreCardFullscreenProps {
   teamId: TeamId;
@@ -25,13 +25,78 @@ interface ScoreCardFullscreenProps {
   alignment?: 'left' | 'right';
 }
 
-const ScoreNumberDisplay = memo(({ score, theme, textEffectClass, isPressed, scoreRefCallback, numberRef, isCritical }: any) => {
+const ScoreNumberDisplay = memo(({ 
+    score, 
+    theme, 
+    textEffectClass, 
+    isPressed, 
+    scoreRefCallback, 
+    numberRef, 
+    isCritical,
+    colorTheme,
+    isServing,
+    isMatchPoint
+}: any) => {
+
+    const glowTheme = {
+        indigo: { haloColor: 'bg-indigo-500' },
+        rose: { haloColor: 'bg-rose-600' }
+    }[colorTheme as 'indigo' | 'rose'];
+
+    const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : glowTheme.haloColor;
+
     return (
-        <div className="relative inline-flex items-center justify-center pointer-events-none">
-            {/* Score Ticker Wrapper - Targeted by TrackingGlow */}
+        <div 
+            className="relative grid place-items-center" 
+            style={{ 
+                lineHeight: 1,
+                // Ensures the container takes up space of the largest item (text)
+                // and centers everything in that cell
+                gridTemplateAreas: '"stack"' 
+            }}
+        >
+            {/* 
+                INTEGRATED GLOW (Fix: Grid Stack Positioning) 
+                Both elements occupy grid-area "stack", forcing them to overlap perfectly.
+                justify-self-center ensures the glow is in the middle of the text's box.
+            */}
+            <motion.div
+                className={`
+                    rounded-full aspect-square pointer-events-none
+                    mix-blend-screen blur-[60px] md:blur-[100px] z-0
+                    ${haloColorClass}
+                    justify-self-center self-center
+                `}
+                style={{ 
+                    gridArea: 'stack',
+                    width: '1.5em', 
+                    height: '1.5em' 
+                }}
+                animate={
+                    isPressed 
+                    ? { scale: 1.1, opacity: 0.8 } 
+                    : isCritical 
+                        ? { 
+                            scale: [1, 1.35, 1],
+                            opacity: isMatchPoint ? [0.6, 1, 0.6] : [0.4, 0.8, 0.4],
+                        }
+                        : { 
+                            scale: 1, 
+                            opacity: isServing ? 0.4 : 0 
+                        }
+                }
+                transition={
+                    isCritical 
+                    ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
+                    : { duration: 0.3, ease: "easeOut" }
+                }
+            />
+
+            {/* Score Ticker Wrapper */}
             <motion.div 
                 ref={numberRef} 
                 className="relative z-10 flex items-center justify-center will-change-transform"
+                style={{ gridArea: 'stack' }}
                 variants={pulseHeartbeat}
                 animate={isCritical ? "pulse" : "idle"}
             >
@@ -63,7 +128,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
   const [isPressed, setIsPressed] = useState(false);
   const numberRef = useRef<HTMLDivElement>(null);
 
-  // Memoized handlers to avoid re-creating gesture config on every render
   const handleStart = React.useCallback(() => {
     setIsPressed(true);
     onInteractionStart?.();
@@ -110,52 +174,44 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
       : 'landscape:translate-x-[6vw]';
 
   return (
-    <>
-      <motion.div 
-          layout
-          transition={layoutTransition}
-          className={`
-              fixed z-10 flex flex-col justify-center items-center select-none overflow-visible
-              ${positionClasses}
-          `}
-          style={{ touchAction: 'none' }}
-          {...gestureHandlers}
-      >
-          {/* Inner Content Wrapper */}
-          <div 
-              className={`
-                  flex items-center justify-center w-full h-full
-                  transition-transform duration-150
-                  ${isPressed ? 'scale-95' : 'scale-100'}
-                  will-change-transform
-              `}
-              style={{ 
-                  fontSize: 'clamp(8rem, 28vmax, 22rem)',
-                  lineHeight: 0.8
-              }}
-          >
-              <div className={`transform transition-transform duration-500 ${offsetClass}`}>
-                  <ScoreNumberDisplay 
-                      score={score} 
-                      theme={theme} 
-                      textEffectClass={textEffectClass} 
-                      isPressed={isPressed} 
-                      scoreRefCallback={scoreRefCallback} 
-                      numberRef={numberRef}
-                      isCritical={isCritical}
-                  />
-              </div>
-          </div>
-      </motion.div>
-
-      <TrackingGlow 
-          targetRef={numberRef}
-          colorTheme={colorTheme}
-          isServing={!!isServing}
-          isCritical={isCritical}
-          isMatchPoint={isMatchPoint}
-          isPressed={isPressed}
-      />
-    </>
+    <motion.div 
+        layout
+        transition={layoutTransition}
+        className={`
+            fixed z-10 flex flex-col justify-center items-center select-none overflow-visible
+            ${positionClasses}
+        `}
+        style={{ touchAction: 'none' }}
+        {...gestureHandlers}
+    >
+        {/* Inner Content Wrapper */}
+        <div 
+            className={`
+                flex items-center justify-center w-full h-full
+                transition-transform duration-150
+                ${isPressed ? 'scale-95' : 'scale-100'}
+                will-change-transform
+            `}
+            style={{ 
+                fontSize: 'clamp(8rem, 28vmax, 22rem)',
+                lineHeight: 0.8
+            }}
+        >
+            <div className={`transform transition-transform duration-500 ${offsetClass}`}>
+                <ScoreNumberDisplay 
+                    score={score} 
+                    theme={theme} 
+                    textEffectClass={textEffectClass} 
+                    isPressed={isPressed} 
+                    scoreRefCallback={scoreRefCallback} 
+                    numberRef={numberRef}
+                    isCritical={isCritical}
+                    colorTheme={colorTheme}
+                    isServing={!!isServing}
+                    isMatchPoint={isMatchPoint}
+                />
+            </div>
+        </div>
+    </motion.div>
   );
 });

@@ -1,4 +1,5 @@
 
+
 import { useState, useCallback } from 'react';
 import { Player, Team, TeamId, RotationReport } from '../types';
 import { PLAYER_LIMIT_ON_COURT, PLAYERS_PER_TEAM } from '../constants';
@@ -41,11 +42,12 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     players
   });
 
-  const createPlayer = (name: string): Player => ({
+  const createPlayer = (name: string, skillLevel: number = 5): Player => ({
     id: generateId(),
     name: sanitizeInput(name),
     isFixed: false,
-    fixedSide: null
+    fixedSide: null,
+    skillLevel: Math.max(1, Math.min(10, skillLevel))
   });
 
   const generateTeams = useCallback((namesList: string[]) => {
@@ -103,6 +105,27 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     setQueueState(prev => {
         const updatePlayerInList = (players: Player[]) => 
             players.map(p => p.id === playerId ? { ...p, name: safeName } : p);
+
+        if (prev.courtA.players.some(p => p.id === playerId)) {
+            return { ...prev, courtA: { ...prev.courtA, players: updatePlayerInList(prev.courtA.players) }};
+        }
+        if (prev.courtB.players.some(p => p.id === playerId)) {
+            return { ...prev, courtB: { ...prev.courtB, players: updatePlayerInList(prev.courtB.players) }};
+        }
+        const newQueue = prev.queue.map(team => ({
+            ...team,
+            players: updatePlayerInList(team.players)
+        }));
+        
+        return { ...prev, queue: newQueue };
+    });
+  }, []);
+
+  const updatePlayerSkill = useCallback((playerId: string, skill: number) => {
+    setQueueState(prev => {
+        const safeSkill = Math.max(1, Math.min(10, skill));
+        const updatePlayerInList = (players: Player[]) => 
+            players.map(p => p.id === playerId ? { ...p, skillLevel: safeSkill } : p);
 
         if (prev.courtA.players.some(p => p.id === playerId)) {
             return { ...prev, courtA: { ...prev.courtA, players: updatePlayerInList(prev.courtA.players) }};
@@ -253,7 +276,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     });
   }, [getRotationPreview]);
 
-  const addPlayer = useCallback((name: string, target: 'A' | 'B' | 'Queue') => {
+  const addPlayer = useCallback((name: string, target: 'A' | 'B' | 'Queue', skill: number = 5) => {
     const safeName = sanitizeInput(name);
     if (!safeName) return;
 
@@ -261,7 +284,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
       if (target === 'A' && prev.courtA.players.length >= PLAYER_LIMIT_ON_COURT) return prev;
       if (target === 'B' && prev.courtB.players.length >= PLAYER_LIMIT_ON_COURT) return prev;
       
-      const newPlayer = createPlayer(safeName);
+      const newPlayer = createPlayer(safeName, skill);
       
       if (target === 'A') {
         return { ...prev, courtA: { ...prev.courtA, players: [...prev.courtA.players, newPlayer] } };
@@ -371,7 +394,17 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
   }, []);
 
   const commitDeletions = useCallback(() => { setDeletedHistory([]); }, []);
-  const updateRosters = useCallback((cA: Player[], cB: Player[], q: Player[]) => { }, []);
+  
+  // New: Batch update for Balancing
+  const updateRosters = useCallback((courtAPlayers: Player[], courtBPlayers: Player[], queueTeams: Team[]) => {
+      setQueueState(prev => ({
+          ...prev,
+          courtA: { ...prev.courtA, players: courtAPlayers },
+          courtB: { ...prev.courtB, players: courtBPlayers },
+          // Only update queue if queueTeams is provided and not empty, otherwise keep existing
+          queue: queueTeams.length > 0 ? queueTeams : prev.queue
+      }));
+  }, []);
   
   const movePlayer = useCallback((playerId: string, fromId: string, toId: string) => {
     setQueueState(prev => {
@@ -460,6 +493,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     generateTeams,
     updateTeamName,
     updatePlayerName,
+    updatePlayerSkill,
     rotateTeams,
     getRotationPreview,
     togglePlayerFixed,

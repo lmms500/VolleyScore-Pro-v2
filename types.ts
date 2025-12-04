@@ -17,6 +17,7 @@ export interface Player {
   name: string;
   isFixed: boolean;
   fixedSide?: string | null; // Changed to string to allow Queue Team IDs
+  skillLevel: number; // 1 to 10
 }
 
 export interface Team {

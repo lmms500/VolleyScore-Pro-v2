@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -46,8 +44,6 @@ function App() {
     movePlayer, 
     updateTeamName, 
     updatePlayerName,
-    updatePlayerSkill,
-    updateRosters,
     addPlayer, 
     undoRemovePlayer, 
     commitDeletions, 
@@ -419,8 +415,6 @@ function App() {
                 onMove={movePlayer}
                 onUpdateTeamName={updateTeamName}
                 onUpdatePlayerName={updatePlayerName}
-                onUpdatePlayerSkill={updatePlayerSkill}
-                onUpdateRosters={updateRosters}
                 onAddPlayer={addPlayer}
                 onUndoRemove={undoRemovePlayer}
                 canUndoRemove={game.hasDeletedPlayers}

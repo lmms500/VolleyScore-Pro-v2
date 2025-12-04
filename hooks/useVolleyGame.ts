@@ -1,5 +1,3 @@
-
-
 import { useState, useCallback, useEffect } from 'react';
 import { GameState, TeamId, SetHistory, GameConfig, Team, Player, RotationReport } from '../types';
 import { DEFAULT_CONFIG, MIN_LEAD_TO_WIN, SETS_TO_WIN_MATCH } from '../constants';
@@ -314,11 +312,9 @@ export const useVolleyGame = () => {
     canUndo: state.actionLog.length > 0, 
     isMatchActive,
     generateTeams: queueManager.generateTeams,
-    updateRosters: queueManager.updateRosters,
     rotateTeams,
     updateTeamName: queueManager.updateTeamName,
     updatePlayerName: queueManager.updatePlayerName,
-    updatePlayerSkill: queueManager.updatePlayerSkill,
     movePlayer: queueManager.movePlayer,
     removePlayer: queueManager.removePlayer,
     addPlayer: queueManager.addPlayer,

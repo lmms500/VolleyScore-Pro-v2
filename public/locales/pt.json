@@ -101,6 +101,30 @@
       "installApp": "Instalar aplicativo"
     }
   },
+  "tutorial": {
+    "header": "Bem-vindo",
+    "next": "Próximo",
+    "welcome": {
+      "title": "Bem-vindo ao VolleyScore Pro",
+      "desc": "O placar profissional definitivo para entusiastas de vôlei e árbitros."
+    },
+    "gestures": {
+      "title": "Gestos Inteligentes",
+      "desc": "Toque no placar para ADICIONAR ponto. Deslize para baixo para SUBTRAIR."
+    },
+    "features": {
+      "title": "Controle Total",
+      "desc": "Gerencie rotações, substituições, tempos e histórico na barra de controle."
+    },
+    "install": {
+      "title": "Instalar App",
+      "installed": "Tudo pronto! O app está instalado e pronto para uso offline.",
+      "descAndroid": "Instale o app para melhor experiência. Funciona offline e tela cheia.",
+      "descIOS": "Para instalar no iOS, siga as instruções abaixo:",
+      "descAndroidShort": "Instale para uso offline e tela cheia.",
+      "descIOSShort": "Adicione à Tela de Início."
+    }
+  },
   "confirm": {
     "cancel": "Cancelar",
     "reset": {

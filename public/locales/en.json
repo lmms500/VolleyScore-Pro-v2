@@ -101,6 +101,30 @@
       "installApp": "Install App"
     }
   },
+  "tutorial": {
+    "header": "Welcome",
+    "next": "Next",
+    "welcome": {
+      "title": "Welcome to VolleyScore Pro",
+      "desc": "The ultimate professional scoreboard for volleyball enthusiasts and referees."
+    },
+    "gestures": {
+      "title": "Smart Gestures",
+      "desc": "Tap anywhere on a score to ADD a point. Swipe down to SUBTRACT."
+    },
+    "features": {
+      "title": "Full Control",
+      "desc": "Manage rotations, subs, timeouts, and match history from the control bar."
+    },
+    "install": {
+      "title": "Install App",
+      "installed": "You are all set! The app is installed and ready for offline use.",
+      "descAndroid": "Install the app for the best experience. Works offline and fullscreen.",
+      "descIOS": "To install on iOS, follow the instructions below:",
+      "descAndroidShort": "Install for offline use & fullscreen.",
+      "descIOSShort": "Add to Home Screen for fullscreen."
+    }
+  },
   "confirm": {
     "cancel": "Cancel",
     "reset": {

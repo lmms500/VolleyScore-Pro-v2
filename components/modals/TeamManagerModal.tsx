@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -94,7 +95,7 @@ const ColorPicker = memo(({
     
     return (
         <div 
-            className="flex flex-col gap-2 relative z-50 touch-pan-x" 
+            className="flex flex-col gap-2 relative z-20 touch-pan-x" 
             onPointerDown={(e) => e.stopPropagation()} // Prevents DND drag activation
         >
             <div className="flex items-center gap-2 overflow-x-auto py-3 px-2 no-scrollbar mask-linear-fade-right">
@@ -720,7 +721,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   return (
     <Modal isOpen={props.isOpen} onClose={props.onClose} title={t('teamManager.title')} maxWidth="max-w-[95vw] md:max-w-7xl">
       
-      <div className="sticky -top-6 z-50 bg-slate-100 dark:bg-[#0a0a0a] border-b border-black/5 dark:border-white/5 -mx-6 px-6 py-4 shadow-sm mb-4">
+      <div className="sticky -top-6 z-[100] bg-slate-100 dark:bg-[#0a0a0a] border-b border-black/5 dark:border-white/5 -mx-6 px-6 py-4 shadow-sm mb-4">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               
               <div className="flex flex-wrap p-1 bg-slate-200/50 dark:bg-white/5 rounded-xl gap-1">

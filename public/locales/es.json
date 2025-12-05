@@ -101,6 +101,30 @@
       "installApp": "Instalar aplicación"
     }
   },
+  "tutorial": {
+    "header": "Bienvenido",
+    "next": "Siguiente",
+    "welcome": {
+      "title": "Bienvenido a VolleyScore Pro",
+      "desc": "El marcador profesional definitivo para entusiastas del vóley y árbitros."
+    },
+    "gestures": {
+      "title": "Gestos Inteligentes",
+      "desc": "Toca en el marcador para AÑADIR punto. Desliza hacia abajo para RESTAR."
+    },
+    "features": {
+      "title": "Control Total",
+      "desc": "Gestiona rotaciones, sustituciones, tiempos y el historial desde la barra de control."
+    },
+    "install": {
+      "title": "Instalar App",
+      "installed": "¡Todo listo! La app está instalada y lista para uso sin conexión.",
+      "descAndroid": "Instala la app para la mejor experiencia. Funciona sin conexión y pantalla completa.",
+      "descIOS": "Para instalar en iOS, sigue las instrucciones a continuación:",
+      "descAndroidShort": "Instala para uso offline y pantalla completa.",
+      "descIOSShort": "Añadir a Pantalla de Inicio."
+    }
+  },
   "confirm": {
     "cancel": "Cancelar",
     "reset": {

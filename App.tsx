@@ -2,6 +2,7 @@
 import React, { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
+import { useTutorial } from './hooks/useTutorial';
 import { ScoreCardNormal } from './components/ScoreCardNormal';
 import { ScoreCardFullscreen } from './components/ScoreCardFullscreen';
 import { HistoryBar } from './components/HistoryBar';
@@ -19,6 +20,7 @@ import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SuddenDeathOverlay } from './components/ui/CriticalPointAnimation';
 import { BackgroundGlow } from './components/ui/BackgroundGlow';
 import { ReloadPrompt } from './components/ui/ReloadPrompt';
+import { InstallReminder } from './components/ui/InstallReminder';
 import { motion, LayoutGroup, AnimatePresence } from 'framer-motion';
 import { useHistoryStore } from './stores/historyStore';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,6 +32,7 @@ const TeamManagerModal = lazy(() => import('./components/modals/TeamManagerModal
 const MatchOverModal = lazy(() => import('./components/modals/MatchOverModal').then(module => ({ default: module.MatchOverModal })));
 const ConfirmationModal = lazy(() => import('./components/modals/ConfirmationModal').then(module => ({ default: module.ConfirmationModal })));
 const HistoryModal = lazy(() => import('./components/modals/HistoryModal').then(module => ({ default: module.HistoryModal })));
+const TutorialModal = lazy(() => import('./components/modals/TutorialModal').then(module => ({ default: module.TutorialModal })));
 
 function App() {
   const game = useVolleyGame();
@@ -50,7 +53,7 @@ function App() {
     movePlayer, 
     updateTeamName, 
     updateTeamColor,
-    updatePlayerName,
+    updatePlayerName, 
     updatePlayerNumber,
     updatePlayerSkill,
     addPlayer, 
@@ -69,6 +72,7 @@ function App() {
   const historyStore = useHistoryStore();
   
   const pwa = usePWAInstallPrompt();
+  const tutorial = useTutorial(pwa.isStandalone);
   
   const [showSettings, setShowSettings] = useState(false);
   const [showManager, setShowManager] = useState(false);
@@ -295,6 +299,15 @@ function App() {
           
           {/* PWA Update & Offline Notifier */}
           <ReloadPrompt />
+          
+          {/* Install Reminder (Periodic) */}
+          <InstallReminder 
+             isVisible={tutorial.showReminder}
+             onInstall={pwa.promptInstall}
+             onDismiss={tutorial.dismissReminder}
+             canInstall={pwa.isInstallable}
+             isIOS={pwa.isIOS}
+          />
 
           {/* Beach Mode Switch Alert Overlay */}
           <AnimatePresence>
@@ -542,6 +555,18 @@ function App() {
           />
 
           <Suspense fallback={null}>
+            {/* Tutorial Modal */}
+            {tutorial.showTutorial && (
+              <TutorialModal 
+                isOpen={tutorial.showTutorial}
+                onClose={tutorial.completeTutorial}
+                onInstall={pwa.promptInstall}
+                canInstall={pwa.isInstallable}
+                isIOS={pwa.isIOS}
+                isStandalone={pwa.isStandalone}
+              />
+            )}
+
             {showSettings && (
               <SettingsModal 
                 isOpen={showSettings} 

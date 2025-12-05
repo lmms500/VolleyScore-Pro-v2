@@ -384,7 +384,8 @@ const PlayerCard = memo(({
     disabled: player.isFixed,
   });
 
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, touchAction: 'none' };
+  // REMOVED touchAction: 'none' to allow vertical scrolling on the card body
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   const isFixed = player.isFixed;
   
   const profile = player.profileId ? profiles.get(player.profileId) : undefined;
@@ -411,6 +412,7 @@ const PlayerCard = memo(({
       
       {/* Left Section: Grip + Number + Name/Stars (Responsive flex-1) */}
       <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
+        {/* Grip Handle - Retains touch-none to claim pointer events for drag */}
         <div {...attributes} {...listeners} className={`cursor-grab active:cursor-grabbing p-1 -ml-0.5 touch-none flex-shrink-0 ${isFixed ? 'cursor-not-allowed opacity-50' : 'text-slate-400 dark:text-slate-600'}`}>
           <GripVertical size={16} />
         </div>

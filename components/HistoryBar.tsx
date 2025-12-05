@@ -45,34 +45,36 @@ const SetHistoryList = memo(({ history }: { history: SetHistory[] }) => {
             )}
             
             <AnimatePresence mode="popLayout">
-              {history.map((set, idx) => (
-                <motion.div 
-                  key={`${set.setNumber}-${idx}`} // Unique key for motion
-                  variants={listItemVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  layout
-                  className="flex flex-col items-center justify-center min-w-[2.5rem]"
-                >
-                    <span className="text-[9px] text-slate-600 dark:text-slate-500 font-bold uppercase tracking-widest mb-0.5">{t('history.setLabel', {setNumber: set.setNumber})}</span>
-                    <div className={`text-sm font-bold px-2 py-0.5 rounded-md border ${
-                        set.winner === 'A' 
-                        ? 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/30' 
-                        : 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                    }`}>
-                    {set.scoreA}-{set.scoreB}
-                    </div>
-                </motion.div>
-              ))}
+              {history.map((set, idx) => {
+                 const isA = set.winner === 'A';
+                 return (
+                    <motion.div 
+                    key={`${set.setNumber}-${idx}`} // Unique key for motion
+                    variants={listItemVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    layout
+                    className="flex flex-col items-center justify-center min-w-[2.5rem]"
+                    >
+                        <span className="text-[9px] text-slate-600 dark:text-slate-500 font-bold uppercase tracking-widest mb-0.5">{t('history.setLabel', {setNumber: set.setNumber})}</span>
+                        <div className={`text-sm font-bold px-2 py-0.5 rounded-md border ${
+                            isA 
+                            ? 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/30' 
+                            : 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/30'
+                        }`}>
+                            <span className={isA ? 'text-black dark:text-white' : 'text-slate-400'}>{set.scoreA}</span>
+                            <span className='opacity-30 mx-0.5'>-</span>
+                            <span className={!isA ? 'text-black dark:text-white' : 'text-slate-400'}>{set.scoreB}</span>
+                        </div>
+                    </motion.div>
+                );
+              })}
             </AnimatePresence>
         </div>
     );
 }, (prev, next) => {
-    // Custom comparison to be absolutely sure we don't re-render on timer ticks
     if (prev.history.length !== next.history.length) return false;
-    // Simple check: if length is same, check last item to see if score updated (though usually history is append-only)
-    // For volleyball history, shallow eq on array + length check is usually enough as sets are immutable once pushed
     return prev.history === next.history;
 });
 
@@ -91,9 +93,9 @@ export const HistoryBar: React.FC<HistoryBarProps> = memo(({ history, duration, 
       {/* Timer & Global Score */}
       <div className="flex items-center gap-4 pl-4 border-l border-black/10 dark:border-white/10">
         <div className="hidden md:flex items-center gap-1.5 text-xl font-black tracking-tight">
-           <ScoreTickerSimple value={setsA} color="text-indigo-600 dark:text-indigo-400" />
+           <ScoreTickerSimple value={setsA} color="text-slate-800 dark:text-slate-200" />
            <span className="text-slate-400 dark:text-slate-600 text-sm">:</span>
-           <ScoreTickerSimple value={setsB} color="text-rose-600 dark:text-rose-400" />
+           <ScoreTickerSimple value={setsB} color="text-slate-800 dark:text-slate-200" />
         </div>
         
         <div className="flex items-center gap-2">

@@ -85,6 +85,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
           id: uuidv4(),
           profileId: profile?.id,
           name: profile ? profile.name : safeName,
+          number: undefined, 
           skillLevel: profile ? profile.skillLevel : 3, // Default 3 stars
           isFixed: false,
           fixedSide: null,
@@ -466,6 +467,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     updateTeamName,
     updateTeamColor,
     updatePlayerName: (id: string, name: string) => updatePlayer(id, { name }),
+    updatePlayerNumber: (id: string, number: string) => updatePlayer(id, { number }),
     updatePlayerSkill: (id: string, skillLevel: number) => updatePlayer(id, { skillLevel }),
     rotateTeams,
     getRotationPreview,

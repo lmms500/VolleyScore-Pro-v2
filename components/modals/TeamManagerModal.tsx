@@ -1,10 +1,11 @@
 
+
 import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Team, Player, RotationMode, PlayerProfile, TeamColor } from '../../types';
 import { calculateTeamStrength } from '../../utils/balanceUtils';
-import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List, Lock } from 'lucide-react';
+import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List, Lock, Hash } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -45,6 +46,7 @@ interface TeamManagerModalProps {
   onUpdateTeamName: (teamId: string, name: string) => void;
   onUpdateTeamColor: (teamId: string, color: TeamColor) => void; // NEW
   onUpdatePlayerName: (playerId: string, name: string) => void;
+  onUpdatePlayerNumber: (playerId: string, number: string) => void; // NEW
   onUpdatePlayerSkill: (playerId: string, skill: number) => void;
   onSaveProfile: (playerId: string) => void;
   onRevertProfile: (playerId: string) => void;
@@ -81,44 +83,45 @@ const SkillSelector = memo(({ level, onChange }: { level: number, onChange: (l: 
     );
 });
 
-// PREMIUM COLOR PICKER - Minimalism & Animations
+// PREMIUM COLOR PICKER - Fix Scroll Bug by removing outer AnimatePresence
 const ColorPicker = memo(({ selected, onChange }: { selected: TeamColor, onChange: (c: TeamColor) => void }) => {
     return (
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2 mask-linear-fade">
-            <AnimatePresence>
+        <div 
+            className="flex items-center gap-3 overflow-x-auto py-3 px-2 no-scrollbar"
+            style={{ 
+                maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)'
+            }}
+        >
             {COLOR_KEYS.map(color => {
                  const isSelected = selected === color;
                  const theme = TEAM_COLORS[color];
                  
                  return (
-                     <motion.button
+                     <button
                         key={color}
                         onClick={() => onChange(color)}
-                        initial={false}
-                        animate={{ 
-                            scale: isSelected ? 1.1 : 1,
-                            opacity: isSelected ? 1 : 0.6
-                        }}
-                        whileHover={{ scale: 1.15, opacity: 1 }}
-                        whileTap={{ scale: 0.9 }}
                         className={`
                             relative w-6 h-6 rounded-full transition-all flex items-center justify-center shrink-0
                             ${theme.bg.replace('/10', '')}
-                            ${isSelected ? 'ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ring-slate-400 dark:ring-slate-500' : ''}
+                            ${isSelected ? 'ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ring-slate-400 dark:ring-slate-500 shadow-md scale-110' : 'hover:scale-110 opacity-60 hover:opacity-100'}
                         `}
                         title={color.charAt(0).toUpperCase() + color.slice(1)}
                      >
-                        {isSelected && (
-                            <motion.div 
-                                layoutId="activeColorIndicator"
-                                className="w-2.5 h-2.5 bg-white rounded-full shadow-sm"
-                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                            />
-                        )}
-                     </motion.button>
+                        <AnimatePresence>
+                            {isSelected && (
+                                <motion.div 
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    exit={{ scale: 0 }}
+                                    className="w-2.5 h-2.5 bg-white rounded-full shadow-sm"
+                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                />
+                            )}
+                        </AnimatePresence>
+                     </button>
                  );
             })}
-            </AnimatePresence>
         </div>
     );
 });
@@ -201,6 +204,51 @@ const EditableTitle = memo(({ name, onSave, className, isPlayer }: { name: strin
           <Edit2 size={10} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 flex-shrink-0" />
       </div>
   );
+});
+
+const EditableNumber = memo(({ number, onSave }: { number?: string; onSave: (val: string) => void }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [val, setVal] = useState(number || '');
+    const inputRef = React.useRef<HTMLInputElement>(null);
+
+    useEffect(() => { setVal(number || ''); }, [number]);
+    useEffect(() => { if(isEditing) inputRef.current?.focus(); }, [isEditing]);
+
+    const save = () => {
+        setIsEditing(false);
+        if (val !== (number || '')) onSave(val.trim());
+    };
+
+    if(isEditing) {
+        return (
+            <input 
+                ref={inputRef} 
+                type="text" 
+                maxLength={3}
+                className="w-8 h-8 bg-white dark:bg-black/50 text-center rounded-lg border border-indigo-500 outline-none text-xs font-bold text-slate-800 dark:text-white shadow-sm"
+                value={val} 
+                onChange={e => setVal(e.target.value)} 
+                onBlur={save}
+                onKeyDown={e => { if(e.key === 'Enter') save(); if(e.key === 'Escape') setIsEditing(false); }}
+                onPointerDown={e => e.stopPropagation()} 
+            />
+        );
+    }
+
+    return (
+        <button 
+            onClick={() => setIsEditing(true)} 
+            onPointerDown={e => e.stopPropagation()}
+            className={`
+                w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border transition-all
+                ${number 
+                    ? 'bg-white dark:bg-white/10 text-slate-800 dark:text-white border-slate-200 dark:border-white/10 shadow-sm' 
+                    : 'bg-transparent text-slate-300 dark:text-slate-600 border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 hover:text-slate-400'}
+            `}
+        >
+            {number || <Hash size={12} />}
+        </button>
+    );
 });
 
 // --- PROFILE CARD COMPONENT ---
@@ -296,6 +344,7 @@ const PlayerCard = memo(({
     onToggleFixed, 
     onRemove, 
     onUpdateName, 
+    onUpdateNumber,
     onUpdateSkill,
     onSaveProfile,
     onRevertProfile
@@ -306,6 +355,7 @@ const PlayerCard = memo(({
     onToggleFixed: (id: string) => void; 
     onRemove: (id: string) => void; 
     onUpdateName: (id: string, name: string) => void; 
+    onUpdateNumber: (id: string, number: string) => void;
     onUpdateSkill: (id: string, skill: number) => void;
     onSaveProfile: (id: string) => void;
     onRevertProfile: (id: string) => void;
@@ -325,6 +375,7 @@ const PlayerCard = memo(({
   const profileMatch = hasProfile && profile!.name === player.name && profile!.skillLevel === player.skillLevel;
 
   const handleSaveName = useCallback((val: string) => onUpdateName(player.id, val), [onUpdateName, player.id]);
+  const handleSaveNumber = useCallback((val: string) => onUpdateNumber(player.id, val), [onUpdateNumber, player.id]);
   const handleUpdateSkill = useCallback((l: number) => onUpdateSkill(player.id, l), [onUpdateSkill, player.id]);
   const handleSaveProfile = useCallback(() => onSaveProfile(player.id), [onSaveProfile, player.id]);
   const handleRevertProfile = useCallback(() => onRevertProfile(player.id), [onRevertProfile, player.id]);
@@ -340,12 +391,15 @@ const PlayerCard = memo(({
         }
     `}>
       
-      {/* Left Section: Grip + Name/Stars (Responsive flex-1) */}
+      {/* Left Section: Grip + Number + Name/Stars (Responsive flex-1) */}
       <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
         <div {...attributes} {...listeners} className={`cursor-grab active:cursor-grabbing p-1 -ml-0.5 touch-none flex-shrink-0 ${isFixed ? 'cursor-not-allowed opacity-50' : 'text-slate-400 dark:text-slate-600'}`}>
           <GripVertical size={16} />
         </div>
         
+        {/* Editable Number */}
+        <EditableNumber number={player.number} onSave={handleSaveNumber} />
+
         <div className="flex flex-col min-w-0 flex-1 pr-0.5 relative">
           <EditableTitle name={player.name} onSave={handleSaveName} isPlayer={true} className="font-bold text-sm text-slate-800 dark:text-slate-200" />
           <div className="mt-0.5 relative z-20">
@@ -440,6 +494,7 @@ const TeamColumn = memo(({
     onUpdateTeamName, 
     onUpdateTeamColor,
     onUpdatePlayerName, 
+    onUpdatePlayerNumber,
     onUpdateSkill,
     onSaveProfile,
     onRevertProfile,
@@ -453,6 +508,7 @@ const TeamColumn = memo(({
     onUpdateTeamName: (id: string, name: string) => void; 
     onUpdateTeamColor: (id: string, color: TeamColor) => void;
     onUpdatePlayerName: (pid: string, n: string) => void; 
+    onUpdatePlayerNumber: (pid: string, n: string) => void;
     onUpdateSkill: (pid: string, s: number) => void;
     onSaveProfile: (pid: string) => void;
     onRevertProfile: (pid: string) => void;
@@ -507,6 +563,7 @@ const TeamColumn = memo(({
                 onToggleFixed={onToggleFixed} 
                 onRemove={onRemove} 
                 onUpdateName={onUpdatePlayerName} 
+                onUpdateNumber={onUpdatePlayerNumber}
                 onUpdateSkill={onUpdateSkill}
                 onSaveProfile={onSaveProfile}
                 onRevertProfile={onRevertProfile}
@@ -742,7 +799,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                 <div className="scale-105 shadow-2xl opacity-90 cursor-grabbing w-[300px]">
                     <PlayerCard 
                         player={activePlayer} locationId="" profiles={props.profiles}
-                        onToggleFixed={() => {}} onRemove={() => {}} onUpdateName={() => {}} onUpdateSkill={()=>{}} onSaveProfile={()=>{}} onRevertProfile={()=>{}}
+                        onToggleFixed={() => {}} onRemove={() => {}} onUpdateName={() => {}} onUpdateNumber={()=>{}} onUpdateSkill={()=>{}} onSaveProfile={()=>{}} onRevertProfile={()=>{}}
                     />
                 </div>
               ) : null}

@@ -51,6 +51,7 @@ function App() {
     updateTeamName, 
     updateTeamColor,
     updatePlayerName,
+    updatePlayerNumber,
     updatePlayerSkill,
     addPlayer, 
     undoRemovePlayer, 
@@ -272,8 +273,11 @@ function App() {
   const setsRight = state.swappedSides ? state.setsA : state.setsB;
   
   // DYNAMIC COLOR RESOLUTION
-  const colorLeft = state.swappedSides ? state.teamBRoster.color : state.teamARoster.color;
-  const colorRight = state.swappedSides ? state.teamARoster.color : state.teamBRoster.color;
+  const colorA = state.teamARoster.color || 'indigo';
+  const colorB = state.teamBRoster.color || 'rose';
+  
+  const colorLeft = state.swappedSides ? colorB : colorA;
+  const colorRight = state.swappedSides ? colorA : colorB;
   
   return (
     <ErrorBoundary>
@@ -282,7 +286,9 @@ function App() {
           
           <BackgroundGlow 
             isSwapped={state.swappedSides} 
-            isFullscreen={isFullscreen} 
+            isFullscreen={isFullscreen}
+            colorA={colorA}
+            colorB={colorB}
           />
 
           <SuddenDeathOverlay active={state.inSuddenDeath} />
@@ -395,7 +401,8 @@ function App() {
                           reverseLayout={state.swappedSides}
                           scoreRefCallback={setScoreElA}
                           alignment={state.swappedSides ? 'right' : 'left'}
-                          config={state.config} 
+                          config={state.config}
+                          colorTheme={colorA} 
                       />
                       <ScoreCardFullscreen
                           teamId="B"
@@ -415,6 +422,7 @@ function App() {
                           scoreRefCallback={setScoreElB}
                           alignment={state.swappedSides ? 'left' : 'right'}
                           config={state.config} 
+                          colorTheme={colorB}
                       />
                     </>
                  ) : (
@@ -442,7 +450,7 @@ function App() {
                             isDeuce={game.isDeuce}
                             inSuddenDeath={state.inSuddenDeath}
                             setsNeededToWin={game.setsNeededToWin}
-                            colorTheme={state.teamARoster.color} // Using team color directly
+                            colorTheme={colorA} // Dynamic Color
                             isLocked={interactingTeam !== null && interactingTeam !== 'A'}
                             onInteractionStart={handleInteractionStartA}
                             onInteractionEnd={handleInteractionEnd}
@@ -473,7 +481,7 @@ function App() {
                             isDeuce={game.isDeuce}
                             inSuddenDeath={state.inSuddenDeath}
                             setsNeededToWin={game.setsNeededToWin}
-                            colorTheme={state.teamBRoster.color} // Using team color directly
+                            colorTheme={colorB} // Dynamic Color
                             isLocked={interactingTeam !== null && interactingTeam !== 'B'}
                             onInteractionStart={handleInteractionStartB}
                             onInteractionEnd={handleInteractionEnd}
@@ -565,6 +573,7 @@ function App() {
                 onUpdateTeamName={updateTeamName}
                 onUpdateTeamColor={updateTeamColor}
                 onUpdatePlayerName={updatePlayerName}
+                onUpdatePlayerNumber={updatePlayerNumber}
                 onUpdatePlayerSkill={updatePlayerSkill}
                 onSaveProfile={savePlayerToProfile}
                 onRevertProfile={revertPlayerChanges}

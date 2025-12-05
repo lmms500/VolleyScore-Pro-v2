@@ -7,6 +7,7 @@ import { useTranslation } from '../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ResultCard } from '../Share/ResultCard';
 import { useSocialShare } from '../../hooks/useSocialShare';
+import { TEAM_COLORS } from '../../utils/colors';
 
 interface MatchOverModalProps {
   isOpen: boolean;
@@ -25,6 +26,20 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   const isA = state.matchWinner === 'A';
   const report = state.rotationReport;
 
+  // Resolve Colors Dynamically
+  const colorA = state.teamARoster.color || 'indigo';
+  const colorB = state.teamBRoster.color || 'rose';
+  
+  const winnerColorKey = isA ? colorA : colorB;
+  const winnerTheme = TEAM_COLORS[winnerColorKey];
+  
+  // Mapping for background blur
+  const bgColors: any = {
+      indigo: 'bg-indigo-600', rose: 'bg-rose-600', emerald: 'bg-emerald-600', amber: 'bg-amber-600', 
+      sky: 'bg-sky-600', violet: 'bg-violet-600', slate: 'bg-slate-600', fuchsia: 'bg-fuchsia-600'
+  };
+  const winnerBgColor = bgColors[winnerColorKey];
+
   const stolenIds = new Set(report?.stolenPlayers.map(p => p.id) || []);
   const coreSquad = report?.incomingTeam.players.filter(p => !stolenIds.has(p.id)) || [];
   const reinforcements = report?.stolenPlayers || [];
@@ -35,10 +50,6 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
      if (!state.matchLog || state.matchLog.length === 0) return null;
      
      const pointsMap = new Map<string, { total: number, name: string, team: TeamId }>();
-     
-     // Need to look up names since matchLog stores IDs (sometimes)
-     // Or we assume the names in matchLog if we had them, but matchLog primarily has metadata
-     // We will scan rosters to match IDs to names
      const playerMap = new Map<string, { name: string, team: TeamId }>();
      state.teamARoster.players.forEach(p => playerMap.set(p.id, { name: p.name, team: 'A' }));
      state.teamBRoster.players.forEach(p => playerMap.set(p.id, { name: p.name, team: 'B' }));
@@ -53,17 +64,13 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
      });
 
      if (pointsMap.size === 0) return null;
-
-     // Sort by points desc
      const sorted = Array.from(pointsMap.values()).sort((a, b) => b.total - a.total);
      const top = sorted[0];
-
      return top.total > 0 ? { name: top.name, totalPoints: top.total, team: top.team } : null;
 
   }, [state.matchLog, state.teamARoster, state.teamBRoster]);
 
   const handleShare = () => {
-      // Assuming 'social-share-card' is the ID in ResultCard.tsx
       const dateStr = new Date().toISOString().split('T')[0];
       shareResult('social-share-card', `volleyscore_result_${dateStr}.png`);
   };
@@ -94,18 +101,18 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
       <div className="flex flex-col items-center text-center space-y-6">
         
         <div className="relative group mt-2">
-            <div className={`absolute inset-0 blur-[50px] rounded-full opacity-40 ${isA ? 'bg-indigo-600' : 'bg-rose-600'}`}></div>
+            <div className={`absolute inset-0 blur-[50px] rounded-full opacity-40 ${winnerBgColor}`}></div>
             <div className="relative flex flex-col items-center">
-                <Trophy size={64} className={`${isA ? 'text-indigo-500 dark:text-indigo-400' : 'text-rose-500 dark:text-rose-400'} drop-shadow-[0_0_25px_rgba(255,255,255,0.3)] animate-bounce`} />
+                <Trophy size={64} className={`${winnerTheme.text} ${winnerTheme.textDark} drop-shadow-[0_0_25px_currentColor] animate-bounce`} />
                 <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-2 uppercase tracking-tighter">{winnerName}</h2>
                 <span className="text-xs font-bold tracking-widest text-slate-500 dark:text-slate-400 uppercase">{t('matchOver.wins')}</span>
             </div>
         </div>
 
         <div className="flex items-center gap-6 text-3xl font-black font-inter bg-black/20 dark:bg-black/40 px-6 py-3 rounded-2xl border border-black/10 dark:border-white/10 shadow-inner">
-            <span className={isA ? 'text-indigo-500 dark:text-indigo-400 drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'text-slate-500 dark:text-slate-600'}>{state.setsA}</span>
+            <span className={isA ? `${winnerTheme.text} ${winnerTheme.textDark} drop-shadow-[0_0_10px_currentColor]` : 'text-slate-500 dark:text-slate-600'}>{state.setsA}</span>
             <span className="w-1 h-6 bg-black/10 dark:bg-white/10 rounded-full"></span>
-            <span className={!isA ? 'text-rose-500 dark:text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]' : 'text-slate-500 dark:text-slate-600'}>{state.setsB}</span>
+            <span className={!isA ? `${winnerTheme.text} ${winnerTheme.textDark} drop-shadow-[0_0_10px_currentColor]` : 'text-slate-500 dark:text-slate-600'}>{state.setsB}</span>
         </div>
 
         {report && (

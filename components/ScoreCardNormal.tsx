@@ -1,5 +1,3 @@
-
-
 import React, { memo, useState, useCallback } from 'react';
 import { Team, TeamId, SkillType, GameConfig, TeamColor } from '../types';
 import { Volleyball, Zap, Timer, Skull, TrendingUp, Trophy } from 'lucide-react';
@@ -48,7 +46,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
   const [isInteractionLocked, setIsInteractionLocked] = useState(false);
 
   // When modal closes, enforce a short cooldown to prevent "ghost clicks" or rapid double-taps
-  // from bypassing the modal logic for the next point.
   const handleScoutClose = useCallback(() => {
      setShowScout(false);
      setIsInteractionLocked(true);
@@ -60,14 +57,13 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
   const handleAddWrapper = useCallback(() => {
     if (isInteractionLocked) return;
 
-    // If scout is enabled, sound plays on scout confirm or in App.tsx (we disable duplicate sound here)
+    // If scout is enabled, sound plays on scout confirm or in App.tsx
     if (config.enablePlayerStats) {
         audio.playTap();
         setShowScout(true);
     } else {
         // Direct point add
         onAdd(teamId);
-        // Sound is handled by App.tsx observing state or callback wrapper to avoid double triggers
     }
   }, [config.enablePlayerStats, onAdd, teamId, audio, isInteractionLocked]);
 
@@ -78,13 +74,12 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
 
   const handleSubtractWrapper = useCallback(() => {
     onSubtract();
-    // Audio handled in App.tsx wrapper
   }, [onSubtract]);
 
   const gestureHandlers = useScoreGestures({
     onAdd: handleAddWrapper, 
     onSubtract: handleSubtractWrapper, 
-    isLocked: isLocked || isInteractionLocked, // Pass lock down to prevent gestures during cooldown
+    isLocked: isLocked || isInteractionLocked, 
     onInteractionStart, 
     onInteractionEnd
   });
@@ -129,11 +124,8 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
       };
   }
 
-  // Determine Halo State
-  const haloColorClass = isMatchPoint 
-    ? 'bg-amber-500 saturate-150' 
-    : theme.halo;
-
+  // Halo Variants
+  const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : theme.halo;
   const haloVariants: Variants = {
     idle: { scale: 1, opacity: isServing ? 0.4 : 0 },
     critical: {
@@ -163,44 +155,49 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             onClose={handleScoutClose} 
             team={team} 
             onConfirm={handleScoutConfirm}
-            colorTheme={team.color === 'rose' || team.color === 'amber' ? 'rose' : 'indigo'} // Fallback for modal theming
+            colorTheme={team.color === 'rose' || team.color === 'amber' ? 'rose' : 'indigo'} 
       />
       
       <div className="flex flex-col h-full w-full relative z-10 py-2 md:py-4 px-2 justify-between items-center">
         
         {/* Header: Name, Sets, Serve */}
-        <div className="flex flex-col items-center justify-center w-full flex-none order-1 mt-4 space-y-3">
+        <div className="flex flex-col items-center justify-center w-full flex-none order-1 mt-4 space-y-3 relative z-30">
             
             <motion.div 
                 layout
                 transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity active:scale-95 duration-200 group"
+                className="flex items-center justify-center gap-2 cursor-pointer hover:opacity-80 transition-opacity active:scale-95 duration-200 group px-2 relative overflow-visible"
                 onClick={(e) => { e.stopPropagation(); onSetServer(); }}
                 role="button"
                 aria-label={`Set serve to ${team?.name}`}
             >
+                {/* Name */}
                 <motion.h2 
                     layout
                     className="font-black uppercase text-center z-10 leading-none text-xl md:text-2xl text-slate-800 dark:text-slate-200 tracking-widest truncate max-w-[200px] group-hover:scale-105 transition-transform"
                 >
                     {team?.name || ''}
                 </motion.h2>
-                <AnimatePresence mode="popLayout">
+
+                {/* Serving Icon - Sliding in nicely */}
+                <AnimatePresence>
                   {isServing && (
                     <motion.div
                       key="serving-indicator"
-                      layout 
-                      initial={{ scale: 0, opacity: 0, rotate: -180 }}
-                      animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                      exit={{ scale: 0, opacity: 0, rotate: 180 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                      initial={{ width: 0, opacity: 0, scale: 0.5, x: -10 }}
+                      animate={{ width: 'auto', opacity: 1, scale: 1, x: 0 }}
+                      exit={{ width: 0, opacity: 0, scale: 0.5, x: -10 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                      className="flex items-center justify-center"
                     >
-                      <Volleyball 
-                          size={18} 
-                          className={`animate-bounce ${theme.text}`} 
-                          fill="currentColor"
-                          fillOpacity={0.2}
-                      />
+                      <div className="px-1 py-1">
+                        <Volleyball 
+                            size={18} 
+                            className={`animate-bounce ${theme.text} drop-shadow-[0_0_8px_currentColor]`} 
+                            fill="currentColor"
+                            fillOpacity={0.2}
+                        />
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>

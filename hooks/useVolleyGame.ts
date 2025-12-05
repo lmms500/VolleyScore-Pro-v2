@@ -417,6 +417,7 @@ export const useVolleyGame = () => {
     updateTeamName: queueManager.updateTeamName,
     updateTeamColor: queueManager.updateTeamColor,
     updatePlayerName: queueManager.updatePlayerName,
+    updatePlayerNumber: queueManager.updatePlayerNumber,
     updatePlayerSkill: queueManager.updatePlayerSkill,
     movePlayer: queueManager.movePlayer,
     removePlayer: queueManager.removePlayer,

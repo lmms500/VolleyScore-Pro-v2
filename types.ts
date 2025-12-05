@@ -43,6 +43,7 @@ export interface Player {
   id: string; // ID único da instância na lista/quadra
   profileId?: PlayerId; // Link para o Perfil Mestre (Undefined = Jogador Anônimo/Temporário)
   name: string;
+  number?: string; // Jersey Number
   skillLevel: number; // 1 to 5
   isFixed: boolean; // Se true, o jogador não é movido durante o balanceamento automático
   fixedSide?: 'A' | 'B' | null; // Se fixo, lembra de onde veio (opcional)

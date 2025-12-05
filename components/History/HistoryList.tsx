@@ -38,7 +38,7 @@ const HistoryCard: React.FC<{
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="group relative rounded-3xl bg-white/40 dark:bg-slate-900/40 backdrop-blur-md border border-white/20 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-md transition-all"
+            className="group relative rounded-3xl bg-white dark:bg-slate-900/40 backdrop-blur-md border border-black/5 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-md transition-all"
         >
             {/* Subtle Gradient Wash for Winner */}
             <div className={`
@@ -47,56 +47,56 @@ const HistoryCard: React.FC<{
                 ${isWinnerB ? 'bg-gradient-to-l from-rose-500 via-transparent to-transparent' : ''}
             `} />
 
-            {/* Header / Main Row */}
-            {/* Switched to Grid on Desktop for Perfect Centering */}
+            {/* Main Content Area */}
             <div 
-                className="relative z-10 p-5 cursor-pointer flex flex-col md:grid md:grid-cols-[140px_1fr_140px] items-center gap-4 md:gap-0"
+                className="relative z-10 p-4 sm:p-5 cursor-pointer flex flex-col gap-4"
                 onClick={onToggle}
             >
-                {/* 1. Date & Duration (Left Column) */}
-                <div className="flex flex-row md:flex-col items-center md:items-start justify-between w-full md:w-auto gap-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                     <div className="flex items-center gap-1.5">
-                        <Calendar size={12} /> {date} <span className="opacity-50">•</span> {time}
+                {/* Top Row: Meta Data */}
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                     <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1"><Calendar size={12} /> {date}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                        <span>{time}</span>
                      </div>
                      <div className="flex items-center gap-1.5">
                         <Clock size={12} /> {durationStr}
                      </div>
                 </div>
 
-                {/* 2. Matchup Center (Middle Column) */}
-                {/* Inner Grid ensures centering within the center column */}
-                <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                {/* Matchup Row - Highly Responsive */}
+                <div className="flex items-center justify-between gap-2 sm:gap-4 w-full">
                     
-                    {/* Team A */}
-                    <div className={`flex items-center justify-end gap-2 text-right justify-self-end w-full ${isWinnerA ? 'opacity-100' : 'opacity-60 grayscale-[0.5]'}`}>
-                        <span className={`text-sm md:text-base leading-tight truncate ${isWinnerA ? 'font-black text-indigo-600 dark:text-indigo-400' : 'font-medium text-slate-600 dark:text-slate-400'}`}>
+                    {/* Team A - Flexible Width, Right Align */}
+                    <div className={`flex-1 min-w-0 flex items-center justify-end gap-2 text-right ${isWinnerA ? 'opacity-100' : 'opacity-60 grayscale-[0.5]'}`}>
+                        <span className={`text-sm sm:text-base leading-tight break-words line-clamp-2 ${isWinnerA ? 'font-black text-indigo-600 dark:text-indigo-400' : 'font-medium text-slate-600 dark:text-slate-400'}`}>
                             {match.teamAName}
                         </span>
                         {isWinnerA && <Crown size={14} className="text-indigo-500 flex-shrink-0" fill="currentColor" />}
                     </div>
 
-                    {/* Score */}
-                    <div className="flex flex-col items-center justify-center px-4 py-1.5 bg-slate-100/50 dark:bg-black/20 rounded-xl border border-white/20 dark:border-white/5 min-w-[70px]">
-                        <div className="flex items-center gap-1 font-inter text-xl font-black tabular-nums leading-none">
+                    {/* Score Box - Fixed Center */}
+                    <div className="flex-shrink-0 flex flex-col items-center justify-center px-3 py-1 bg-slate-100/50 dark:bg-black/20 rounded-xl border border-black/5 dark:border-white/5 min-w-[60px] sm:min-w-[80px]">
+                        <div className="flex items-center gap-1 font-inter text-lg sm:text-xl font-black tabular-nums leading-none">
                             <span className={isWinnerA ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}>{match.setsA}</span>
                             <span className="text-slate-300 dark:text-slate-600 text-sm">:</span>
                             <span className={isWinnerB ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}>{match.setsB}</span>
                         </div>
                     </div>
 
-                    {/* Team B */}
-                    <div className={`flex items-center justify-start gap-2 text-left justify-self-start w-full ${isWinnerB ? 'opacity-100' : 'opacity-60 grayscale-[0.5]'}`}>
+                    {/* Team B - Flexible Width, Left Align */}
+                    <div className={`flex-1 min-w-0 flex items-center justify-start gap-2 text-left ${isWinnerB ? 'opacity-100' : 'opacity-60 grayscale-[0.5]'}`}>
                         {isWinnerB && <Crown size={14} className="text-rose-500 flex-shrink-0" fill="currentColor" />}
-                        <span className={`text-sm md:text-base leading-tight truncate ${isWinnerB ? 'font-black text-rose-600 dark:text-rose-400' : 'font-medium text-slate-600 dark:text-slate-400'}`}>
+                        <span className={`text-sm sm:text-base leading-tight break-words line-clamp-2 ${isWinnerB ? 'font-black text-rose-600 dark:text-rose-400' : 'font-medium text-slate-600 dark:text-slate-400'}`}>
                             {match.teamBName}
                         </span>
                     </div>
 
                 </div>
 
-                {/* 3. Expand Chevron (Right Column) */}
-                <div className="hidden md:flex justify-end text-slate-300 dark:text-slate-600">
-                    {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                {/* Bottom Row: Expand Indicator (Center) */}
+                <div className="flex justify-center text-slate-300 dark:text-slate-700 -mt-2">
+                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </div>
             </div>
 
@@ -109,13 +109,13 @@ const HistoryCard: React.FC<{
                         exit={{ height: 0, opacity: 0 }}
                         className="relative z-10 border-t border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-black/10"
                     >
-                        <div className="p-5 flex flex-col items-center space-y-5">
+                        <div className="p-4 sm:p-5 flex flex-col items-center space-y-5">
                             
                             {/* Sets History Strip */}
                             <div className="w-full overflow-x-auto pb-1 no-scrollbar flex justify-center">
                                 <div className="flex gap-2">
                                     {match.sets.map((set, idx) => (
-                                        <div key={idx} className="flex flex-col items-center">
+                                        <div key={idx} className="flex flex-col items-center flex-shrink-0">
                                             <span className="text-[9px] font-bold text-slate-300 uppercase mb-1">{t('history.setLabel', {setNumber: set.setNumber})}</span>
                                             <div className={`
                                                 min-w-[3rem] text-center px-2 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm
@@ -131,10 +131,10 @@ const HistoryCard: React.FC<{
                             </div>
 
                             {/* Actions */}
-                            <div className="flex items-center gap-3 w-full md:w-auto">
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
                                 <Button 
                                     onClick={(e) => { e.stopPropagation(); onAnalyze(); }}
-                                    className="flex-1 md:flex-none bg-slate-800 text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                                    className="flex-1 sm:flex-none bg-slate-800 text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
                                     size="sm"
                                 >
                                     <BarChart2 size={14} /> Analysis
@@ -286,7 +286,7 @@ export const HistoryList: React.FC = () => {
             </div>
 
             {/* List */}
-            <div className="space-y-4 flex-1 overflow-y-auto pb-8 min-h-0 px-1">
+            <div className="space-y-4 flex-1 overflow-y-auto pb-8 min-h-0 px-1 custom-scrollbar">
                 {filteredMatches.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-slate-400 opacity-60">
                         <div className="p-4 bg-slate-200 dark:bg-white/5 rounded-full mb-3">

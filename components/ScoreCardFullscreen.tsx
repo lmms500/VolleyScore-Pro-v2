@@ -1,15 +1,19 @@
 
-import React, { useState, memo, useMemo, useRef } from 'react';
-import { TeamId } from '../types';
+
+import React, { useState, memo, useMemo, useRef, useCallback } from 'react';
+import { TeamId, Team, SkillType, GameConfig } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { ScoreTicker } from './ui/ScoreTicker';
-import { motion } from 'framer-motion';
-import { layoutTransition, pulseHeartbeat } from '../utils/animations';
+import { motion, AnimatePresence } from 'framer-motion';
+import { pulseHeartbeat, layoutTransition } from '../utils/animations';
+import { useGameAudio } from '../hooks/useGameAudio';
+import { ScoutModal } from './modals/ScoutModal';
 
 interface ScoreCardFullscreenProps {
   teamId: TeamId;
+  team: Team; // New: Needed for Scout Mode
   score: number;
-  onAdd: () => void;
+  onAdd: (teamId: TeamId, playerId?: string, skill?: SkillType) => void;
   onSubtract: () => void;
   isMatchPoint: boolean;
   isSetPoint: boolean;
@@ -23,6 +27,7 @@ interface ScoreCardFullscreenProps {
   scoreRefCallback?: (node: HTMLElement | null) => void;
   isServing?: boolean;
   alignment?: 'left' | 'right';
+  config: GameConfig; // New: Audio & Scout Config
 }
 
 const ScoreNumberDisplay = memo(({ 
@@ -50,16 +55,9 @@ const ScoreNumberDisplay = memo(({
             className="relative grid place-items-center" 
             style={{ 
                 lineHeight: 1,
-                // Ensures the container takes up space of the largest item (text)
-                // and centers everything in that cell
                 gridTemplateAreas: '"stack"' 
             }}
         >
-            {/* 
-                INTEGRATED GLOW (Fix: Grid Stack Positioning) 
-                Both elements occupy grid-area "stack", forcing them to overlap perfectly.
-                justify-self-center ensures the glow is in the middle of the text's box.
-            */}
             <motion.div
                 className={`
                     rounded-full aspect-square pointer-events-none
@@ -92,7 +90,6 @@ const ScoreNumberDisplay = memo(({
                 }
             />
 
-            {/* Score Ticker Wrapper */}
             <motion.div 
                 ref={numberRef} 
                 className="relative z-10 flex items-center justify-center will-change-transform"
@@ -120,26 +117,52 @@ const ScoreNumberDisplay = memo(({
 });
 
 export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
-  teamId, score, onAdd, onSubtract,
+  teamId, team, score, onAdd, onSubtract,
   isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, colorTheme,
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
-  scoreRefCallback, isServing, alignment = 'left'
+  scoreRefCallback, isServing, alignment = 'left', config
 }) => {
   const [isPressed, setIsPressed] = useState(false);
+  const [showScout, setShowScout] = useState(false);
   const numberRef = useRef<HTMLDivElement>(null);
+  
+  const audio = useGameAudio(config);
 
-  const handleStart = React.useCallback(() => {
+  const handleStart = useCallback(() => {
     setIsPressed(true);
     onInteractionStart?.();
   }, [onInteractionStart]);
 
-  const handleEnd = React.useCallback(() => {
+  const handleEnd = useCallback(() => {
     setIsPressed(false);
     onInteractionEnd?.();
   }, [onInteractionEnd]);
+
+  // Audio & Scout Logic Wrappers
+  const handleAddWrapper = useCallback(() => {
+      if (config.enablePlayerStats) {
+          audio.playTap();
+          setShowScout(true);
+      } else {
+          onAdd(teamId);
+          // Audio handled in App.tsx
+      }
+  }, [config.enablePlayerStats, onAdd, teamId, audio]);
+
+  const handleScoutConfirm = useCallback((pid: string, skill: SkillType) => {
+      onAdd(teamId, pid, skill);
+      audio.playScore();
+  }, [onAdd, teamId, audio]);
+
+  const handleSubtractWrapper = useCallback(() => {
+      onSubtract();
+      // Audio handled in App.tsx
+  }, [onSubtract]);
   
   const gestureHandlers = useScoreGestures({
-    onAdd, onSubtract, isLocked, 
+    onAdd: handleAddWrapper, 
+    onSubtract: handleSubtractWrapper, 
+    isLocked, 
     onInteractionStart: handleStart, 
     onInteractionEnd: handleEnd
   });
@@ -174,44 +197,54 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
       : 'landscape:translate-x-[6vw]';
 
   return (
-    <motion.div 
-        layout
-        transition={layoutTransition}
-        className={`
-            fixed z-10 flex flex-col justify-center items-center select-none overflow-visible
-            ${positionClasses}
-        `}
-        style={{ touchAction: 'none' }}
-        {...gestureHandlers}
-    >
-        {/* Inner Content Wrapper */}
-        <div 
+    <>
+        {/* Render ScoutModal outside the gesture container to isolate events */}
+        <ScoutModal 
+            isOpen={showScout}
+            onClose={() => setShowScout(false)}
+            team={team}
+            onConfirm={handleScoutConfirm}
+            colorTheme={colorTheme}
+        />
+
+        <motion.div 
+            layout
+            transition={layoutTransition}
             className={`
-                flex items-center justify-center w-full h-full
-                transition-transform duration-150
-                ${isPressed ? 'scale-95' : 'scale-100'}
-                will-change-transform
+                fixed z-10 flex flex-col justify-center items-center select-none overflow-visible
+                ${positionClasses}
             `}
-            style={{ 
-                fontSize: 'clamp(8rem, 28vmax, 22rem)',
-                lineHeight: 0.8
-            }}
+            style={{ touchAction: 'none' }}
+            {...gestureHandlers}
         >
-            <div className={`transform transition-transform duration-500 ${offsetClass}`}>
-                <ScoreNumberDisplay 
-                    score={score} 
-                    theme={theme} 
-                    textEffectClass={textEffectClass} 
-                    isPressed={isPressed} 
-                    scoreRefCallback={scoreRefCallback} 
-                    numberRef={numberRef}
-                    isCritical={isCritical}
-                    colorTheme={colorTheme}
-                    isServing={!!isServing}
-                    isMatchPoint={isMatchPoint}
-                />
+            <div 
+                className={`
+                    flex items-center justify-center w-full h-full
+                    transition-transform duration-150
+                    ${isPressed ? 'scale-95' : 'scale-100'}
+                    will-change-transform
+                `}
+                style={{ 
+                    fontSize: 'clamp(8rem, 28vmax, 22rem)',
+                    lineHeight: 0.8
+                }}
+            >
+                <div className={`transform transition-transform duration-500 ${offsetClass}`}>
+                    <ScoreNumberDisplay 
+                        score={score} 
+                        theme={theme} 
+                        textEffectClass={textEffectClass} 
+                        isPressed={isPressed} 
+                        scoreRefCallback={scoreRefCallback} 
+                        numberRef={numberRef}
+                        isCritical={isCritical}
+                        colorTheme={colorTheme}
+                        isServing={!!isServing}
+                        isMatchPoint={isMatchPoint}
+                    />
+                </div>
             </div>
-        </div>
-    </motion.div>
+        </motion.div>
+    </>
   );
 });

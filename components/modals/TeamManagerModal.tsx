@@ -61,7 +61,7 @@ type PlayerLocationStatus = 'A' | 'B' | 'Queue' | null;
 
 const SkillSelector = memo(({ level, onChange }: { level: number, onChange: (l: number) => void }) => {
     return (
-        <div className="flex gap-0.5" onPointerDown={(e) => e.stopPropagation()}>
+        <div className="flex gap-0.5 relative z-20" onPointerDown={(e) => e.stopPropagation()}>
             {[1, 2, 3, 4, 5].map(i => (
                 <button 
                    key={i} 
@@ -93,25 +93,25 @@ const SyncIndicator = memo(({ player, hasProfile, profileMatch, onSave, onRevert
     }[status];
 
     return (
-        <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${config.color} shadow-[0_0_5px_currentColor]`} title={config.text} />
+        <div className="flex items-center gap-1">
+            <div className={`w-1.5 h-1.5 rounded-full ${config.color} shadow-[0_0_5px_currentColor]`} title={config.text} />
             
             {status !== 'synced' && (
-                <div className="flex gap-1 animate-in fade-in zoom-in duration-200">
+                <div className="flex gap-0.5 animate-in fade-in zoom-in duration-200">
                      <button 
                         onClick={(e) => { e.stopPropagation(); onSave(); }}
-                        className={`p-1.5 rounded-md text-white shadow-sm hover:scale-105 transition-all ${status === 'desynced' ? 'bg-amber-500 hover:bg-amber-400' : 'bg-slate-400 hover:bg-slate-500 dark:bg-slate-600 dark:hover:bg-slate-500'}`}
+                        className={`p-1 rounded-md text-white shadow-sm hover:scale-105 transition-all ${status === 'desynced' ? 'bg-amber-500 hover:bg-amber-400' : 'bg-slate-400 hover:bg-slate-500 dark:bg-slate-600 dark:hover:bg-slate-500'}`}
                         title={status === 'desynced' ? t('teamManager.sync.updateTooltip') : t('teamManager.sync.createTooltip')}
                      >
-                         <Save size={12} />
+                         <Save size={10} />
                      </button>
                      {status === 'desynced' && (
                          <button 
                             onClick={(e) => { e.stopPropagation(); onRevert(); }}
-                            className="p-1.5 rounded-md bg-white/10 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                            className="p-1 rounded-md bg-white/10 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
                             title={t('teamManager.sync.revertTooltip')}
                          >
-                             <Undo2 size={12} />
+                             <Undo2 size={10} />
                          </button>
                      )}
                 </div>
@@ -290,7 +290,7 @@ const PlayerCard = memo(({
 
   return (
     <div ref={setNodeRef} style={style} className={`
-        group relative flex items-center justify-between p-2 rounded-xl border transition-all duration-300
+        group relative flex items-center justify-between p-1.5 rounded-xl border transition-all duration-300
         ${isFixed 
             ? 'bg-amber-500/10 border-amber-500/40 shadow-sm shadow-amber-500/10 ring-1 ring-amber-500/20' 
             : 'bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/20 shadow-sm'
@@ -298,21 +298,21 @@ const PlayerCard = memo(({
     `}>
       
       {/* Left Section: Grip + Name/Stars (Responsive flex-1) */}
-      <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
-        <div {...attributes} {...listeners} className={`cursor-grab active:cursor-grabbing p-1.5 -ml-1 touch-none flex-shrink-0 ${isFixed ? 'cursor-not-allowed opacity-50' : 'text-slate-400 dark:text-slate-600'}`}>
+      <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
+        <div {...attributes} {...listeners} className={`cursor-grab active:cursor-grabbing p-1 -ml-0.5 touch-none flex-shrink-0 ${isFixed ? 'cursor-not-allowed opacity-50' : 'text-slate-400 dark:text-slate-600'}`}>
           <GripVertical size={16} />
         </div>
         
-        <div className="flex flex-col min-w-0 flex-1 pr-1">
+        <div className="flex flex-col min-w-0 flex-1 pr-0.5 relative">
           <EditableTitle name={player.name} onSave={handleSaveName} isPlayer={true} className="font-bold text-sm text-slate-800 dark:text-slate-200" />
-          <div className="mt-0.5">
+          <div className="mt-0.5 relative z-20">
              <SkillSelector level={player.skillLevel} onChange={handleUpdateSkill} />
           </div>
         </div>
       </div>
       
       {/* Right Section: Actions (Fixed width, does not shrink) */}
-      <div className="flex items-center gap-1 flex-shrink-0 ml-1">
+      <div className="flex items-center gap-0.5 flex-shrink-0 ml-0.5 pl-1 relative z-30">
         <SyncIndicator 
             player={player}
             hasProfile={hasProfile}
@@ -321,11 +321,11 @@ const PlayerCard = memo(({
             onRevert={handleRevertProfile}
         />
         
-        <div className="w-px h-5 bg-black/10 dark:bg-white/10 mx-1"></div>
+        <div className="w-px h-5 bg-black/10 dark:bg-white/10 mx-0.5"></div>
 
         <button onClick={handleToggleFixed} onPointerDown={e => e.stopPropagation()} 
             className={`
-                p-1.5 rounded-lg transition-all relative
+                p-1 rounded-lg transition-all relative
                 ${isFixed ? 'bg-amber-500 text-amber-900 shadow-md shadow-amber-500/20' : 'bg-transparent text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}
             `} 
             title={isFixed ? t('teamManager.unlockPlayer') : t('teamManager.lockPlayer')}
@@ -338,7 +338,7 @@ const PlayerCard = memo(({
                 </span>
             )}
         </button>
-        <button onClick={handleRemove} onPointerDown={e => e.stopPropagation()} className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors">
+        <button onClick={handleRemove} onPointerDown={e => e.stopPropagation()} className="text-slate-400 hover:text-rose-500 p-1 rounded-lg hover:bg-rose-500/10 transition-colors">
           <Trash2 size={14} />
         </button>
       </div>
@@ -674,8 +674,9 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                 onAddPlayer={handleAddB} 
             />
             
-            <div className="w-full md:col-span-2 xl:col-span-1 bg-slate-100 dark:bg-white/[0.02] p-4 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col h-fit">
-                <h3 className="font-bold text-slate-500 dark:text-slate-400 mb-4 text-xs uppercase tracking-widest flex items-center gap-2 flex-none"><div className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-600"></div>{t('teamManager.queue')}</h3>
+            {/* Optimized Queue Column: Reduced padding to maximize card width */}
+            <div className="w-full md:col-span-2 xl:col-span-1 bg-slate-100 dark:bg-white/[0.02] p-2 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col h-fit">
+                <h3 className="font-bold text-slate-500 dark:text-slate-400 mb-4 px-2 pt-2 text-xs uppercase tracking-widest flex items-center gap-2 flex-none"><div className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-600"></div>{t('teamManager.queue')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-4">
                   {props.queue.length === 0 && <div className="text-center py-8 text-slate-400 italic text-sm border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl col-span-full">{t('teamManager.queueEmpty')}</div>}
                   {props.queue.map(team => (

@@ -1,6 +1,7 @@
+
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { GameConfig, SetHistory, TeamId, ActionLog } from '../types';
+import { GameConfig, SetHistory, TeamId, ActionLog, Team } from '../types';
 
 // --- TYPES (Derived/Extended from Core Types) ---
 
@@ -28,6 +29,10 @@ export interface Match {
   teamAName: string;
   teamBName: string;
   
+  // Roster Snapshots (Optional for backward compatibility)
+  teamARoster?: Team;
+  teamBRoster?: Team;
+
   setsA: number;
   setsB: number;
   
@@ -36,6 +41,9 @@ export interface Match {
   // Detailed History
   sets: SetHistory[];
   
+  // Detailed Actions (New for V2 Stats)
+  actionLog?: ActionLog[];
+
   // Configuration used
   config: MatchSettings;
 }

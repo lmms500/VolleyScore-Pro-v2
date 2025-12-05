@@ -1,13 +1,17 @@
 
+
 import { GameConfig } from './types';
 
 export const DEFAULT_CONFIG: GameConfig = {
+  mode: 'indoor',
   maxSets: 5, // Official FIVB: Best of 5
   pointsPerSet: 25, // Sets 1-4 are 25 points
   hasTieBreak: true,
   tieBreakPoints: 15, // 5th set is 15 points
   deuceType: 'standard',
-  rotationMode: 'standard'
+  rotationMode: 'standard',
+  enablePlayerStats: false,
+  enableSound: true
 };
 
 export const MIN_LEAD_TO_WIN = 2;

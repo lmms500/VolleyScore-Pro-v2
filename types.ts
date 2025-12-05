@@ -6,6 +6,10 @@ export type DeuceType = 'standard' | 'sudden_death_3pt';
 
 export type RotationMode = 'standard' | 'balanced';
 
+export type GameMode = 'indoor' | 'beach';
+
+export type SkillType = 'attack' | 'block' | 'ace' | 'opponent_error';
+
 export type PlayerId = string; // UUID v4
 
 export type SyncStatus = 'synced' | 'desynced' | 'unlinked';
@@ -20,12 +24,15 @@ export interface PlayerProfile {
 }
 
 export interface GameConfig {
+  mode: GameMode; // 'indoor' | 'beach'
   maxSets: 1 | 3 | 5;
   pointsPerSet: 15 | 21 | 25;
   hasTieBreak: boolean;
-  tieBreakPoints: number;
+  tieBreakPoints: 15 | 25; // Limitado a valores comuns
   deuceType: DeuceType;
   rotationMode: RotationMode;
+  enablePlayerStats: boolean; // Toggle Scout Mode
+  enableSound: boolean; // Global Audio Toggle
 }
 
 // 2. A INSTÂNCIA DE JOGO (Volátil / Em Quadra)
@@ -68,12 +75,17 @@ export type ActionLog =
       prevScoreA: number;
       prevScoreB: number;
       prevServingTeam: TeamId | null;
+      timestamp?: number;
+      // Scout Metadata (Explicitly typed)
+      playerId?: string; 
+      skill?: SkillType; 
     }
   | { 
       type: 'TIMEOUT'; 
       team: TeamId;
       prevTimeoutsA: number;
       prevTimeoutsB: number;
+      timestamp?: number;
     };
 
 export interface GameState {
@@ -90,7 +102,8 @@ export interface GameState {
   
   // History & Logic
   history: SetHistory[];
-  actionLog: ActionLog[]; 
+  actionLog: ActionLog[]; // Current Set Undo Stack (Clears every set)
+  matchLog: ActionLog[];  // Full Match History (PERSISTENT - Do not clear between sets)
   lastSnapshot?: GameState; // For critical undo (Match/Set transitions)
   isMatchOver: boolean;
   matchWinner: TeamId | null;
@@ -106,6 +119,7 @@ export interface GameState {
   
   // Advanced State
   inSuddenDeath: boolean;
+  pendingSideSwitch: boolean; // Controls the "Switch Sides" overlay
   matchDurationSeconds: number;
   isTimerRunning: boolean;
   

@@ -1,13 +1,30 @@
+
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { springSnappy } from '../../utils/animations';
+import { useGameAudio } from '../../hooks/useGameAudio';
+import { DEFAULT_CONFIG } from '../../constants';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'icon';
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export const Button: React.FC<ButtonProps> = ({ variant = 'primary', size = 'md', className = '', children, ...props }) => {
+export const Button: React.FC<ButtonProps> = ({ variant = 'primary', size = 'md', className = '', children, onClick, ...props }) => {
+  // We use a default config here because Button is generic. 
+  // In a real app, you might access context, but for simple clicks, default works or pass prop.
+  // Ideally, use context if available, but to keep Button dumb, we just instantiate a quick player
+  // or rely on parent to play sound.
+  // HOWEVER, for "all actions", adding it here ensures coverage.
+  // We'll use a safe fallback config.
+  const audio = useGameAudio({ ...DEFAULT_CONFIG, enableSound: true }); 
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      audio.playTap();
+      if (onClick) onClick(e);
+  };
+
   const base = "font-inter font-semibold rounded-2xl flex items-center justify-center gap-2 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-black focus:ring-indigo-500/50 dark:focus:ring-white/20 select-none";
   
   const variants = {
@@ -32,7 +49,8 @@ export const Button: React.FC<ButtonProps> = ({ variant = 'primary', size = 'md'
       className={`${base} ${variants[variant]} ${appliedSize} ${className}`}
       whileTap={{ scale: 0.94 }}
       transition={springSnappy}
-      {...props as any} // Cast needed for motion component overlap
+      onClick={handleClick}
+      {...props as any} 
     >
       {children}
     </motion.button>

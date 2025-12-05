@@ -1,12 +1,11 @@
 
-
 import React, { useState, useMemo, useRef } from 'react';
 import { useHistoryStore, Match } from '../../stores/historyStore';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { downloadJSON, parseJSONFile } from '../../services/io';
 import { 
-  Trophy, Search, Clock, Trash2, ChevronDown, ChevronUp, 
-  Download, Upload, Filter, AlertCircle, BarChart2, Crown 
+  Search, Clock, Trash2, ChevronDown, ChevronUp, 
+  Download, Upload, Filter, AlertCircle, BarChart2, Crown, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../ui/Button';
@@ -22,97 +21,127 @@ const HistoryCard: React.FC<{
     onAnalyze: () => void;
 }> = ({ match, onDelete, isExpanded, onToggle, onAnalyze }) => {
     const { t } = useTranslation();
-    const date = new Date(match.timestamp).toLocaleDateString();
+    const date = new Date(match.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const time = new Date(match.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
     // Format duration
     const h = Math.floor(match.durationSeconds / 3600);
     const m = Math.floor((match.durationSeconds % 3600) / 60);
     const durationStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
 
-    const borderColor = match.winner === 'A' ? 'border-indigo-500/20' : 'border-rose-500/20';
-    
+    const isWinnerA = match.winner === 'A';
+    const isWinnerB = match.winner === 'B';
+
     return (
         <motion.div 
             layout
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className={`
-                rounded-2xl border bg-white/50 dark:bg-white/5 backdrop-blur-md overflow-hidden
-                ${borderColor} shadow-sm transition-all hover:bg-white/70 dark:hover:bg-white/10
-            `}
+            className="group relative rounded-3xl bg-white/40 dark:bg-slate-900/40 backdrop-blur-md border border-white/20 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-md transition-all"
         >
-            {/* Header */}
+            {/* Subtle Gradient Wash for Winner */}
+            <div className={`
+                absolute inset-0 opacity-[0.03] dark:opacity-[0.08] pointer-events-none transition-colors duration-500
+                ${isWinnerA ? 'bg-gradient-to-r from-indigo-500 via-transparent to-transparent' : ''}
+                ${isWinnerB ? 'bg-gradient-to-l from-rose-500 via-transparent to-transparent' : ''}
+            `} />
+
+            {/* Header / Main Row */}
+            {/* Switched to Grid on Desktop for Perfect Centering */}
             <div 
-                className="p-4 cursor-pointer flex items-center justify-between"
+                className="relative z-10 p-5 cursor-pointer flex flex-col md:grid md:grid-cols-[140px_1fr_140px] items-center gap-4 md:gap-0"
                 onClick={onToggle}
             >
-                <div className="flex-1 min-w-0 grid grid-cols-[1fr_auto_1fr] items-center gap-2 md:gap-4">
+                {/* 1. Date & Duration (Left Column) */}
+                <div className="flex flex-row md:flex-col items-center md:items-start justify-between w-full md:w-auto gap-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                     <div className="flex items-center gap-1.5">
+                        <Calendar size={12} /> {date} <span className="opacity-50">•</span> {time}
+                     </div>
+                     <div className="flex items-center gap-1.5">
+                        <Clock size={12} /> {durationStr}
+                     </div>
+                </div>
+
+                {/* 2. Matchup Center (Middle Column) */}
+                {/* Inner Grid ensures centering within the center column */}
+                <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                    
                     {/* Team A */}
-                    <div className={`flex items-center justify-end gap-1.5 min-w-0 ${match.winner === 'A' ? 'font-black text-slate-900 dark:text-white' : 'font-medium text-slate-500 dark:text-slate-400'}`}>
-                        <div className="truncate text-right">{match.teamAName}</div>
-                        {match.winner === 'A' && <Crown size={14} className="text-indigo-500 flex-shrink-0" fill="currentColor" />}
+                    <div className={`flex items-center justify-end gap-2 text-right justify-self-end w-full ${isWinnerA ? 'opacity-100' : 'opacity-60 grayscale-[0.5]'}`}>
+                        <span className={`text-sm md:text-base leading-tight truncate ${isWinnerA ? 'font-black text-indigo-600 dark:text-indigo-400' : 'font-medium text-slate-600 dark:text-slate-400'}`}>
+                            {match.teamAName}
+                        </span>
+                        {isWinnerA && <Crown size={14} className="text-indigo-500 flex-shrink-0" fill="currentColor" />}
                     </div>
 
                     {/* Score */}
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-black/5 dark:bg-black/30 rounded-lg border border-black/5 dark:border-white/5 font-mono font-bold text-lg">
-                        <span className={match.winner === 'A' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}>{match.setsA}</span>
-                        <span className="text-slate-300 dark:text-slate-600">-</span>
-                        <span className={match.winner === 'B' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}>{match.setsB}</span>
+                    <div className="flex flex-col items-center justify-center px-4 py-1.5 bg-slate-100/50 dark:bg-black/20 rounded-xl border border-white/20 dark:border-white/5 min-w-[70px]">
+                        <div className="flex items-center gap-1 font-inter text-xl font-black tabular-nums leading-none">
+                            <span className={isWinnerA ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}>{match.setsA}</span>
+                            <span className="text-slate-300 dark:text-slate-600 text-sm">:</span>
+                            <span className={isWinnerB ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}>{match.setsB}</span>
+                        </div>
                     </div>
 
                     {/* Team B */}
-                    <div className={`flex items-center justify-start gap-1.5 min-w-0 ${match.winner === 'B' ? 'font-black text-slate-900 dark:text-white' : 'font-medium text-slate-500 dark:text-slate-400'}`}>
-                        {match.winner === 'B' && <Crown size={14} className="text-rose-500 flex-shrink-0" fill="currentColor" />}
-                        <div className="truncate text-left">{match.teamBName}</div>
+                    <div className={`flex items-center justify-start gap-2 text-left justify-self-start w-full ${isWinnerB ? 'opacity-100' : 'opacity-60 grayscale-[0.5]'}`}>
+                        {isWinnerB && <Crown size={14} className="text-rose-500 flex-shrink-0" fill="currentColor" />}
+                        <span className={`text-sm md:text-base leading-tight truncate ${isWinnerB ? 'font-black text-rose-600 dark:text-rose-400' : 'font-medium text-slate-600 dark:text-slate-400'}`}>
+                            {match.teamBName}
+                        </span>
                     </div>
+
                 </div>
 
-                <div className="flex items-center gap-2 pl-4 border-l border-black/10 dark:border-white/10 ml-4">
-                     <div className="flex flex-col items-end text-[10px] text-slate-400 font-medium uppercase tracking-wider min-w-[50px]">
-                         <span>{date}</span>
-                         <span className="flex items-center gap-1"><Clock size={10} /> {durationStr}</span>
-                     </div>
-                     {isExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                {/* 3. Expand Chevron (Right Column) */}
+                <div className="hidden md:flex justify-end text-slate-300 dark:text-slate-600">
+                    {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
             </div>
 
-            {/* Details (Expanded) */}
+            {/* Expanded Content */}
             <AnimatePresence>
                 {isExpanded && (
                     <motion.div 
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="border-t border-black/5 dark:border-white/5 bg-black/5 dark:bg-black/20"
+                        className="relative z-10 border-t border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-black/10"
                     >
-                        <div className="p-4 space-y-4">
-                            {/* Sets History */}
-                            <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar justify-center">
-                                {match.sets.map((set, idx) => (
-                                    <div key={idx} className="flex flex-col items-center min-w-[3rem]">
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase mb-1">{t('history.setLabel', {setNumber: set.setNumber})}</span>
-                                        <div className={`
-                                            px-2 py-1 rounded text-xs font-bold border
-                                            ${set.winner === 'A' ? 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/20' : 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border-rose-500/20'}
-                                        `}>
-                                            {set.scoreA}-{set.scoreB}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                        <div className="p-5 flex flex-col items-center space-y-5">
                             
-                            <div className="flex items-center gap-3 pt-2">
+                            {/* Sets History Strip */}
+                            <div className="w-full overflow-x-auto pb-1 no-scrollbar flex justify-center">
+                                <div className="flex gap-2">
+                                    {match.sets.map((set, idx) => (
+                                        <div key={idx} className="flex flex-col items-center">
+                                            <span className="text-[9px] font-bold text-slate-300 uppercase mb-1">{t('history.setLabel', {setNumber: set.setNumber})}</span>
+                                            <div className={`
+                                                min-w-[3rem] text-center px-2 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm
+                                                ${set.winner === 'A' 
+                                                    ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border-indigo-500/20' 
+                                                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-300 border-rose-500/20'}
+                                            `}>
+                                                {set.scoreA}-{set.scoreB}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-3 w-full md:w-auto">
                                 <Button 
                                     onClick={(e) => { e.stopPropagation(); onAnalyze(); }}
-                                    className="flex-1 bg-indigo-600 text-white hover:bg-indigo-500"
+                                    className="flex-1 md:flex-none bg-slate-800 text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
                                     size="sm"
                                 >
-                                    <BarChart2 size={14} /> Analysis & Replay
+                                    <BarChart2 size={14} /> Analysis
                                 </Button>
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); onDelete(match.id); }}
-                                    className="p-3 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 rounded-xl transition-colors"
+                                    className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all border border-rose-500/20"
                                     title={t('historyList.delete')}
                                 >
                                     <Trash2 size={16} />
@@ -210,7 +239,7 @@ export const HistoryList: React.FC = () => {
             />
 
             {/* Controls Bar */}
-            <div className="flex flex-col gap-4 mb-6 sticky top-0 bg-slate-100/90 dark:bg-[#0a0a0a]/90 backdrop-blur-md z-20 py-2 border-b border-black/5 dark:border-white/5">
+            <div className="flex flex-col gap-4 mb-6 sticky top-0 bg-slate-100/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl z-20 py-2 border-b border-black/5 dark:border-white/5">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -218,7 +247,7 @@ export const HistoryList: React.FC = () => {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder={t('historyList.searchPlaceholder')}
-                            className="w-full bg-white dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                            className="w-full bg-white dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400"
                         />
                     </div>
                     
@@ -226,7 +255,7 @@ export const HistoryList: React.FC = () => {
                         <select 
                             value={winnerFilter}
                             onChange={(e) => setWinnerFilter(e.target.value as any)}
-                            className="appearance-none bg-white dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl pl-4 pr-10 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 h-full"
+                            className="appearance-none bg-white dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl pl-4 pr-10 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 h-full transition-all"
                         >
                             <option value="all">{t('historyList.filterAll')}</option>
                             <option value="A">{t('historyList.filterWinnerA')}</option>
@@ -257,11 +286,11 @@ export const HistoryList: React.FC = () => {
             </div>
 
             {/* List */}
-            <div className="space-y-3 flex-1 overflow-y-auto pb-8 min-h-0">
+            <div className="space-y-4 flex-1 overflow-y-auto pb-8 min-h-0 px-1">
                 {filteredMatches.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                    <div className="flex flex-col items-center justify-center py-12 text-slate-400 opacity-60">
                         <div className="p-4 bg-slate-200 dark:bg-white/5 rounded-full mb-3">
-                            <Trophy size={32} strokeWidth={1.5} className="opacity-50" />
+                            <Clock size={32} strokeWidth={1.5} className="opacity-50" />
                         </div>
                         <p className="text-sm font-medium">{t('historyList.empty')}</p>
                     </div>

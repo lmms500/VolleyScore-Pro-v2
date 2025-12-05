@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -6,8 +7,8 @@ import { ScoreCardNormal } from './components/ScoreCardNormal';
 import { ScoreCardFullscreen } from './components/ScoreCardFullscreen';
 import { HistoryBar } from './components/HistoryBar';
 import { Controls } from './components/Controls';
-import { Minimize2 } from 'lucide-react';
-import { TeamId } from './types';
+import { Minimize2, RefreshCw } from 'lucide-react';
+import { TeamId, SkillType } from './types';
 import { MeasuredFullscreenHUD } from './components/MeasuredFullscreenHUD';
 import { useTranslation } from './contexts/LanguageContext';
 import { FloatingControlBar } from './components/Fullscreen/FloatingControlBar';
@@ -18,9 +19,10 @@ import { useHudMeasure } from './hooks/useHudMeasure';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SuddenDeathOverlay } from './components/ui/CriticalPointAnimation';
 import { BackgroundGlow } from './components/ui/BackgroundGlow';
-import { motion, LayoutGroup } from 'framer-motion';
+import { motion, LayoutGroup, AnimatePresence } from 'framer-motion';
 import { useHistoryStore } from './stores/historyStore';
 import { v4 as uuidv4 } from 'uuid';
+import { useGameAudio } from './hooks/useGameAudio';
 
 // Lazy Loaded Heavy Modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -81,10 +83,25 @@ function App() {
 
   // Auto-Save Match History Logic with Undo Support
   const savedMatchIdRef = useRef<string | null>(null);
+  
+  // Audio for App-level events (Match Over, Set Over)
+  const audio = useGameAudio(state.config);
+
+  // Track sets to detect Set Changes for Audio
+  const prevSetsRef = useRef({ a: 0, b: 0 });
 
   useEffect(() => {
-    // 1. Match Just Finished -> Save
+    // 1. Detect Set Win (Audio Only)
+    const setsChanged = state.setsA > prevSetsRef.current.a || state.setsB > prevSetsRef.current.b;
+    if (setsChanged && !state.isMatchOver) {
+        audio.playSetWin();
+    }
+    prevSetsRef.current = { a: state.setsA, b: state.setsB };
+
+    // 2. Match Over Logic
     if (state.isMatchOver && !savedMatchIdRef.current && state.matchWinner) {
+      audio.playMatchWin(); // Play Win Sound
+
       const newId = uuidv4();
       historyStore.addMatch({
         id: newId,
@@ -93,42 +110,60 @@ function App() {
         durationSeconds: state.matchDurationSeconds,
         teamAName: state.teamAName,
         teamBName: state.teamBName,
+        teamARoster: state.teamARoster, 
+        teamBRoster: state.teamBRoster, 
         setsA: state.setsA,
         setsB: state.setsB,
         winner: state.matchWinner,
         sets: state.history,
+        actionLog: state.matchLog, // USE MATCHLOG to include all stats across all sets
         config: state.config
       });
       savedMatchIdRef.current = newId;
     } 
     
-    // 2. Reset the ref if match is no longer over (New Game Started OR Undo happened)
-    // We do NOT delete here anymore. Explicit deletion happens in handleUndo.
     if (!state.isMatchOver) {
         savedMatchIdRef.current = null;
     }
-  }, [state.isMatchOver, state.matchWinner, state.matchDurationSeconds, state.teamAName, state.teamBName, state.setsA, state.setsB, state.history, state.config, historyStore]);
+  }, [state.isMatchOver, state.matchWinner, state.setsA, state.setsB, historyStore, audio]);
 
-  // Wrapper for Undo to handle History deletion logic
+  // Wrapper for Undo
   const handleUndo = useCallback(() => {
     if (state.isMatchOver && savedMatchIdRef.current) {
         historyStore.deleteMatch(savedMatchIdRef.current);
         savedMatchIdRef.current = null;
     }
     game.undo();
-  }, [state.isMatchOver, game.undo, historyStore]);
+    audio.playUndo();
+  }, [state.isMatchOver, game.undo, historyStore, audio]);
 
-  // Determine which visual element corresponds to which logic based on swap
-  const isSwapped = state.swappedSides;
-  const visualLeftScoreEl = isSwapped ? scoreElB : scoreElA;
-  const visualRightScoreEl = isSwapped ? scoreElA : scoreElB;
+  // Handle Beach Switch Alert
+  useEffect(() => {
+      if (state.pendingSideSwitch) {
+          audio.playWhistle();
+          // Optional: Vibrate
+          if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+      }
+  }, [state.pendingSideSwitch, audio]);
 
-  // Force re-measure trigger on swap
+  // Handle Critical Moments (Audio)
+  useEffect(() => {
+      if (game.isMatchPointA || game.isMatchPointB || game.isSetPointA || game.isSetPointB) {
+          // Play subtle tension sound only once when entering state
+          // (Implementation depends on user preference, kept subtle here)
+          // audio.playCritical(); 
+      }
+  }, [game.isMatchPointA, game.isMatchPointB, game.isSetPointA, game.isSetPointB, audio]);
+
+  // Fullscreen Logic
+  const visualLeftScoreEl = state.swappedSides ? scoreElB : scoreElA;
+  const visualRightScoreEl = state.swappedSides ? scoreElA : scoreElB;
+
   const [layoutVersion, setLayoutVersion] = useState(0);
   useEffect(() => {
     const t = setTimeout(() => setLayoutVersion(v => v + 1), 50);
     return () => clearTimeout(t);
-  }, [isSwapped, isFullscreen]);
+  }, [state.swappedSides, isFullscreen]);
 
   const hudPlacement = useHudMeasure({ 
       leftScoreEl: visualLeftScoreEl, 
@@ -138,81 +173,82 @@ function App() {
       version: layoutVersion
   });
 
-  const enterFullscreenMode = async () => {
-    const element = document.documentElement;
-    if (element.requestFullscreen && !document.fullscreenElement) {
-      try {
-        await element.requestFullscreen();
-        if (screen.orientation && typeof (screen.orientation as any).lock === 'function') {
-          const lockPromise = (screen.orientation as any).lock('landscape');
-          if (lockPromise && typeof lockPromise.catch === 'function') lockPromise.catch(() => {});
-        }
-      } catch (error) {
-        console.error("Error entering fullscreen:", error);
-      }
-    }
-  };
-
-  const exitFullscreenMode = async () => {
-    if (document.exitFullscreen && document.fullscreenElement) {
-      try {
-        await document.exitFullscreen();
-      } catch (error) {
-        console.error("Error exiting fullscreen:", error);
-      }
-    }
-  };
-
   const toggleFullscreen = () => {
+    audio.playTap();
     if (!document.fullscreenElement) {
-      enterFullscreenMode();
+        const element = document.documentElement;
+        if (element.requestFullscreen) element.requestFullscreen().catch(() => {});
     } else {
-      exitFullscreenMode();
+        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
     }
   };
   
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = !!document.fullscreenElement;
-      setIsFullscreen(isCurrentlyFullscreen);
-      if (!isCurrentlyFullscreen) {
-        if (screen.orientation && typeof (screen.orientation as any).unlock === 'function') {
-           const unlockPromise = (screen.orientation as any).unlock();
-           if (unlockPromise && typeof unlockPromise.catch === 'function') unlockPromise.catch(() => {});
-        }
-      }
-    };
-
+    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
   const toggleTimer = useCallback(() => {
+    audio.playTap();
     game.setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
-  }, [game]);
+  }, [game, audio]);
 
-  // Stable Handlers for Interactions
-  // These are crucial to prevent prop churn on ScoreCards during gestures
+  // Interaction Handlers
   const handleInteractionStartA = useCallback(() => setInteractingTeam('A'), []);
   const handleInteractionStartB = useCallback(() => setInteractingTeam('B'), []);
   const handleInteractionEnd = useCallback(() => setInteractingTeam(null), []);
   
-  // Handlers for Score (Wrapped to keep JSX clean AND stable for memoization)
-  const handleAddA = useCallback(() => addPoint('A'), [addPoint]);
-  const handleSubA = useCallback(() => subtractPoint('A'), [subtractPoint]);
-  const handleAddB = useCallback(() => addPoint('B'), [addPoint]);
-  const handleSubB = useCallback(() => subtractPoint('B'), [subtractPoint]);
-  const handleSetServerA = useCallback(() => setServer('A'), [setServer]);
-  const handleSetServerB = useCallback(() => setServer('B'), [setServer]);
-  const handleTimeoutA = useCallback(() => useTimeout('A'), [useTimeout]);
-  const handleTimeoutB = useCallback(() => useTimeout('B'), [useTimeout]);
+  // --- UPDATED HANDLERS FOR SCOUT MODE & AUDIO ---
+  // Ensure we pass a metadata object if playerId exists
+  const handleAddA = useCallback((teamId: TeamId, playerId?: string, skill?: any) => {
+    const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
+    
+    // Play sound BEFORE state update for responsiveness, unless scout modal handles it
+    if (!playerId && !state.config.enablePlayerStats) {
+         audio.playScore(); 
+    }
+    
+    addPoint('A', metadata);
+  }, [addPoint, state.config.enablePlayerStats, audio]);
+
+  const handleSubA = useCallback(() => {
+    audio.playUndo();
+    subtractPoint('A');
+  }, [subtractPoint, audio]);
+
+  const handleAddB = useCallback((teamId: TeamId, playerId?: string, skill?: any) => {
+    const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
+    if (!playerId && !state.config.enablePlayerStats) {
+         audio.playScore(); 
+    }
+    addPoint('B', metadata);
+  }, [addPoint, state.config.enablePlayerStats, audio]);
+  
+  const handleSubB = useCallback(() => {
+    audio.playUndo();
+    subtractPoint('B');
+  }, [subtractPoint, audio]);
+  
+  const handleSetServerA = useCallback(() => { audio.playTap(); setServer('A'); }, [setServer, audio]);
+  const handleSetServerB = useCallback(() => { audio.playTap(); setServer('B'); }, [setServer, audio]);
+  
+  const handleTimeoutA = useCallback(() => { audio.playWhistle(); useTimeout('A'); }, [useTimeout, audio]);
+  const handleTimeoutB = useCallback(() => { audio.playWhistle(); useTimeout('B'); }, [useTimeout, audio]);
+
+  // Modal Open Wrappers with Sound
+  const openSettings = () => { audio.playTap(); setShowSettings(true); };
+  const openManager = () => { audio.playTap(); setShowManager(true); };
+  const openHistory = () => { audio.playTap(); setShowHistory(true); };
+  const openReset = () => { audio.playTap(); setShowResetConfirm(true); };
+  const toggleSwap = () => { audio.playTap(); toggleSides(); };
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
-  const setsLeft = isSwapped ? state.setsB : state.setsA;
-  const setsRight = isSwapped ? state.setsA : state.setsB;
-  const colorLeft = isSwapped ? 'rose' : 'indigo';
-  const colorRight = isSwapped ? 'indigo' : 'rose';
+  const setsLeft = state.swappedSides ? state.setsB : state.setsA;
+  const setsRight = state.swappedSides ? state.setsA : state.setsB;
+  const colorLeft = state.swappedSides ? 'rose' : 'indigo';
+  const colorRight = state.swappedSides ? 'indigo' : 'rose';
   
   return (
     <ErrorBoundary>
@@ -220,13 +256,37 @@ function App() {
         <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative">
           
           <BackgroundGlow 
-            isSwapped={isSwapped} 
+            isSwapped={state.swappedSides} 
             isFullscreen={isFullscreen} 
           />
 
           <SuddenDeathOverlay active={state.inSuddenDeath} />
 
-          {/* History Bar - Hidden in Fullscreen, Sticky in Normal */}
+          {/* Beach Mode Switch Alert Overlay */}
+          <AnimatePresence>
+             {state.pendingSideSwitch && (
+                 <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                    onClick={toggleSwap} // Clicking anywhere swaps
+                 >
+                     <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl border border-indigo-500 text-center flex flex-col items-center gap-4 animate-bounce-subtle">
+                         <RefreshCw size={48} className="text-indigo-500 animate-spin-slow" />
+                         <div>
+                             <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white">Switch Sides</h2>
+                             <p className="text-sm font-bold text-slate-500">Sum of points is multiple of {state.config.hasTieBreak && state.currentSet === state.config.maxSets ? 5 : 7}</p>
+                         </div>
+                         <button className="px-6 py-2 bg-indigo-500 text-white rounded-full font-bold uppercase tracking-widest hover:bg-indigo-600 transition-colors">
+                             Tap to Swap
+                         </button>
+                     </div>
+                 </motion.div>
+             )}
+          </AnimatePresence>
+
+          {/* History Bar */}
           <div className={`
               z-30 transition-all duration-500 flex-none
               ${isFullscreen 
@@ -249,22 +309,22 @@ function App() {
                     isTieBreak={game.isTieBreak}
                     onToggleTimer={toggleTimer}
                     isTimerRunning={state.isTimerRunning}
-                    teamNameA={isSwapped ? state.teamBName : state.teamAName}
-                    teamNameB={isSwapped ? state.teamAName : state.teamBName}
+                    teamNameA={state.swappedSides ? state.teamBName : state.teamAName}
+                    teamNameB={state.swappedSides ? state.teamAName : state.teamBName}
                     colorA={colorLeft}
                     colorB={colorRight}
-                    isServingLeft={isSwapped ? state.servingTeam === 'B' : state.servingTeam === 'A'}
-                    isServingRight={isSwapped ? state.servingTeam === 'A' : state.servingTeam === 'B'}
-                    onSetServerA={isSwapped ? handleSetServerB : handleSetServerA}
-                    onSetServerB={isSwapped ? handleSetServerA : handleSetServerB}
-                    timeoutsA={isSwapped ? state.timeoutsB : state.timeoutsA}
-                    timeoutsB={isSwapped ? state.timeoutsA : state.timeoutsB}
-                    onTimeoutA={isSwapped ? handleTimeoutB : handleTimeoutA}
-                    onTimeoutB={isSwapped ? handleTimeoutA : handleTimeoutB}
-                    isMatchPointA={isSwapped ? game.isMatchPointB : game.isMatchPointA}
-                    isSetPointA={isSwapped ? game.isSetPointB : game.isSetPointA}
-                    isMatchPointB={isSwapped ? game.isMatchPointA : game.isMatchPointB}
-                    isSetPointB={isSwapped ? game.isSetPointA : game.isSetPointB}
+                    isServingLeft={state.swappedSides ? state.servingTeam === 'B' : state.servingTeam === 'A'}
+                    isServingRight={state.swappedSides ? state.servingTeam === 'A' : state.servingTeam === 'B'}
+                    onSetServerA={state.swappedSides ? handleSetServerB : handleSetServerA}
+                    onSetServerB={state.swappedSides ? handleSetServerA : handleSetServerB}
+                    timeoutsA={state.swappedSides ? state.timeoutsB : state.timeoutsA}
+                    timeoutsB={state.swappedSides ? state.timeoutsA : state.timeoutsB}
+                    onTimeoutA={state.swappedSides ? handleTimeoutB : handleTimeoutA}
+                    onTimeoutB={state.swappedSides ? handleTimeoutA : handleTimeoutB}
+                    isMatchPointA={state.swappedSides ? game.isMatchPointB : game.isMatchPointA}
+                    isSetPointA={state.swappedSides ? game.isSetPointB : game.isSetPointA}
+                    isMatchPointB={state.swappedSides ? game.isMatchPointA : game.isMatchPointB}
+                    isSetPointB={state.swappedSides ? game.isSetPointA : game.isSetPointB}
                     isDeuce={game.isDeuce}
                     inSuddenDeath={state.inSuddenDeath}
                 />
@@ -292,6 +352,7 @@ function App() {
                     <>
                       <ScoreCardFullscreen 
                           teamId="A"
+                          team={state.teamARoster} 
                           score={state.scoreA}
                           isServing={state.servingTeam === 'A'}
                           onAdd={handleAddA}
@@ -304,12 +365,14 @@ function App() {
                           isLocked={interactingTeam !== null && interactingTeam !== 'A'}
                           onInteractionStart={handleInteractionStartA}
                           onInteractionEnd={handleInteractionEnd}
-                          reverseLayout={isSwapped}
+                          reverseLayout={state.swappedSides}
                           scoreRefCallback={setScoreElA}
-                          alignment={isSwapped ? 'right' : 'left'}
+                          alignment={state.swappedSides ? 'right' : 'left'}
+                          config={state.config} 
                       />
                       <ScoreCardFullscreen
                           teamId="B"
+                          team={state.teamBRoster} 
                           score={state.scoreB}
                           isServing={state.servingTeam === 'B'}
                           onAdd={handleAddB}
@@ -322,9 +385,10 @@ function App() {
                           isLocked={interactingTeam !== null && interactingTeam !== 'B'}
                           onInteractionStart={handleInteractionStartB}
                           onInteractionEnd={handleInteractionEnd}
-                          reverseLayout={isSwapped}
+                          reverseLayout={state.swappedSides}
                           scoreRefCallback={setScoreElB}
-                          alignment={isSwapped ? 'left' : 'right'}
+                          alignment={state.swappedSides ? 'left' : 'right'}
+                          config={state.config} 
                       />
                     </>
                  ) : (
@@ -333,7 +397,7 @@ function App() {
                       <motion.div 
                         layout 
                         key="card-wrapper-A"
-                        className={`flex-1 w-full h-full flex flex-col ${isSwapped ? 'order-last' : 'order-first'}`}
+                        className={`flex-1 w-full h-full flex flex-col ${state.swappedSides ? 'order-last' : 'order-first'}`}
                         transition={{ type: "spring", stiffness: 250, damping: 25 }}
                       >
                         <ScoreCardNormal
@@ -356,6 +420,7 @@ function App() {
                             isLocked={interactingTeam !== null && interactingTeam !== 'A'}
                             onInteractionStart={handleInteractionStartA}
                             onInteractionEnd={handleInteractionEnd}
+                            config={state.config} 
                         />
                       </motion.div>
 
@@ -363,7 +428,7 @@ function App() {
                       <motion.div 
                         layout 
                         key="card-wrapper-B"
-                        className={`flex-1 w-full h-full flex flex-col ${isSwapped ? 'order-first' : 'order-last'}`}
+                        className={`flex-1 w-full h-full flex flex-col ${state.swappedSides ? 'order-first' : 'order-last'}`}
                         transition={{ type: "spring", stiffness: 250, damping: 25 }}
                       >
                         <ScoreCardNormal
@@ -386,6 +451,7 @@ function App() {
                             isLocked={interactingTeam !== null && interactingTeam !== 'B'}
                             onInteractionStart={handleInteractionStartB}
                             onInteractionEnd={handleInteractionEnd}
+                            config={state.config} 
                         />
                       </motion.div>
                     </LayoutGroup>
@@ -413,11 +479,11 @@ function App() {
               <Controls 
                   onUndo={handleUndo}
                   canUndo={game.canUndo}
-                  onSwap={toggleSides}
-                  onSettings={() => setShowSettings(true)}
-                  onRoster={() => setShowManager(true)}
-                  onHistory={() => setShowHistory(true)}
-                  onReset={() => setShowResetConfirm(true)}
+                  onSwap={toggleSwap}
+                  onSettings={openSettings}
+                  onRoster={openManager}
+                  onHistory={openHistory}
+                  onReset={openReset}
                   onToggleFullscreen={toggleFullscreen}
               />
           </div>
@@ -426,19 +492,19 @@ function App() {
             <FloatingControlBar 
                 onUndo={handleUndo}
                 canUndo={game.canUndo}
-                onSwap={toggleSides}
-                onReset={() => setShowResetConfirm(true)}
-                onMenu={() => setShowFullscreenMenu(true)}
+                onSwap={toggleSwap}
+                onReset={openReset}
+                onMenu={() => { audio.playTap(); setShowFullscreenMenu(true); }}
             />
           )}
 
           <FullscreenMenuDrawer 
              isOpen={showFullscreenMenu}
              onClose={() => setShowFullscreenMenu(false)}
-             onOpenSettings={() => setShowSettings(true)}
-             onOpenRoster={() => setShowManager(true)}
-             onOpenHistory={() => setShowHistory(true)}
-             onExitFullscreen={exitFullscreenMode}
+             onOpenSettings={openSettings}
+             onOpenRoster={openManager}
+             onOpenHistory={openHistory}
+             onExitFullscreen={toggleFullscreen}
           />
 
           <Suspense fallback={null}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Users, Settings, LogOut, Sun, Moon } from 'lucide-react';
+import { X, Users, Settings, LogOut, Sun, Moon, History } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -8,11 +8,12 @@ interface FullscreenMenuDrawerProps {
   onClose: () => void;
   onOpenSettings: () => void;
   onOpenRoster: () => void;
+  onOpenHistory: () => void;
   onExitFullscreen: () => void;
 }
 
 export const FullscreenMenuDrawer: React.FC<FullscreenMenuDrawerProps> = ({
-  isOpen, onClose, onOpenSettings, onOpenRoster, onExitFullscreen
+  isOpen, onClose, onOpenSettings, onOpenRoster, onOpenHistory, onExitFullscreen
 }) => {
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
@@ -48,6 +49,16 @@ export const FullscreenMenuDrawer: React.FC<FullscreenMenuDrawerProps> = ({
             <div>
                 <span className="block text-sm font-bold text-slate-200 group-hover:text-white uppercase tracking-wide">{t('controls.teams')}</span>
                 <span className="text-[10px] text-slate-500">{t('teamManager.title')}</span>
+            </div>
+          </button>
+
+          <button onClick={() => { onOpenHistory(); onClose(); }} className="w-full flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all text-left group">
+            <div className="p-3 rounded-full bg-amber-500/20 text-amber-400 group-hover:text-amber-200 group-hover:scale-110 transition-transform">
+                <History size={20} />
+            </div>
+            <div>
+                <span className="block text-sm font-bold text-slate-200 group-hover:text-white uppercase tracking-wide">{t('controls.history')}</span>
+                <span className="text-[10px] text-slate-500">{t('historyList.title')}</span>
             </div>
           </button>
 

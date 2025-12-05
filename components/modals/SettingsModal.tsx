@@ -1,12 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameConfig } from '../../types';
-import { Check, Trophy, Sun, Zap, Download, Share, Smartphone, Menu, Moon, AlertTriangle, Globe } from 'lucide-react';
+import { Check, Trophy, Sun, Zap, Download, Share, Smartphone, Menu, Moon, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { motion } from 'framer-motion';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -50,8 +48,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const isBeach = localConfig.maxSets === 3 && localConfig.pointsPerSet === 21 && localConfig.hasTieBreak === true && localConfig.deuceType === 'standard';
   const isSegunda = localConfig.maxSets === 1 && localConfig.pointsPerSet === 15 && localConfig.hasTieBreak === false && localConfig.deuceType === 'sudden_death_3pt';
 
-  const labelClass = "text-xs font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-3 block flex items-center gap-2";
-  const sectionClass = "p-5 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-black/5 dark:border-white/5 shadow-inner";
+  const labelClass = "text-xs font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-2 block";
+  const sectionClass = "p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5";
 
   const PresetButton = ({ active, onClick, icon: Icon, label, sub, colorClass, borderClass, bgActive, textActive }: any) => (
     <button 
@@ -59,143 +57,109 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         className={`relative py-3 px-3 rounded-xl border transition-all flex flex-col items-center gap-1.5 text-center group
             ${active 
                 ? `${bgActive} ${borderClass} ${textActive} shadow-lg shadow-${colorClass}/20 ring-1 ring-${colorClass}/50` 
-                : `bg-white dark:bg-white/5 border-black/5 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 hover:text-slate-700 dark:hover:text-slate-200`}`}
+                : `bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:bg-black/10 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 hover:text-slate-700 dark:hover:text-slate-200`}`}
     >
         {active && <div className={`absolute top-2 right-2 p-0.5 rounded-full ${textActive} bg-white/10`}><Check size={10} strokeWidth={3} /></div>}
-        <Icon size={20} className={`mb-0.5 transition-colors ${active ? textActive : 'text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300'}`} />
+        <Icon size={20} className={`mb-0.5 transition-colors ${active ? textActive : 'text-slate-500 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300'}`} />
         <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
         <span className={`text-[10px] font-normal opacity-70`}>{sub}</span>
     </button>
   );
 
-  const languages = [
-    { code: 'en', label: 'English', flag: '🇺🇸' },
-    { code: 'pt', label: 'Português', flag: '🇧🇷' },
-    { code: 'es', label: 'Español', flag: '🇪🇸' }
-  ] as const;
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('settings.title')}>
       <div className="space-y-6 pb-2">
         
-        {/* Appearance Section */}
         <div className={sectionClass}>
-          <label className={labelClass}><Sun size={12} /> {t('settings.appearance.title')}</label>
-          <div className="space-y-5">
-              
-              {/* Theme Toggle */}
-              <div className="flex items-center justify-between bg-white/50 dark:bg-black/20 p-1 rounded-xl border border-black/5 dark:border-white/5">
-                  {(['light', 'dark'] as const).map(th => (
-                      <button key={th} onClick={() => setTheme(th)}
-                          className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${theme === th ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}
-                      >
-                          {th === 'light' ? <Sun size={14} /> : <Moon size={14} />}
-                          {t(`settings.appearance.themes.${th}`)}
-                      </button>
-                  ))}
-              </div>
-
-              {/* Language Selector - Grid Layout */}
-              <div>
-                  <div className="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-wider flex items-center gap-1.5 ml-1">
-                    <Globe size={10} /> {t('settings.appearance.language')}
+          <label className={labelClass}>{t('settings.appearance.title')}</label>
+          <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                  <span className="text-slate-700 dark:text-slate-300 text-sm">{t('settings.appearance.theme')}</span>
+                  <div className="flex bg-black/5 dark:bg-white/5 rounded-lg p-1 gap-1">
+                      {(['light', 'dark'] as const).map(th => (
+                          <button key={th} onClick={() => setTheme(th)}
+                              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${theme === th ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}
+                          >
+                              {th === 'light' && <Sun size={12} />}
+                              {th === 'dark' && <Moon size={12} />}
+                              {t(`settings.appearance.themes.${th}`)}
+                          </button>
+                      ))}
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {languages.map((lang) => {
-                      const isActive = language === lang.code;
-                      return (
-                        <button
-                          key={lang.code}
-                          onClick={() => setLanguage(lang.code)}
-                          className={`
-                            relative overflow-hidden flex flex-col items-center justify-center py-3 rounded-xl border transition-all duration-300
-                            ${isActive 
-                              ? 'bg-indigo-500/10 border-indigo-500/40 shadow-[0_0_15px_-3px_rgba(99,102,241,0.2)]' 
-                              : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10'
-                            }
-                          `}
-                        >
-                          <span className="text-xl mb-1 filter drop-shadow-sm transform transition-transform duration-300 group-hover:scale-110">{lang.flag}</span>
-                          <span className={`text-[10px] font-bold uppercase tracking-wider transition-colors ${isActive ? 'text-indigo-600 dark:text-indigo-300' : 'text-slate-500 dark:text-slate-400'}`}>
-                            {lang.label}
-                          </span>
-                          
-                          {/* Active Indicator Dot */}
-                          {isActive && (
-                            <motion.div 
-                              layoutId="active-lang"
-                              className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_4px_currentColor]"
-                            />
-                          )}
-                        </button>
-                      );
-                    })}
+              </div>
+              <div className="flex items-center justify-between">
+                  <span className="text-slate-700 dark:text-slate-300 text-sm">{t('settings.appearance.language')}</span>
+                  <div className="relative">
+                    <select value={language} onChange={(e) => setLanguage(e.target.value as any)}
+                        className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-2 text-xs text-slate-800 dark:text-white outline-none focus:border-indigo-500/50 appearance-none text-right font-medium min-w-[100px]">
+                        <option className="bg-white dark:bg-slate-900" value="en">{t('languages.en')}</option>
+                        <option className="bg-white dark:bg-slate-900" value="pt">{t('languages.pt')}</option>
+                        <option className="bg-white dark:bg-slate-900" value="es">{t('languages.es')}</option>
+                    </select>
                   </div>
               </div>
           </div>
         </div>
 
-        {/* Presets Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
            <PresetButton active={isFIVB} onClick={setPresetFIVB} icon={Trophy} label={t('presets.fivb.label')} sub={t('presets.fivb.sub')} colorClass="indigo-500" borderClass="border-indigo-500" bgActive="bg-indigo-500/20" textActive="text-indigo-600 dark:text-indigo-300"/>
            <PresetButton active={isBeach} onClick={setPresetBeach} icon={Sun} label={t('presets.beach.label')} sub={t('presets.beach.sub')} colorClass="orange-500" borderClass="border-orange-500" bgActive="bg-orange-500/20" textActive="text-orange-600 dark:text-orange-300"/>
            <PresetButton active={isSegunda} onClick={setPresetSegunda} icon={Zap} label={t('presets.custom.label')} sub={t('presets.custom.sub')} colorClass="emerald-500" borderClass="border-emerald-500" bgActive="bg-emerald-500/20" textActive="text-emerald-600 dark:text-emerald-300"/>
         </div>
 
-        {/* Rules Section */}
         <div className={sectionClass}>
-          <label className={labelClass}><Menu size={12} /> {t('settings.rules.title')}</label>
+          <label className={labelClass}>{t('settings.rules.title')}</label>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{t('settings.rules.setsToPlay')}</span>
-                <div className="flex bg-black/5 dark:bg-black/20 rounded-lg p-1 gap-1 border border-black/5 dark:border-white/5">
+                <span className="text-slate-700 dark:text-slate-300 text-sm">{t('settings.rules.setsToPlay')}</span>
+                <div className="flex bg-black/5 dark:bg-white/5 rounded-lg p-1 gap-1">
                 {[1, 3, 5].map(val => (
                     <button key={val} onClick={() => setLocalConfig(prev => ({ ...prev, maxSets: val as any }))}
-                        className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${localConfig.maxSets === val ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}>
+                        className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${localConfig.maxSets === val ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}>
                         {val}
                     </button>
                 ))}
                 </div>
             </div>
             <div className="flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{t('settings.rules.pointsPerSet')}</span>
-                <div className="flex bg-black/5 dark:bg-black/20 rounded-lg p-1 gap-1 border border-black/5 dark:border-white/5">
+                <span className="text-slate-700 dark:text-slate-300 text-sm">{t('settings.rules.pointsPerSet')}</span>
+                <div className="flex bg-black/5 dark:bg-white/5 rounded-lg p-1 gap-1">
                 {[15, 21, 25].map(val => (
                     <button key={val} onClick={() => setLocalConfig(prev => ({ ...prev, pointsPerSet: val as any }))}
-                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${localConfig.pointsPerSet === val ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}>
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${localConfig.pointsPerSet === val ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}>
                         {val}
                     </button>
                 ))}
                 </div>
             </div>
             <div className="flex items-center justify-between border-t border-black/5 dark:border-white/5 pt-4">
-                <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{t('settings.rules.tieBreak')}</span>
+                <span className="text-slate-700 dark:text-slate-300 text-sm">{t('settings.rules.tieBreak')}</span>
                 <div className="flex items-center gap-3">
                     {localConfig.hasTieBreak && (
                         <select value={localConfig.tieBreakPoints} onChange={e => setLocalConfig(prev => ({ ...prev, tieBreakPoints: Number(e.target.value) }))}
-                            className="bg-white dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-white outline-none focus:border-indigo-500/50 appearance-none font-bold">
+                            className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-white outline-none focus:border-indigo-500/50">
                             <option className="bg-white dark:bg-slate-900" value={15}>{t('settings.rules.tieBreakTo15')}</option>
                             <option className="bg-white dark:bg-slate-900" value={25}>{t('settings.rules.tieBreakTo25')}</option>
                         </select>
                     )}
                     <button onClick={() => setLocalConfig(prev => ({ ...prev, hasTieBreak: !prev.hasTieBreak }))}
-                        className={`w-11 h-6 rounded-full p-1 transition-colors duration-300 ${localConfig.hasTieBreak ? 'bg-indigo-500' : 'bg-slate-200 dark:bg-white/10'}`}>
-                        <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${localConfig.hasTieBreak ? 'translate-x-5' : ''}`} />
+                        className={`w-10 h-6 rounded-full p-1 transition-colors ${localConfig.hasTieBreak ? 'bg-indigo-500' : 'bg-black/10 dark:bg-white/10'}`}>
+                        <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${localConfig.hasTieBreak ? 'translate-x-4' : ''}`} />
                     </button>
                 </div>
             </div>
-            <div className="flex flex-col gap-3 border-t border-black/5 dark:border-white/5 pt-4">
-                <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{t('settings.rules.deuceLogic')}</span>
+            <div className="flex flex-col gap-2 border-t border-black/5 dark:border-white/5 pt-4">
+                <span className="text-slate-700 dark:text-slate-300 text-sm">{t('settings.rules.deuceLogic')}</span>
                 <div className="grid grid-cols-2 gap-2">
                     <button onClick={() => setLocalConfig(prev => ({ ...prev, deuceType: 'standard' }))}
-                        className={`py-3 px-3 rounded-xl border text-xs font-bold text-left transition-all relative ${localConfig.deuceType === 'standard' ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-600 dark:text-indigo-300' : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/5 text-slate-500 hover:bg-black/5 dark:hover:bg-white/10'}`}>
+                        className={`py-2 px-3 rounded-lg border text-xs font-medium text-left transition-all relative ${localConfig.deuceType === 'standard' ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-600 dark:text-indigo-300' : 'bg-transparent border-black/5 dark:border-white/5 text-slate-500'}`}>
                         {t('settings.rules.deuceStandard')}
-                        {localConfig.deuceType === 'standard' && <div className="absolute top-2 right-2 text-indigo-500"><Check size={12} /></div>}
+                        {localConfig.deuceType === 'standard' && <Check size={14} className="absolute right-2 top-2.5" />}
                     </button>
                     <button onClick={() => setLocalConfig(prev => ({ ...prev, deuceType: 'sudden_death_3pt' }))}
-                        className={`py-3 px-3 rounded-xl border text-xs font-bold text-left transition-all relative ${localConfig.deuceType === 'sudden_death_3pt' ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-600 dark:text-indigo-300' : 'bg-white dark:bg-white/5 border-black/5 dark:border-white/5 text-slate-500 hover:bg-black/5 dark:hover:bg-white/10'}`}>
+                        className={`py-2 px-3 rounded-lg border text-xs font-medium text-left transition-all relative ${localConfig.deuceType === 'sudden_death_3pt' ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-600 dark:text-indigo-300' : 'bg-transparent border-black/5 dark:border-white/5 text-slate-500'}`}>
                         {t('settings.rules.deuceSuddenDeath')}
-                        {localConfig.deuceType === 'sudden_death_3pt' && <div className="absolute top-2 right-2 text-indigo-500"><Check size={12} /></div>}
+                        {localConfig.deuceType === 'sudden_death_3pt' && <Check size={14} className="absolute right-2 top-2.5" />}
                     </button>
                 </div>
             </div>
@@ -234,18 +198,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         )}
 
         {requiresReset && (
-            <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
-                <div className="p-2.5 bg-rose-500/20 rounded-full text-rose-500 shrink-0">
-                    <AlertTriangle size={20} />
+            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                <div className="p-2 bg-rose-500/20 rounded-full text-rose-500">
+                    <AlertTriangle size={18} />
                 </div>
                 <div>
-                    <h4 className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wide mb-0.5">{t('settings.warningTitle')}</h4>
+                    <h4 className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wide">{t('settings.warningTitle')}</h4>
                     <p className="text-xs text-slate-600 dark:text-slate-400 leading-tight">{t('settings.warningMessage')}</p>
                 </div>
             </div>
         )}
 
-        <Button onClick={handleSave} className={`w-full mt-2 ${requiresReset ? 'bg-rose-600 hover:bg-rose-500 border-rose-400 shadow-rose-500/20' : ''}`} size="lg">
+        <Button onClick={handleSave} className={`w-full ${requiresReset ? 'bg-rose-600 hover:bg-rose-500 border-rose-400 shadow-rose-500/20' : ''}`} size="lg">
             {requiresReset ? t('settings.applyAndReset') : t('settings.applyChanges')}
         </Button>
       </div>

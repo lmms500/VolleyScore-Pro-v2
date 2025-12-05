@@ -62,8 +62,19 @@ export interface RotationReport {
 }
 
 export type ActionLog = 
-  | { type: 'POINT'; team: TeamId }
-  | { type: 'TIMEOUT'; team: TeamId };
+  | { 
+      type: 'POINT'; 
+      team: TeamId;
+      prevScoreA: number;
+      prevScoreB: number;
+      prevServingTeam: TeamId | null;
+    }
+  | { 
+      type: 'TIMEOUT'; 
+      team: TeamId;
+      prevTimeoutsA: number;
+      prevTimeoutsB: number;
+    };
 
 export interface GameState {
   // Names
@@ -80,6 +91,7 @@ export interface GameState {
   // History & Logic
   history: SetHistory[];
   actionLog: ActionLog[]; 
+  lastSnapshot?: GameState; // For critical undo (Match/Set transitions)
   isMatchOver: boolean;
   matchWinner: TeamId | null;
   

@@ -88,6 +88,9 @@ export const useVolleyGame = () => {
         
         savedState.actionLog = savedState.actionLog.filter((action: any) => action.type !== 'TOGGLE_SERVE');
         
+        // Ensure legacy saves don't break with new snapshot field
+        if ((savedState as any).lastSnapshot) delete (savedState as any).lastSnapshot;
+
         setState(savedState); 
       }
       setIsLoaded(true);
@@ -96,9 +99,12 @@ export const useVolleyGame = () => {
   }, []);
 
   // Persistence: SAVE
+  // This ensures the match state, including individual sets history, is saved to persistent storage.
   useEffect(() => {
     if (isLoaded) {
-        SecureStorage.save(STORAGE_KEY, state);
+        // We strip lastSnapshot to avoid recursive JSON structures and save space
+        const { lastSnapshot, ...stateToSave } = state;
+        SecureStorage.save(STORAGE_KEY, stateToSave);
     }
   }, [state, isLoaded]);
 
@@ -175,6 +181,11 @@ export const useVolleyGame = () => {
 
           if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
           
+          // CRITICAL: We save the 'prev' state as a snapshot before transitioning to a win state.
+          // This allows "Undo" to revert the set/match win.
+          // IMPORTANT: We must capture the exact roster/queue state at this moment to revert rotation logic correctly.
+          const snapshotState = { ...prev };
+
           return {
               ...prev, 
               scoreA: matchWinner ? newScoreA : 0, scoreB: matchWinner ? newScoreB : 0, setsA: newSetsA, setsB: newSetsB,
@@ -184,7 +195,8 @@ export const useVolleyGame = () => {
               rotationReport: previewReport, 
               servingTeam: null, isTimerRunning: matchWinner ? false : true, timeoutsA: 0, timeoutsB: 0, 
               inSuddenDeath: false,
-              actionLog: []
+              actionLog: [], // Clear log for new set, but snapshot handles the undo
+              lastSnapshot: snapshotState // Save clean snapshot
           };
       }
       
@@ -195,7 +207,14 @@ export const useVolleyGame = () => {
           servingTeam: team, 
           isTimerRunning: true, 
           inSuddenDeath: prev.inSuddenDeath || enteringSuddenDeath,
-          actionLog: [...prev.actionLog, { type: 'POINT', team }] 
+          actionLog: [...prev.actionLog, { 
+              type: 'POINT', 
+              team,
+              prevScoreA: prev.scoreA,
+              prevScoreB: prev.scoreB,
+              prevServingTeam: prev.servingTeam
+          }],
+          lastSnapshot: undefined // Clear snapshot on normal point to prevent stale jump-backs
       };
     });
   }, [queueManager]);
@@ -204,7 +223,16 @@ export const useVolleyGame = () => {
     setState(prev => {
         if (prev.isMatchOver) return prev;
         if (!isValidScoreOperation(team === 'A' ? prev.scoreA : prev.scoreB, -1)) return prev;
-        return { ...prev, scoreA: team === 'A' ? prev.scoreA - 1 : prev.scoreA, scoreB: team === 'B' ? prev.scoreB - 1 : prev.scoreB };
+        
+        // Manual subtraction essentially functions like an undo but without popping the history stack cleanly.
+        // We log the manual change for consistency if needed, but usually this is just a correction.
+        return { 
+            ...prev, 
+            scoreA: team === 'A' ? prev.scoreA - 1 : prev.scoreA, 
+            scoreB: team === 'B' ? prev.scoreB - 1 : prev.scoreB,
+            // We do NOT clear lastSnapshot here because manual adjustment might be minor.
+            // But strict undo is preferred.
+        };
     });
   }, []);
   
@@ -223,13 +251,36 @@ export const useVolleyGame = () => {
           ...prev, 
           timeoutsA: newTimeoutsA, 
           timeoutsB: newTimeoutsB,
-          actionLog: [...prev.actionLog, { type: 'TIMEOUT', team }]
+          actionLog: [...prev.actionLog, { 
+              type: 'TIMEOUT', 
+              team,
+              prevTimeoutsA: prev.timeoutsA,
+              prevTimeoutsB: prev.timeoutsB
+          }],
+          lastSnapshot: undefined
       };
     });
   }, []);
 
   const undo = useCallback(() => { 
     setState(prev => {
+        // Priority 1: Restore Snapshot (Set/Match Transitions)
+        // This handles the "Undo Match Win" scenario, effectively reverting to Match Point.
+        if (prev.lastSnapshot) {
+            console.log("Restoring snapshot (Undo Match/Set Win)");
+            // CRITICAL FIX: Explicitly restore the Queue State in the QueueManager.
+            // The snapshot contains the roster state *before* the match/set ended.
+            // If we don't do this, the QueueManager thinks rotation happened, but the GameState thinks it didn't.
+            if (prev.lastSnapshot.teamARoster && prev.lastSnapshot.teamBRoster) {
+                queueManager.overrideQueueState(
+                    prev.lastSnapshot.teamARoster,
+                    prev.lastSnapshot.teamBRoster,
+                    prev.lastSnapshot.queue
+                );
+            }
+            return prev.lastSnapshot;
+        }
+
         if (prev.isMatchOver) return prev; 
         if (prev.actionLog.length === 0) return prev;
 
@@ -240,8 +291,9 @@ export const useVolleyGame = () => {
             return {
                 ...prev,
                 actionLog: newLog,
-                timeoutsA: lastAction.team === 'A' ? Math.max(0, prev.timeoutsA - 1) : prev.timeoutsA,
-                timeoutsB: lastAction.team === 'B' ? Math.max(0, prev.timeoutsB - 1) : prev.timeoutsB,
+                timeoutsA: lastAction.prevTimeoutsA,
+                timeoutsB: lastAction.prevTimeoutsB,
+                lastSnapshot: undefined
             };
         }
 
@@ -249,15 +301,16 @@ export const useVolleyGame = () => {
             return {
                 ...prev,
                 actionLog: newLog,
-                scoreA: lastAction.team === 'A' ? Math.max(0, prev.scoreA - 1) : prev.scoreA,
-                scoreB: lastAction.team === 'B' ? Math.max(0, prev.scoreB - 1) : prev.scoreB,
-                servingTeam: null 
+                scoreA: lastAction.prevScoreA,
+                scoreB: lastAction.prevScoreB,
+                servingTeam: lastAction.prevServingTeam, // Restore correctly instead of null
+                lastSnapshot: undefined
             };
         }
 
         return prev;
     });
-  }, []); 
+  }, [queueManager]); 
 
   const resetMatch = useCallback(() => {
       setState(prev => ({ 
@@ -296,15 +349,16 @@ export const useVolleyGame = () => {
 
   const rotateTeams = useCallback(() => {
     if (!state.matchWinner) return;
-    queueManager.rotateTeams(state.matchWinner);
+    // Pass the existing report to ensure the rotation matches what was previewed
+    queueManager.rotateTeams(state.matchWinner, state.rotationReport);
     setState(prev => ({
         ...prev, scoreA: 0, scoreB: 0, setsA: 0, setsB: 0, currentSet: 1, history: [], actionLog: [], isMatchOver: false, matchWinner: null, servingTeam: null, timeoutsA: 0, timeoutsB: 0, inSuddenDeath: false, matchDurationSeconds: 0, isTimerRunning: false,
     }));
-  }, [state.matchWinner, queueManager]);
+  }, [state.matchWinner, state.rotationReport, queueManager]);
 
   return {
     state, setState, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, setServer, useTimeout, applySettings, 
-    canUndo: state.actionLog.length > 0, 
+    canUndo: state.actionLog.length > 0 || !!state.lastSnapshot, 
     isMatchActive,
     generateTeams: queueManager.generateTeams,
     rotateTeams,

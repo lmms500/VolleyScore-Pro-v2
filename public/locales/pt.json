@@ -17,6 +17,7 @@
     "swap": "Trocar Lados",
     "teams": "Equipes",
     "settings": "Configurações",
+    "history": "Histórico",
     "fullscreen": "Tela Cheia",
     "exitFullscreen": "Sair Tela Cheia",
     "reset": "Zerar Partida"
@@ -175,6 +176,21 @@
       "queue": "Na Fila"
     },
     "emptyProfiles": "Nenhum perfil salvo ainda. Sincronize jogadores na aba Elenco para criar perfis."
+  },
+  "historyList": {
+    "title": "Histórico de Partidas",
+    "empty": "Nenhuma partida gravada ainda.",
+    "searchPlaceholder": "Buscar times...",
+    "filterAll": "Todas",
+    "filterWinnerA": "Vencedor: A",
+    "filterWinnerB": "Vencedor: B",
+    "export": "Exportar JSON",
+    "import": "Importar JSON",
+    "importSuccess": "Histórico importado com sucesso!",
+    "importError": "Formato de arquivo inválido.",
+    "delete": "Excluir",
+    "duration": "Duração",
+    "date": "Data"
   },
   "errors": {
     "genericTitle": "Algo deu errado",

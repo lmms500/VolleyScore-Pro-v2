@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Player, Team, TeamId, RotationReport, RotationMode, PlayerProfile } from '../types';
 import { PLAYER_LIMIT_ON_COURT, PLAYERS_PER_TEAM } from '../constants';
@@ -100,6 +101,18 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
 
   const setRotationMode = useCallback((mode: RotationMode) => {
       setQueueState(prev => ({ ...prev, mode }));
+  }, []);
+
+  // CRITICAL: Force state override (used by Undo logic in Game Hook)
+  const overrideQueueState = useCallback((courtA: Team, courtB: Team, queue: Team[]) => {
+      console.log("[Queue] Overriding State from Snapshot (Undo)");
+      setQueueState(prev => ({
+          ...prev,
+          courtA,
+          courtB,
+          queue,
+          lastReport: null // Clear report as we reverted to a state before rotation
+      }));
   }, []);
 
   const balanceTeams = useCallback(() => {
@@ -258,13 +271,23 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     }
   }, [queueState]);
 
-  const rotateTeams = useCallback((winnerId: TeamId) => {
-    const report = getRotationPreview(winnerId);
-    if (!report) return;
+  const rotateTeams = useCallback((winnerId: TeamId, manualReport?: RotationReport | null) => {
+    // If a manual report is provided (e.g. from history snapshot or match over modal), use it.
+    // This ensures consistency even if queue state fluctuated slightly, though queue state should be stable.
+    
+    // Fallback: If no manual report (shouldn't happen in normal flow), calculate fresh.
+    const report = manualReport || getRotationPreview(winnerId);
+    
+    if (!report) {
+        console.warn("Rotation attempted but no report generated. Queue likely empty.");
+        return;
+    }
 
     setQueueState(prev => {
       const nextCourtA = winnerId === 'A' ? prev.courtA : report.incomingTeam;
       const nextCourtB = winnerId === 'B' ? prev.courtB : report.incomingTeam;
+      
+      console.log(`[Rotation] Executing. Winner: ${winnerId}. Incoming: ${report.incomingTeam.name}`);
       
       _updateNames(nextCourtA, nextCourtB);
       
@@ -433,6 +456,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     updatePlayerSkill: (id: string, skillLevel: number) => updatePlayer(id, { skillLevel }),
     rotateTeams,
     getRotationPreview,
+    overrideQueueState, // EXPORTED FOR UNDO
     togglePlayerFixed,
     movePlayer,
     addPlayer,

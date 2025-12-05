@@ -1,11 +1,10 @@
 
-
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Team, Player, RotationMode, PlayerProfile } from '../../types';
 import { calculateTeamStrength } from '../../utils/balanceUtils';
-import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List, UserPlus, Shield, PlayCircle, Lock } from 'lucide-react';
+import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List, Lock } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -23,7 +22,6 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '../../contexts/LanguageContext';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const SortableContextFixed = SortableContext as any;
 const DragOverlayFixed = DragOverlay as any;
@@ -59,9 +57,9 @@ interface TeamManagerModalProps {
 
 type PlayerLocationStatus = 'A' | 'B' | 'Queue' | null;
 
-// --- SUB-COMPONENTS ---
+// --- OPTIMIZED SUB-COMPONENTS ---
 
-const SkillSelector: React.FC<{ level: number, onChange: (l: number) => void }> = ({ level, onChange }) => {
+const SkillSelector = memo(({ level, onChange }: { level: number, onChange: (l: number) => void }) => {
     return (
         <div className="flex gap-0.5" onPointerDown={(e) => e.stopPropagation()}>
             {[1, 2, 3, 4, 5].map(i => (
@@ -78,16 +76,14 @@ const SkillSelector: React.FC<{ level: number, onChange: (l: number) => void }> 
             ))}
         </div>
     );
-};
+});
 
-const SyncIndicator: React.FC<{ player: Player, profiles: Map<string, PlayerProfile>, onSave: () => void, onRevert: () => void }> = ({ player, profiles, onSave, onRevert }) => {
+const SyncIndicator = memo(({ player, hasProfile, profileMatch, onSave, onRevert }: { player: Player, hasProfile: boolean, profileMatch: boolean, onSave: () => void, onRevert: () => void }) => {
     const { t } = useTranslation();
-    const profile = player.profileId ? profiles.get(player.profileId) : undefined;
     
     let status: 'synced' | 'desynced' | 'unlinked' = 'unlinked';
-    if (profile) {
-        if (profile.name !== player.name || profile.skillLevel !== player.skillLevel) status = 'desynced';
-        else status = 'synced';
+    if (hasProfile) {
+        status = profileMatch ? 'synced' : 'desynced';
     }
 
     const config = {
@@ -122,9 +118,9 @@ const SyncIndicator: React.FC<{ player: Player, profiles: Map<string, PlayerProf
             )}
         </div>
     );
-};
+});
 
-const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; className?: string; isPlayer?: boolean }> = ({ name, onSave, className, isPlayer }) => {
+const EditableTitle = memo(({ name, onSave, className, isPlayer }: { name: string; onSave: (val: string) => void; className?: string; isPlayer?: boolean }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [val, setVal] = useState(name);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -160,17 +156,23 @@ const EditableTitle: React.FC<{ name: string; onSave: (val: string) => void; cla
           <Edit2 size={10} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 flex-shrink-0" />
       </div>
   );
-};
+});
 
 // --- PROFILE CARD COMPONENT ---
 
-const ProfileCard: React.FC<{
+const ProfileCard = memo(({
+    profile,
+    onUpdate,
+    onDelete,
+    onAddToGame,
+    status
+}: {
     profile: PlayerProfile;
     onUpdate: (name: string, skill: number) => void;
     onDelete: () => void;
     onAddToGame: (target: 'A' | 'B' | 'Queue') => void;
     status: PlayerLocationStatus;
-}> = ({ profile, onUpdate, onDelete, onAddToGame, status }) => {
+}) => {
     const { t } = useTranslation();
     
     // Configuração Visual baseada no Status
@@ -180,6 +182,12 @@ const ProfileCard: React.FC<{
         Queue: { bg: 'bg-slate-500/10 border-slate-500/20', text: 'text-slate-600 dark:text-slate-400', label: t('teamManager.location.queue') },
         null: { bg: 'bg-transparent', text: '', label: '' }
     }[status || 'null'];
+
+    const handleUpdateName = useCallback((val: string) => onUpdate(val, profile.skillLevel), [onUpdate, profile.skillLevel]);
+    const handleUpdateSkill = useCallback((l: number) => onUpdate(profile.name, l), [onUpdate, profile.name]);
+    const handleAddA = useCallback(() => onAddToGame('A'), [onAddToGame]);
+    const handleAddB = useCallback(() => onAddToGame('B'), [onAddToGame]);
+    const handleAddQ = useCallback(() => onAddToGame('Queue'), [onAddToGame]);
 
     return (
         <div className={`
@@ -191,14 +199,14 @@ const ProfileCard: React.FC<{
              <div className="flex flex-col min-w-0 flex-1 pr-3">
                  <EditableTitle 
                     name={profile.name} 
-                    onSave={(val) => onUpdate(val, profile.skillLevel)} 
+                    onSave={handleUpdateName} 
                     isPlayer={true} 
                     className="font-bold text-sm text-slate-800 dark:text-slate-200" 
                  />
                  <div className="mt-1">
                     <SkillSelector 
                         level={profile.skillLevel} 
-                        onChange={(l) => onUpdate(profile.name, l)} 
+                        onChange={handleUpdateSkill} 
                     />
                  </div>
              </div>
@@ -210,13 +218,13 @@ const ProfileCard: React.FC<{
                      </span>
                  ) : (
                      <div className="flex gap-1">
-                         <Button size="sm" onClick={() => onAddToGame('A')} className="h-7 px-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border-indigo-500/20" title={t('teamManager.actions.addToA')}>
+                         <Button size="sm" onClick={handleAddA} className="h-7 px-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border-indigo-500/20" title={t('teamManager.actions.addToA')}>
                              A
                          </Button>
-                         <Button size="sm" onClick={() => onAddToGame('B')} className="h-7 px-2 bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white border-rose-500/20" title={t('teamManager.actions.addToB')}>
+                         <Button size="sm" onClick={handleAddB} className="h-7 px-2 bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white border-rose-500/20" title={t('teamManager.actions.addToB')}>
                              B
                          </Button>
-                         <Button size="sm" onClick={() => onAddToGame('Queue')} className="h-7 px-2 bg-slate-500/10 text-slate-600 hover:bg-slate-500 hover:text-white border-slate-500/20" title={t('teamManager.actions.addToQueue')}>
+                         <Button size="sm" onClick={handleAddQ} className="h-7 px-2 bg-slate-500/10 text-slate-600 hover:bg-slate-500 hover:text-white border-slate-500/20" title={t('teamManager.actions.addToQueue')}>
                              Q
                          </Button>
                      </div>
@@ -233,9 +241,20 @@ const ProfileCard: React.FC<{
              </div>
         </div>
     );
-};
+});
 
-const PlayerCard: React.FC<{ 
+// React.memo to prevent re-renders of PlayerCard unless props change
+const PlayerCard = memo(({ 
+    player, 
+    locationId, 
+    profiles, // Note: passing whole Map can break memo if Map ref changes. Better to pass profile-derived props or ensure Map stability.
+    onToggleFixed, 
+    onRemove, 
+    onUpdateName, 
+    onUpdateSkill,
+    onSaveProfile,
+    onRevertProfile
+}: { 
     player: Player; 
     locationId: string; 
     profiles: Map<string, PlayerProfile>;
@@ -245,7 +264,7 @@ const PlayerCard: React.FC<{
     onUpdateSkill: (id: string, skill: number) => void;
     onSaveProfile: (id: string) => void;
     onRevertProfile: (id: string) => void;
-}> = ({ player, locationId, profiles, onToggleFixed, onRemove, onUpdateName, onUpdateSkill, onSaveProfile, onRevertProfile }) => {
+}) => {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: player.id,
@@ -255,6 +274,19 @@ const PlayerCard: React.FC<{
 
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, touchAction: 'none' };
   const isFixed = player.isFixed;
+  
+  // Extract profile logic here to avoid passing map deep down if possible, 
+  // but for now keeping it compatible with current arch.
+  const profile = player.profileId ? profiles.get(player.profileId) : undefined;
+  const hasProfile = !!profile;
+  const profileMatch = hasProfile && profile!.name === player.name && profile!.skillLevel === player.skillLevel;
+
+  const handleSaveName = useCallback((val: string) => onUpdateName(player.id, val), [onUpdateName, player.id]);
+  const handleUpdateSkill = useCallback((l: number) => onUpdateSkill(player.id, l), [onUpdateSkill, player.id]);
+  const handleSaveProfile = useCallback(() => onSaveProfile(player.id), [onSaveProfile, player.id]);
+  const handleRevertProfile = useCallback(() => onRevertProfile(player.id), [onRevertProfile, player.id]);
+  const handleToggleFixed = useCallback(() => onToggleFixed(player.id), [onToggleFixed, player.id]);
+  const handleRemove = useCallback(() => onRemove(player.id), [onRemove, player.id]);
 
   return (
     <div ref={setNodeRef} style={style} className={`
@@ -272,9 +304,9 @@ const PlayerCard: React.FC<{
         </div>
         
         <div className="flex flex-col min-w-0 flex-1 pr-1">
-          <EditableTitle name={player.name} onSave={(val) => onUpdateName(player.id, val)} isPlayer={true} className="font-bold text-sm text-slate-800 dark:text-slate-200" />
+          <EditableTitle name={player.name} onSave={handleSaveName} isPlayer={true} className="font-bold text-sm text-slate-800 dark:text-slate-200" />
           <div className="mt-0.5">
-             <SkillSelector level={player.skillLevel} onChange={(l) => onUpdateSkill(player.id, l)} />
+             <SkillSelector level={player.skillLevel} onChange={handleUpdateSkill} />
           </div>
         </div>
       </div>
@@ -282,15 +314,16 @@ const PlayerCard: React.FC<{
       {/* Right Section: Actions (Fixed width, does not shrink) */}
       <div className="flex items-center gap-1 flex-shrink-0 ml-1">
         <SyncIndicator 
-            player={player} 
-            profiles={profiles} 
-            onSave={() => onSaveProfile(player.id)}
-            onRevert={() => onRevertProfile(player.id)}
+            player={player}
+            hasProfile={hasProfile}
+            profileMatch={profileMatch} 
+            onSave={handleSaveProfile}
+            onRevert={handleRevertProfile}
         />
         
         <div className="w-px h-5 bg-black/10 dark:bg-white/10 mx-1"></div>
 
-        <button onClick={() => onToggleFixed(player.id)} onPointerDown={e => e.stopPropagation()} 
+        <button onClick={handleToggleFixed} onPointerDown={e => e.stopPropagation()} 
             className={`
                 p-1.5 rounded-lg transition-all relative
                 ${isFixed ? 'bg-amber-500 text-amber-900 shadow-md shadow-amber-500/20' : 'bg-transparent text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}
@@ -305,15 +338,22 @@ const PlayerCard: React.FC<{
                 </span>
             )}
         </button>
-        <button onClick={() => onRemove(player.id)} onPointerDown={e => e.stopPropagation()} className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors">
+        <button onClick={handleRemove} onPointerDown={e => e.stopPropagation()} className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors">
           <Trash2 size={14} />
         </button>
       </div>
     </div>
   );
-};
+}, (prev, next) => {
+    // Custom comparison for high performance: Only re-render if player data or dragging state changes
+    return (
+        prev.player === next.player && 
+        prev.locationId === next.locationId &&
+        prev.profiles === next.profiles // Map ref check (should be stable from hook)
+    );
+});
 
-const AddPlayerInput: React.FC<{ onAdd: (name: string) => void; disabled?: boolean }> = ({ onAdd, disabled }) => {
+const AddPlayerInput = memo(({ onAdd, disabled }: { onAdd: (name: string) => void; disabled?: boolean }) => {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [name, setName] = useState('');
@@ -347,9 +387,23 @@ const AddPlayerInput: React.FC<{ onAdd: (name: string) => void; disabled?: boole
             {disabled ? (<><Ban size={14} /> {t('common.full')}</>) : (<><Plus size={14} /> {t('common.add')}</>)}
         </button>
     );
-};
+});
 
-const TeamColumn: React.FC<{ 
+// Optimized TeamColumn with React.memo
+const TeamColumn = memo(({ 
+    id, 
+    team, 
+    profiles,
+    onUpdateTeamName, 
+    onUpdatePlayerName, 
+    onUpdateSkill,
+    onSaveProfile,
+    onRevertProfile,
+    onAddPlayer, 
+    onToggleFixed, 
+    onRemove, 
+    color 
+}: { 
     id: string; 
     team: Team; 
     profiles: Map<string, PlayerProfile>;
@@ -362,7 +416,7 @@ const TeamColumn: React.FC<{
     onToggleFixed: (playerId: string) => void; 
     onRemove: (id: string) => void; 
     color: 'indigo' | 'rose' | 'slate'; 
-}> = ({ id, team, profiles, onUpdateTeamName, onUpdatePlayerName, onUpdateSkill, onSaveProfile, onRevertProfile, onAddPlayer, onToggleFixed, onRemove, color }) => {
+}) => {
   const { t } = useTranslation();
   const isFull = team.players.length >= 6;
   const { setNodeRef, isOver } = useSortable({ id: id, data: { type: 'container' } });
@@ -375,6 +429,8 @@ const TeamColumn: React.FC<{
     slate: { bg: 'bg-slate-50/50 dark:bg-slate-900/30', border: 'border-slate-200 dark:border-slate-800', text: 'text-slate-600 dark:text-slate-400', glow: 'bg-slate-500' }
   };
 
+  const handleUpdateName = useCallback((n: string) => onUpdateTeamName(id, n), [onUpdateTeamName, id]);
+
   return (
     <div ref={setNodeRef} className={`flex flex-col w-full h-fit ${theme[color].bg} p-3 rounded-2xl ${theme[color].border} border transition-all duration-300 ${isOver && !isFull ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900' : ''}`}>
       <div className="flex items-center justify-between mb-3 pb-2 border-b border-black/5 dark:border-white/5 gap-2">
@@ -382,7 +438,7 @@ const TeamColumn: React.FC<{
             <div className={`w-1.5 h-6 rounded-full flex-shrink-0 ${theme[color].glow}`}></div>
             <div className="flex flex-col min-w-0 flex-1">
                 <span className={`text-[9px] font-bold uppercase tracking-wider opacity-60 ${theme[color].text}`}>{t('teamManager.teamLabel')}</span>
-                <EditableTitle name={team.name} onSave={n => onUpdateTeamName(id, n)} className={`font-black uppercase tracking-tight text-sm ${theme[color].text}`} />
+                <EditableTitle name={team.name} onSave={handleUpdateName} className={`font-black uppercase tracking-tight text-sm ${theme[color].text}`} />
             </div>
         </div>
         
@@ -416,14 +472,36 @@ const TeamColumn: React.FC<{
       <AddPlayerInput onAdd={onAddPlayer} disabled={isFull} />
     </div>
   );
-};
+});
+
+// Separated Batch Input to avoid re-rendering main modal on keystrokes
+const BatchInputSection = memo(({ onGenerate }: { onGenerate: (names: string[]) => void }) => {
+    const { t } = useTranslation();
+    const [rawNames, setRawNames] = useState('');
+
+    const handleGenerate = () => {
+        const names = rawNames.split('\n').map(n => n.trim()).filter(n => n);
+        if (names.length > 0) {
+            onGenerate(names);
+            setRawNames('');
+        }
+    };
+
+    return (
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 px-1 pb-10"> 
+            <textarea className="w-full h-64 bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono text-sm resize-none custom-scrollbar"
+               placeholder={t('teamManager.batchInputPlaceholder')} value={rawNames} onChange={e => setRawNames(e.target.value)} />
+            <Button onClick={handleGenerate} className="w-full" size="lg"><Shuffle size={18} /> {t('teamManager.generateTeams')}</Button>
+        </div>
+    );
+});
 
 
 // --- MAIN MODAL ---
 
 export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   const { t } = useTranslation();
-  const [rawNames, setRawNames] = useState('');
+  // Moved rawNames state to BatchInputSection to prevent re-renders of the whole modal on typing
   const [activeTab, setActiveTab] = useState<'roster' | 'profiles' | 'input'>('roster');
   const [activePlayer, setActivePlayer] = useState<Player | null>(null);
   const [undoVisible, setUndoVisible] = useState(false);
@@ -481,14 +559,10 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
     setActivePlayer(null);
   };
   
-  const handleGenerate = () => {
-    const names = rawNames.split('\n').map(n => n.trim()).filter(n => n);
-    if (names.length > 0) {
+  const handleGenerate = useCallback((names: string[]) => {
       props.onGenerate(names);
-      setRawNames('');
       setActiveTab('roster');
-    }
-  };
+  }, [props.onGenerate]);
 
   const getProfileStatus = (profileId: string): PlayerLocationStatus => {
       if (props.courtA.players.some(p => p.profileId === profileId)) return 'A';
@@ -498,6 +572,11 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
       }
       return null;
   };
+
+  // Stabilize handlers for TeamColumn
+  const handleAddA = useCallback((n: string) => props.onAddPlayer(n, 'A'), [props.onAddPlayer]);
+  const handleAddB = useCallback((n: string) => props.onAddPlayer(n, 'B'), [props.onAddPlayer]);
+  const handleAddQueue = useCallback((n: string) => props.onAddPlayer(n, 'Queue'), [props.onAddPlayer]);
 
   return (
     <Modal isOpen={props.isOpen} onClose={props.onClose} title={t('teamManager.title')} maxWidth="max-w-[95vw] md:max-w-7xl">
@@ -549,11 +628,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
       </div>
 
       {activeTab === 'input' && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 px-1 pb-10"> 
-            <textarea className="w-full h-64 bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono text-sm resize-none custom-scrollbar"
-               placeholder={t('teamManager.batchInputPlaceholder')} value={rawNames} onChange={e => setRawNames(e.target.value)} />
-            <Button onClick={handleGenerate} className="w-full" size="lg"><Shuffle size={18} /> {t('teamManager.generateTeams')}</Button>
-        </div>
+        <BatchInputSection onGenerate={handleGenerate} />
       )}
 
       {activeTab === 'profiles' && (
@@ -589,14 +664,14 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                 id="A" team={props.courtA} color="indigo"
                 {...props}
                 onUpdateSkill={props.onUpdatePlayerSkill} 
-                onAddPlayer={(n) => props.onAddPlayer(n, 'A')} 
+                onAddPlayer={handleAddA} 
             />
             
             <TeamColumn 
                 id="B" team={props.courtB} color="rose"
                 {...props}
                 onUpdateSkill={props.onUpdatePlayerSkill} 
-                onAddPlayer={(n) => props.onAddPlayer(n, 'B')} 
+                onAddPlayer={handleAddB} 
             />
             
             <div className="w-full md:col-span-2 xl:col-span-1 bg-slate-100 dark:bg-white/[0.02] p-4 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col h-fit">
@@ -608,11 +683,11 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                         key={team.id} id={team.id} team={team} color="slate"
                         {...props}
                         onUpdateSkill={props.onUpdatePlayerSkill} 
-                        onAddPlayer={_ => {}} 
+                        onAddPlayer={_ => {}} // Queue teams don't add via input here
                     />
                   ))}
                 </div>
-                <div className="pt-4 border-t border-slate-200 dark:border-white/5 mt-4"><AddPlayerInput onAdd={(n) => props.onAddPlayer(n, 'Queue')} /></div>
+                <div className="pt-4 border-t border-slate-200 dark:border-white/5 mt-4"><AddPlayerInput onAdd={handleAddQueue} /></div>
             </div>
           </div>
 

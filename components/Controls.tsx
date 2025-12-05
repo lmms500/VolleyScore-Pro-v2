@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { RotateCcw, ArrowLeftRight, Settings, Users, Undo2, Maximize2 } from 'lucide-react';
+import { RotateCcw, ArrowLeftRight, Settings, Users, Undo2, Maximize2, History } from 'lucide-react';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface ControlsProps {
@@ -8,11 +8,12 @@ interface ControlsProps {
   onSwap: () => void;
   onSettings: () => void;
   onRoster: () => void;
+  onHistory: () => void;
   onReset: () => void;
   onToggleFullscreen: () => void;
 }
 
-export const Controls: React.FC<ControlsProps> = memo(({ onUndo, canUndo, onSwap, onSettings, onRoster, onReset, onToggleFullscreen }) => {
+export const Controls: React.FC<ControlsProps> = memo(({ onUndo, canUndo, onSwap, onSettings, onRoster, onHistory, onReset, onToggleFullscreen }) => {
   const { t } = useTranslation();
 
   const iconBase = "p-3 md:p-4 rounded-full transition-all duration-200 active:scale-90 hover:scale-105 flex items-center justify-center";
@@ -40,6 +41,10 @@ export const Controls: React.FC<ControlsProps> = memo(({ onUndo, canUndo, onSwap
 
         <button onClick={onRoster} className={`${iconBase} bg-cyan-400/20 dark:bg-white/5 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500 hover:text-white shadow-[0_0_15px_-5px_rgba(34,211,238,0.3)]`} title={t('controls.teams')}>
           <Users size={20} className="md:w-[22px] md:h-[22px]" />
+        </button>
+
+        <button onClick={onHistory} className={`${iconBase} ${iconText}`} title={t('controls.history')}>
+          <History size={20} className="md:w-[22px] md:h-[22px]" />
         </button>
 
         <button onClick={onSettings} className={`${iconBase} ${iconText}`} title={t('controls.settings')}>

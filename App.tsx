@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
 import { ScoreCardNormal } from './components/ScoreCardNormal';
@@ -19,12 +19,15 @@ import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SuddenDeathOverlay } from './components/ui/CriticalPointAnimation';
 import { BackgroundGlow } from './components/ui/BackgroundGlow';
 import { motion, LayoutGroup } from 'framer-motion';
+import { useHistoryStore } from './stores/historyStore';
+import { v4 as uuidv4 } from 'uuid';
 
 // Lazy Loaded Heavy Modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
 const TeamManagerModal = lazy(() => import('./components/modals/TeamManagerModal').then(module => ({ default: module.TeamManagerModal })));
 const MatchOverModal = lazy(() => import('./components/modals/MatchOverModal').then(module => ({ default: module.MatchOverModal })));
 const ConfirmationModal = lazy(() => import('./components/modals/ConfirmationModal').then(module => ({ default: module.ConfirmationModal })));
+const HistoryModal = lazy(() => import('./components/modals/HistoryModal').then(module => ({ default: module.HistoryModal })));
 
 function App() {
   const game = useVolleyGame();
@@ -59,11 +62,13 @@ function App() {
   } = game;
 
   const { t } = useTranslation();
+  const historyStore = useHistoryStore();
   
   const pwa = usePWAInstallPrompt();
   
   const [showSettings, setShowSettings] = useState(false);
   const [showManager, setShowManager] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showFullscreenMenu, setShowFullscreenMenu] = useState(false);
   
@@ -73,6 +78,45 @@ function App() {
   // Refs for HUD Measurement (Passed down to ScoreCards)
   const [scoreElA, setScoreElA] = useState<HTMLElement | null>(null);
   const [scoreElB, setScoreElB] = useState<HTMLElement | null>(null);
+
+  // Auto-Save Match History Logic with Undo Support
+  const savedMatchIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // 1. Match Just Finished -> Save
+    if (state.isMatchOver && !savedMatchIdRef.current && state.matchWinner) {
+      const newId = uuidv4();
+      historyStore.addMatch({
+        id: newId,
+        date: new Date().toISOString(),
+        timestamp: Date.now(),
+        durationSeconds: state.matchDurationSeconds,
+        teamAName: state.teamAName,
+        teamBName: state.teamBName,
+        setsA: state.setsA,
+        setsB: state.setsB,
+        winner: state.matchWinner,
+        sets: state.history,
+        config: state.config
+      });
+      savedMatchIdRef.current = newId;
+    } 
+    
+    // 2. Reset the ref if match is no longer over (New Game Started OR Undo happened)
+    // We do NOT delete here anymore. Explicit deletion happens in handleUndo.
+    if (!state.isMatchOver) {
+        savedMatchIdRef.current = null;
+    }
+  }, [state.isMatchOver, state.matchWinner, state.matchDurationSeconds, state.teamAName, state.teamBName, state.setsA, state.setsB, state.history, state.config, historyStore]);
+
+  // Wrapper for Undo to handle History deletion logic
+  const handleUndo = useCallback(() => {
+    if (state.isMatchOver && savedMatchIdRef.current) {
+        historyStore.deleteMatch(savedMatchIdRef.current);
+        savedMatchIdRef.current = null;
+    }
+    game.undo();
+  }, [state.isMatchOver, game.undo, historyStore]);
 
   // Determine which visual element corresponds to which logic based on swap
   const isSwapped = state.swappedSides;
@@ -367,11 +411,12 @@ function App() {
             `}
           >
               <Controls 
-                  onUndo={undo}
+                  onUndo={handleUndo}
                   canUndo={game.canUndo}
                   onSwap={toggleSides}
                   onSettings={() => setShowSettings(true)}
                   onRoster={() => setShowManager(true)}
+                  onHistory={() => setShowHistory(true)}
                   onReset={() => setShowResetConfirm(true)}
                   onToggleFullscreen={toggleFullscreen}
               />
@@ -379,7 +424,7 @@ function App() {
 
           {isFullscreen && (
             <FloatingControlBar 
-                onUndo={undo}
+                onUndo={handleUndo}
                 canUndo={game.canUndo}
                 onSwap={toggleSides}
                 onReset={() => setShowResetConfirm(true)}
@@ -392,6 +437,7 @@ function App() {
              onClose={() => setShowFullscreenMenu(false)}
              onOpenSettings={() => setShowSettings(true)}
              onOpenRoster={() => setShowManager(true)}
+             onOpenHistory={() => setShowHistory(true)}
              onExitFullscreen={exitFullscreenMode}
           />
 
@@ -435,8 +481,15 @@ function App() {
                 onCommitDeletions={commitDeletions}
                 deletedCount={game.deletedCount}
                 profiles={game.profiles}
-                upsertProfile={upsertProfile} // Pass down
-                deleteProfile={deleteProfile} // Pass down
+                upsertProfile={upsertProfile} 
+                deleteProfile={deleteProfile} 
+              />
+            )}
+
+            {showHistory && (
+              <HistoryModal 
+                isOpen={showHistory}
+                onClose={() => setShowHistory(false)}
               />
             )}
 
@@ -446,6 +499,7 @@ function App() {
                 state={state}
                 onRotate={rotateTeams}
                 onReset={resetMatch}
+                onUndo={handleUndo}
               />
             )}
 

@@ -1,10 +1,9 @@
 
-
 import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameState } from '../../types';
-import { Trophy, RefreshCw, ArrowRight, UserPlus, ShieldAlert, Users, RotateCcw, Terminal, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trophy, RefreshCw, ArrowRight, UserPlus, ShieldAlert, Users, RotateCcw, Terminal, ChevronDown, ChevronUp, Undo2 } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -13,9 +12,10 @@ interface MatchOverModalProps {
   state: GameState;
   onRotate: () => void;
   onReset: () => void;
+  onUndo: () => void;
 }
 
-export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, onRotate, onReset }) => {
+export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, onRotate, onReset, onUndo }) => {
   const { t } = useTranslation();
   const [showLogs, setShowLogs] = useState(false);
   const winnerName = state.matchWinner === 'A' ? state.teamAName : state.teamBName;
@@ -144,10 +144,16 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
                 {t('matchOver.nextGameButton')}
             </Button>
             
-            <Button onClick={onReset} size="md" variant="secondary" className="w-full">
-                <RotateCcw size={16} />
-                {t('controls.reset')}
-            </Button>
+            <div className="grid grid-cols-2 gap-3">
+                <Button onClick={onUndo} size="md" variant="secondary" className="w-full">
+                    <Undo2 size={16} />
+                    {t('controls.undo')}
+                </Button>
+                <Button onClick={onReset} size="md" variant="secondary" className="w-full text-rose-500 hover:text-rose-600 border-rose-500/20 hover:bg-rose-500/10">
+                    <RotateCcw size={16} />
+                    {t('controls.reset')}
+                </Button>
+            </div>
         </div>
       </div>
     </Modal>

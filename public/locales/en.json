@@ -17,6 +17,7 @@
     "swap": "Swap Sides",
     "teams": "Teams",
     "settings": "Settings",
+    "history": "History",
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit Fullscreen",
     "reset": "Reset Match"
@@ -175,6 +176,21 @@
       "queue": "In Queue"
     },
     "emptyProfiles": "No profiles saved yet. Sync players in the Roster tab to create profiles."
+  },
+  "historyList": {
+    "title": "Match History",
+    "empty": "No matches recorded yet.",
+    "searchPlaceholder": "Search teams...",
+    "filterAll": "All Matches",
+    "filterWinnerA": "Winner: A",
+    "filterWinnerB": "Winner: B",
+    "export": "Export JSON",
+    "import": "Import JSON",
+    "importSuccess": "History imported successfully!",
+    "importError": "Invalid file format.",
+    "delete": "Delete",
+    "duration": "Duration",
+    "date": "Date"
   },
   "errors": {
     "genericTitle": "Something went wrong",

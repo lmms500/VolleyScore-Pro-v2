@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Team, SkillType } from '../../types';
 import { Swords, Shield, Target, AlertTriangle, X, User, ChevronLeft } from 'lucide-react';
@@ -23,11 +23,13 @@ export const ScoutModal: React.FC<ScoutModalProps> = ({
     colorTheme 
 }) => {
     const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+    const mountTimeRef = useRef<number>(0);
 
     // Reset state when modal opens to ensure we start at Step 1
     useEffect(() => {
         if (isOpen) {
             setSelectedPlayerId(null);
+            mountTimeRef.current = Date.now();
         }
     }, [isOpen]);
 
@@ -40,6 +42,14 @@ export const ScoutModal: React.FC<ScoutModalProps> = ({
             onConfirm(selectedPlayerId, skill);
             onClose();
         }
+    };
+    
+    // Safety check: Prevent "Ghost Clicks" from the opening tap from immediately closing the modal.
+    // We ignore backdrop clicks that happen within 350ms of the modal mounting.
+    const handleBackdropClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (Date.now() - mountTimeRef.current < 350) return;
+        onClose();
     };
 
     const skills: { id: SkillType, label: string, icon: any }[] = [
@@ -70,7 +80,7 @@ export const ScoutModal: React.FC<ScoutModalProps> = ({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={onClose}
+                        onClick={handleBackdropClick}
                     />
                     
                     {/* Modal Content - Neo Glass */}

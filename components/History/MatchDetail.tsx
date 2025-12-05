@@ -276,12 +276,12 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
             {/* 2. TIMELINE & SUMMARY */}
             <div className="bg-white dark:bg-white/[0.03] rounded-3xl overflow-hidden border border-black/5 dark:border-white/5 shadow-sm">
                 
-                {/* Tabs */}
-                <div className="p-2 border-b border-black/5 dark:border-white/5 flex overflow-x-auto no-scrollbar gap-1 bg-slate-50 dark:bg-black/20">
+                {/* Tabs - Scrollable with no shrinking */}
+                <div className="p-2 border-b border-black/5 dark:border-white/5 flex overflow-x-auto no-scrollbar gap-2 bg-slate-50 dark:bg-black/20">
                      <button 
                         onClick={() => setReplayIndex(-1)}
                         className={`
-                            px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex-1 md:flex-none
+                            px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex-shrink-0
                             ${replayIndex === -1 ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-500 dark:text-indigo-300 ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}
                         `}
                      >
@@ -292,7 +292,7 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                             key={idx}
                             onClick={() => setReplayIndex(idx)}
                             className={`
-                                px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex-1 md:flex-none
+                                px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex-shrink-0
                                 ${replayIndex === idx ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-500 dark:text-indigo-300 ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}
                             `}
                         >
@@ -302,7 +302,7 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                 </div>
                 
                 {/* Content */}
-                <div className="p-6 min-h-[140px] flex items-center justify-center">
+                <div className="p-6 min-h-[140px] flex items-center justify-center overflow-hidden">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={replayIndex}
@@ -312,17 +312,20 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                             className="w-full"
                         >
                             {replayIndex === -1 ? (
-                                <div className="flex flex-wrap justify-center gap-3">
-                                    {match.sets.map((set, idx) => (
-                                        <div key={idx} className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/5 min-w-[90px]">
-                                            <span className="text-[10px] font-bold text-slate-400 mb-1">SET {set.setNumber}</span>
-                                            <div className="text-2xl font-black tabular-nums tracking-tight">
-                                                <span className={set.winner === 'A' ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}>{set.scoreA}</span>
-                                                <span className="mx-1 opacity-20 text-slate-400">-</span>
-                                                <span className={set.winner === 'B' ? 'text-rose-500' : 'text-slate-400 dark:text-slate-500'}>{set.scoreB}</span>
+                                /* Summary View - Scrollable Horizontal Row */
+                                <div className="w-full overflow-x-auto no-scrollbar pb-2">
+                                    <div className="flex gap-3 px-1 min-w-full md:justify-center">
+                                        {match.sets.map((set, idx) => (
+                                            <div key={idx} className="flex-shrink-0 flex flex-col items-center p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/5 min-w-[100px] snap-center">
+                                                <span className="text-[10px] font-bold text-slate-400 mb-1">SET {set.setNumber}</span>
+                                                <div className="text-2xl font-black tabular-nums tracking-tight">
+                                                    <span className={set.winner === 'A' ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}>{set.scoreA}</span>
+                                                    <span className="mx-1 opacity-20 text-slate-400">-</span>
+                                                    <span className={set.winner === 'B' ? 'text-rose-500' : 'text-slate-400 dark:text-slate-500'}>{set.scoreB}</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                             ) : (
                                 currentReplaySet && (

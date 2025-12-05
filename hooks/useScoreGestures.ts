@@ -1,4 +1,5 @@
 
+
 import React, { useRef } from 'react';
 
 interface UseScoreGesturesProps {
@@ -29,6 +30,11 @@ export const useScoreGestures = ({
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (isLocked) return; 
+    
+    // Attempt to suppress native behaviors like text selection or context menus
+    // causing interference, while still allowing the pointer events to flow.
+    // Note: We don't preventDefault here always because it might block scrolling 
+    // if touch-action isn't set, but we set touch-action: none in CSS.
     
     try {
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -66,10 +72,16 @@ export const useScoreGestures = ({
     // Rule 1: TAP (Relaxed logic to catch "sloppy" taps)
     // If movement is small enough, treat as tap regardless of slight drag
     if (deltaTime < TAP_MAX_DURATION_MS && absDeltaX < TAP_MAX_MOVE && absDeltaY < TAP_MAX_MOVE) {
+      // CRITICAL: Prevent default to stop the browser from firing a compatibility 'click' event
+      // after this pointerUp. This 'ghost click' would otherwise hit elements that appear
+      // instantly (like Modals) and close them immediately.
+      if (e.cancelable) e.preventDefault();
       onAdd();
     } 
     // Rule 2: Swipes (Significant Vertical Movement)
     else if (absDeltaY > SWIPE_THRESHOLD && absDeltaY > absDeltaX) {
+        if (e.cancelable) e.preventDefault();
+        
         // Vertical Swipe Dominant
         if (deltaY < 0) {
            // Swipe Up -> Dragging score UP -> ADD

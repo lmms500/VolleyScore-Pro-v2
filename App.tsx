@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -19,6 +18,7 @@ import { useHudMeasure } from './hooks/useHudMeasure';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SuddenDeathOverlay } from './components/ui/CriticalPointAnimation';
 import { BackgroundGlow } from './components/ui/BackgroundGlow';
+import { ReloadPrompt } from './components/ui/ReloadPrompt';
 import { motion, LayoutGroup, AnimatePresence } from 'framer-motion';
 import { useHistoryStore } from './stores/historyStore';
 import { v4 as uuidv4 } from 'uuid';
@@ -261,6 +261,9 @@ function App() {
           />
 
           <SuddenDeathOverlay active={state.inSuddenDeath} />
+          
+          {/* PWA Update & Offline Notifier */}
+          <ReloadPrompt />
 
           {/* Beach Mode Switch Alert Overlay */}
           <AnimatePresence>

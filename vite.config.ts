@@ -7,7 +7,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt', // Mudado para 'prompt' para controlar a atualização
+      injectRegister: null, // Desabilita injeção automática (faremos manualmente no componente)
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'], 
       devOptions: {
         enabled: true
@@ -15,6 +16,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,json,ico,png}'], 
         cleanupOutdatedCaches: true,
+        clientsClaim: true, 
+        skipWaiting: false, // Importante: FALSE para permitir que o usuário escolha quando atualizar
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -81,7 +84,7 @@ export default defineConfig({
     })
   ],
   build: {
-    minify: 'esbuild', // Faster minification
-    sourcemap: false, // Do not expose source maps in production
+    minify: 'esbuild', 
+    sourcemap: false, 
   }
 });

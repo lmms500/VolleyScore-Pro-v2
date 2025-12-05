@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -32,6 +33,40 @@
     
     <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // FIX: Configure Tailwind to use 'class' strategy for dark mode
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+          }
+        }
+      }
+    </script>
+
+    <!-- Theme Initialization Script (Avoids FOUC) -->
+    <script>
+      (function() {
+        try {
+          var savedTheme = localStorage.getItem('appTheme');
+          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          // Apply dark mode if saved as 'dark' OR if no save exists and system is dark
+          if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
+            document.documentElement.classList.add('dark');
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#020617');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f1f5f9');
+          }
+        } catch (e) {
+          console.error("Theme init error", e);
+        }
+      })();
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" crossorigin="anonymous">
@@ -48,8 +83,19 @@
         background-color: #000000; /* Deep black backing for notch/dynamic island */
       }
       
+      /* Global Smooth Theme Transition */
+      body {
+        transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 700ms;
+      }
+
+      /* Force color-scheme to match class for scrollbars/native UI */
       html.dark {
         color-scheme: dark;
+      }
+      html:not(.dark) {
+        color-scheme: light;
       }
       
       body {
@@ -102,7 +148,7 @@
     }
     </script>
   </head>
-  <body class="bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 antialiased h-screen overflow-hidden selection:bg-indigo-500 selection:text-white">
+  <body class="bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 antialiased h-screen overflow-hidden selection:bg-indigo-500 selection:text-white transition-colors duration-700">
     <div class="bg-noise"></div>
     <div id="root" class="h-full w-full flex flex-col relative z-10"></div>
     

@@ -1,8 +1,7 @@
 
-
 import React, { memo } from 'react';
-import { Volleyball, Timer, Skull, TrendingUp, Scale, Hash } from 'lucide-react';
-import { motion, AnimatePresence, LayoutGroup, Variants } from 'framer-motion';
+import { Volleyball, Timer, Skull, TrendingUp, Zap, Crown } from 'lucide-react';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { resolveTheme } from '../../utils/colors';
 import { TeamColor } from '../../types';
@@ -39,60 +38,6 @@ const formatTime = (seconds: number) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
-// --- ANIMATION CONFIG ---
-
-const barTransition = {
-  layout: { duration: 0.4, ease: [0.3, 1.2, 0.2, 1] as [number, number, number, number] } // Bouncy layout adjustment
-};
-
-const textSwapVariants: Variants = {
-  initial: { y: 10, opacity: 0, filter: 'blur(2px)' },
-  animate: { 
-    y: 0, 
-    opacity: 1, 
-    filter: 'blur(0px)',
-    transition: { type: "spring", stiffness: 500, damping: 30 } 
-  },
-  exit: { 
-    y: -10, 
-    opacity: 0, 
-    filter: 'blur(2px)',
-    transition: { duration: 0.15 } 
-  }
-};
-
-const serveIconVariants: Variants = {
-  initial: { scale: 0, opacity: 0, rotate: -180 },
-  animate: { 
-    scale: 1, 
-    opacity: 1, 
-    rotate: 0,
-    transition: { type: "spring", stiffness: 400, damping: 20 }
-  },
-  exit: { 
-    scale: 0, 
-    opacity: 0, 
-    rotate: 180, 
-    transition: { duration: 0.2 } 
-  }
-};
-
-const badgeVariants: Variants = {
-  initial: { opacity: 0, scale: 0.8, y: -2 },
-  animate: { 
-    opacity: 1, 
-    scale: 1, 
-    y: 0,
-    transition: { type: "spring", stiffness: 500, damping: 25 }
-  },
-  exit: { 
-    opacity: 0, 
-    scale: 0.8, 
-    y: -2,
-    transition: { duration: 0.15 } 
-  }
-};
-
 // --- SUB-COMPONENTS ---
 
 const TimeoutDots = memo<{ count: number; colorTheme: any }>(({ count, colorTheme }) => (
@@ -104,8 +49,10 @@ const TimeoutDots = memo<{ count: number; colorTheme: any }>(({ count, colorThem
           key={i}
           layout
           className={`
-            w-1 h-1 rounded-full
-            ${isUsed ? 'bg-white/20' : `${colorTheme.halo} ${colorTheme.glow}`}
+            w-1.5 h-1.5 rounded-full transition-colors
+            ${isUsed 
+                ? 'bg-slate-300 dark:bg-white/10' 
+                : `${colorTheme.bg.replace('/10', '')} ${colorTheme.text} dark:${colorTheme.halo}`}
           `}
         />
       );
@@ -125,21 +72,21 @@ const TimeoutButton = memo<{
         whileTap={{ scale: 0.92 }}
         onClick={(e) => { e.stopPropagation(); onTimeout(); }}
         className={`
-           flex flex-col items-center justify-center p-1 rounded-lg
-           hover:bg-white/10 border border-transparent hover:border-white/5
-           ${timeouts >= 2 ? 'opacity-40 cursor-not-allowed grayscale' : 'opacity-100 cursor-pointer'}
-           w-8 h-10 flex-shrink-0 transition-colors gap-1
+           flex flex-col items-center justify-center p-1.5 rounded-xl
+           hover:bg-black/5 dark:hover:bg-white/10 border border-transparent hover:border-black/5 dark:hover:border-white/5
+           ${timeouts >= 2 ? 'opacity-30 cursor-not-allowed grayscale' : 'opacity-100 cursor-pointer'}
+           w-10 h-full flex-shrink-0 transition-colors gap-1.5
         `}
       >
-        <div className={`p-1 rounded-md ${theme.bg} ${theme.text}`}>
-          <Timer size={14} />
+        <div className={`p-1.5 rounded-lg ${theme.bg} ${theme.text}`}>
+          <Timer size={16} />
         </div>
         <TimeoutDots count={timeouts} colorTheme={theme} />
       </motion.button>
     );
 });
 
-const TeamInfoStealth = memo<{
+const TeamInfoSmart = memo<{
   name: string;
   color: TeamColor;
   isServing: boolean;
@@ -150,77 +97,70 @@ const TeamInfoStealth = memo<{
 }>(({ name, color, isServing, onSetServer, align, isMatchPoint, isSetPoint }) => {
   const { t } = useTranslation();
   const theme = resolveTheme(color);
-  const hasBadge = isMatchPoint || isSetPoint;
+  
+  const isCritical = isMatchPoint || isSetPoint;
+  
+  // Badge styling
+  const badgeClass = isMatchPoint 
+    ? 'bg-amber-500 text-white shadow-amber-500/30' 
+    : `${theme.bg.replace('/10', '')} text-white shadow-${color}-500/30`;
 
   return (
-    <div className={`flex flex-col items-center justify-center relative min-w-0 flex-1 h-full py-0.5`}>
-      {/* Name Row */}
+    <div className={`flex flex-col items-center justify-center relative min-w-0 flex-1 h-full py-1`}>
       <div 
-        className={`flex items-center gap-1.5 cursor-pointer group mb-0.5 ${align === 'right' ? 'flex-row-reverse' : 'flex-row'}`}
+        className={`flex items-center gap-3 cursor-pointer group h-full w-full relative overflow-visible ${align === 'right' ? 'flex-row-reverse justify-end' : 'flex-row justify-end'} px-2`}
         onClick={(e) => { e.stopPropagation(); onSetServer(); }}
       >
-        <div className="relative overflow-hidden text-center">
-             <AnimatePresence mode="popLayout" initial={false}>
-                <motion.span 
-                    key={name}
-                    variants={textSwapVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    className={`text-xs md:text-sm font-black uppercase tracking-wider text-slate-200 group-hover:text-white transition-colors truncate block max-w-[100px] md:max-w-[140px] leading-tight`}
-                >
-                  {name}
-                </motion.span>
+        
+        {/* Name & Badge Container */}
+        <div className={`flex flex-col ${align === 'right' ? 'items-start' : 'items-end'} min-w-0`}>
+            <span className={`text-sm md:text-base font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 transition-colors truncate block max-w-[140px] leading-tight`}>
+                {name}
+            </span>
+            
+            {/* Status Badge (Set/Match Point) - Small Pill underneath or next to name */}
+            <AnimatePresence>
+                {isCritical && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                        exit={{ opacity: 0, height: 0, scale: 0.8 }}
+                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider mt-0.5 ${badgeClass}`}
+                    >
+                        {isMatchPoint ? <Crown size={10} fill="currentColor" /> : <Zap size={10} fill="currentColor" />}
+                        <span>{isMatchPoint ? t('status.match_point') : t('status.set_point')}</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+
+        {/* Serving Indicator - Animated alongside name */}
+        <div className="relative w-6 h-6 flex items-center justify-center">
+             {/* Placeholder circle to keep layout stable */}
+             <div className={`w-1 h-1 rounded-full opacity-20 ${theme.halo}`} />
+             
+             <AnimatePresence>
+                {isServing && (
+                    <motion.div
+                        key="serve-ball"
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        exit={{ scale: 0, rotate: 180 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        className={`absolute inset-0 flex items-center justify-center ${theme.text}`}
+                    >
+                        <Volleyball size={20} className="drop-shadow-sm" fill="currentColor" fillOpacity={0.1} />
+                        {/* Pulse Ring */}
+                        <motion.div 
+                            className={`absolute inset-0 rounded-full border-2 ${theme.border} opacity-50`}
+                            animate={{ scale: [1, 1.4], opacity: [0.5, 0] }}
+                            transition={{ repeat: Infinity, duration: 1.5 }}
+                        />
+                    </motion.div>
+                )}
              </AnimatePresence>
         </div>
-        
-        {/* Serve Icon */}
-        <AnimatePresence>
-            {isServing && (
-                <motion.div
-                    key="serve-icon"
-                    variants={serveIconVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    className={`${theme.text}`}
-                >
-                    <Volleyball size={12} fill="currentColor" fillOpacity={0.3} />
-                </motion.div>
-            )}
-        </AnimatePresence>
-      </div>
 
-      {/* Micro-Badge for Set/Match Point */}
-      <div className={`h-4 flex items-center`}>
-        <AnimatePresence>
-          {hasBadge && (
-            <motion.div
-              key="badge"
-              variants={badgeVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-            >
-                <div className={`
-                    px-2 py-[2px] rounded-full flex items-center gap-1 shadow-md backdrop-blur-md border border-white/10
-                    ${isMatchPoint 
-                        ? 'bg-amber-500 text-slate-900 border-amber-300 shadow-amber-500/20' 
-                        : `${theme.halo} text-white border-white/20`}
-                `}>
-                    <motion.div
-                        animate={isMatchPoint ? { scale: [1, 1.2, 1] } : {}}
-                        transition={{ repeat: Infinity, duration: 1 }}
-                    >
-                         {isMatchPoint ? <Skull size={8} strokeWidth={2.5} /> : <TrendingUp size={8} strokeWidth={2.5} />}
-                    </motion.div>
-                    <span className="text-[8px] font-black uppercase tracking-widest leading-none whitespace-nowrap">
-                        {isMatchPoint ? t('status.match_point') : t('status.set_point')}
-                    </span>
-                </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );
@@ -241,15 +181,15 @@ const CenterDisplayStealth = memo<{
   let content = null;
 
   const StatusPill = ({ icon: Icon, text, colorClass, borderClass, bgClass, animateIcon }: any) => (
-      <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border backdrop-blur-md ${borderClass} ${bgClass} shadow-lg w-full justify-center h-full`}>
+      <div className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-xl border backdrop-blur-md ${borderClass} ${bgClass} shadow-lg w-full h-full`}>
            <motion.div 
              animate={animateIcon}
              transition={{ duration: 1.5, repeat: Infinity }}
              className="flex-shrink-0"
            >
-              <Icon size={12} className={colorClass} strokeWidth={3} />
+              <Icon size={14} className={colorClass} strokeWidth={3} />
            </motion.div>
-           <span className={`text-[8px] md:text-[9px] font-black uppercase tracking-tight leading-none ${colorClass} text-center`}>
+           <span className={`text-[8px] font-black uppercase tracking-tight leading-none ${colorClass} text-center`}>
              {text}
            </span>
       </div>
@@ -257,34 +197,33 @@ const CenterDisplayStealth = memo<{
 
   if (inSuddenDeath) {
     key = 'sudden-death';
-    content = <StatusPill icon={Skull} text={t('status.sudden_death')} colorClass="text-red-200" borderClass="border-red-500/30" bgClass="bg-red-900/60" animateIcon={{ scale: [1, 1.15, 1], rotate: [0, 5, -5, 0] }} />;
+    content = <StatusPill icon={Skull} text={t('status.sudden_death')} colorClass="text-red-600 dark:text-red-200" borderClass="border-red-500/30" bgClass="bg-red-100 dark:bg-red-900/60" animateIcon={{ scale: [1, 1.15, 1], rotate: [0, 5, -5, 0] }} />;
   } else if (isDeuce) {
     key = 'deuce';
     content = <StatusPill 
         icon={TrendingUp} 
-        text={t('status.deuce_advantage')} 
-        colorClass="text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]" 
+        text="DEUCE" 
+        colorClass="text-cyan-600 dark:text-cyan-200" 
         borderClass="border-cyan-500/30" 
-        bgClass="bg-cyan-900/40" 
+        bgClass="bg-cyan-100 dark:bg-cyan-900/40" 
         animateIcon={{ y: [-2, 2, -2] }} 
     />;
   } else {
     content = (
       <button 
         onClick={onToggleTimer} 
-        className="flex flex-col items-center justify-center group w-full h-full"
+        className="flex flex-col items-center justify-center group w-full h-full gap-0.5"
       >
         <motion.span 
             layout
-            className={`font-mono text-xl font-bold tabular-nums leading-none tracking-tight transition-all duration-300 ${isTimerRunning ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]' : 'text-slate-500'}`}
+            className={`font-mono text-lg font-bold tabular-nums leading-none tracking-tight transition-all duration-300 ${isTimerRunning ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}
         >
             {formatTime(time)}
         </motion.span>
         <motion.span 
             layout
-            className={`text-[8px] font-bold uppercase tracking-[0.2em] mt-0.5 flex items-center gap-1 ${isTieBreak ? 'text-amber-400' : 'text-slate-500 group-hover:text-slate-300'}`}
+            className={`text-[9px] font-bold uppercase tracking-[0.1em] flex items-center gap-1 ${isTieBreak ? 'text-amber-500' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`}
         >
-            {isTieBreak ? <Scale size={8} /> : <Hash size={8} />}
             {isTieBreak ? 'TIE BREAK' : `SET ${currentSet}`}
         </motion.span>
       </button>
@@ -296,9 +235,9 @@ const CenterDisplayStealth = memo<{
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={key}
-          initial={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-          exit={{ opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
           transition={{ duration: 0.3, ease: "circOut" }}
           className="w-full flex justify-center h-full"
         >
@@ -312,31 +251,28 @@ const CenterDisplayStealth = memo<{
 // --- MAIN COMPONENT ---
 
 export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
-  const glassContainer = "bg-slate-950/80 backdrop-blur-2xl border border-white/10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] ring-1 ring-white/5";
+  // Light Mode: bg-white/90, Dark Mode: bg-slate-950/80
+  const glassContainer = "bg-white/90 dark:bg-slate-950/80 backdrop-blur-2xl border border-black/5 dark:border-white/10 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] ring-1 ring-black/5 dark:ring-white/5";
 
   return (
-    <div className="fixed top-2 md:top-3 left-0 w-full z-[55] flex justify-center pointer-events-none px-2 md:px-6">
+    <div className="fixed top-4 left-0 w-full z-[55] flex justify-center pointer-events-none px-4">
         <LayoutGroup>
             <motion.div 
                 layout
-                transition={barTransition.layout}
                 className={`
                     pointer-events-auto
-                    w-full max-w-4xl
+                    w-full max-w-xl
                     ${glassContainer}
-                    rounded-2xl
-                    px-3 py-1
-                    flex items-center justify-between gap-1 md:gap-2
-                    min-h-[56px] 
+                    rounded-3xl
+                    px-2 py-2
+                    flex items-stretch justify-between gap-1
+                    min-h-[64px]
                     relative
-                    overflow-hidden
+                    overflow-visible
                 `}
             >
-                {/* Background Ambient Glow (Optional subtle effect) */}
-                <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-20 pointer-events-none" />
-
-                {/* Left Side */}
-                <TeamInfoStealth 
+                {/* Left Side (Name + Serving + Badge) */}
+                <TeamInfoSmart 
                     name={props.teamNameA} 
                     color={props.colorA} 
                     isServing={props.isServingLeft} 
@@ -347,20 +283,17 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
                 />
                 
                 {/* Divider & Timeout A */}
-                <div className="flex items-center gap-1 shrink-0">
-                    <div className="w-px h-6 bg-white/10 hidden sm:block"></div>
-                    <div className="hidden sm:block">
-                        <TimeoutButton 
-                            timeouts={props.timeoutsA} 
-                            onTimeout={props.onTimeoutA} 
-                            color={props.colorA}
-                        />
-                    </div>
+                <div className="flex items-center gap-1 shrink-0 border-l border-black/5 dark:border-white/10 pl-1">
+                    <TimeoutButton 
+                        timeouts={props.timeoutsA} 
+                        onTimeout={props.onTimeoutA} 
+                        color={props.colorA}
+                    />
                 </div>
 
                 {/* Center Dynamic Display */}
-                <div className="shrink-0 z-10 mx-0.5">
-                    <div className="bg-black/40 rounded-xl px-1 py-1 border border-white/5 w-[110px] h-[40px] flex justify-center items-center shadow-inner">
+                <div className="shrink-0 z-10 mx-1 flex items-center">
+                    <div className="bg-slate-100/50 dark:bg-black/40 rounded-2xl border border-black/5 dark:border-white/5 w-[80px] h-full flex justify-center items-center">
                         <CenterDisplayStealth 
                             time={props.time}
                             isTimerRunning={props.isTimerRunning}
@@ -374,19 +307,16 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
                 </div>
 
                 {/* Timeout B & Divider */}
-                <div className="flex items-center gap-1 shrink-0">
-                     <div className="hidden sm:block">
-                        <TimeoutButton 
-                            timeouts={props.timeoutsB} 
-                            onTimeout={props.onTimeoutB} 
-                            color={props.colorB}
-                        />
-                    </div>
-                    <div className="w-px h-6 bg-white/10 hidden sm:block"></div>
+                <div className="flex items-center gap-1 shrink-0 border-r border-black/5 dark:border-white/10 pr-1">
+                    <TimeoutButton 
+                        timeouts={props.timeoutsB} 
+                        onTimeout={props.onTimeoutB} 
+                        color={props.colorB}
+                    />
                 </div>
 
-                {/* Right Side */}
-                <TeamInfoStealth 
+                {/* Right Side (Name + Serving + Badge) */}
+                <TeamInfoSmart 
                     name={props.teamNameB} 
                     color={props.colorB} 
                     isServing={props.isServingRight} 

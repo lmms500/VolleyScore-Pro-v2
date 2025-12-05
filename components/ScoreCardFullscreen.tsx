@@ -1,5 +1,4 @@
 
-
 import React, { useState, memo, useMemo, useRef, useCallback } from 'react';
 import { TeamId, Team, SkillType, GameConfig, TeamColor } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
@@ -39,7 +38,6 @@ const ScoreNumberDisplay = memo(({
     scoreRefCallback, 
     numberRef, 
     isCritical,
-    isServing,
     isMatchPoint
 }: any) => {
 
@@ -53,34 +51,41 @@ const ScoreNumberDisplay = memo(({
                 gridTemplateAreas: '"stack"' 
             }}
         >
+            {/* The Halo - Fix for "Square" issue: 
+                1. Removed mix-blend-screen from base class (applied conditionally for dark mode via CSS or explicit style)
+                2. Use opacity layering for Light Mode compatibility
+                3. Ensure transform-3d to use GPU composition properly
+            */}
             <motion.div
                 className={`
-                    rounded-full aspect-square pointer-events-none
-                    mix-blend-screen blur-[60px] md:blur-[100px] z-0
+                    rounded-full aspect-square pointer-events-none z-0
                     ${haloColorClass}
                     justify-self-center self-center
+                    mix-blend-multiply dark:mix-blend-screen
+                    blur-[80px] md:blur-[120px]
                 `}
                 style={{ 
                     gridArea: 'stack',
-                    width: '1.5em', 
-                    height: '1.5em' 
+                    width: '1.2em', 
+                    height: '1.2em',
+                    transform: 'translate3d(0,0,0)' // Force GPU to prevent clipping
                 }}
                 animate={
                     isPressed 
-                    ? { scale: 1.1, opacity: 0.8 } 
+                    ? { scale: 1.1, opacity: 0.6 } 
                     : isCritical 
                         ? { 
-                            scale: [1, 1.35, 1],
-                            opacity: isMatchPoint ? [0.6, 1, 0.6] : [0.4, 0.8, 0.4],
+                            scale: [1, 1.25, 1],
+                            opacity: isMatchPoint ? [0.4, 0.7, 0.4] : [0.3, 0.6, 0.3],
                         }
                         : { 
                             scale: 1, 
-                            opacity: isServing ? 0.4 : 0 
+                            opacity: 0 // Hidden when not critical/serving/pressed to keep UI clean
                         }
                 }
                 transition={
                     isCritical 
-                    ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
+                    ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
                     : { duration: 0.3, ease: "easeOut" }
                 }
             />
@@ -100,11 +105,9 @@ const ScoreNumberDisplay = memo(({
                             ${theme.text}
                             ${theme.textDark}
                             ${textEffectClass}
-                            ${isPressed ? 'brightness-125' : ''}
+                            ${isPressed ? 'brightness-110 scale-95' : ''}
                         `}
-                        style={{ 
-                            textShadow: '0 20px 60px rgba(0,0,0,0.5)',
-                        }}
+                        // Removed massive textShadow to prevent box artifact
                     />
                 </div>
             </motion.div>
@@ -181,10 +184,9 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
   const isCritical = isMatchPoint || isSetPoint;
   
   const textEffectClass = useMemo(() => {
-    if (isMatchPoint) return 'drop-shadow-[0_0_60px_rgba(251,191,36,0.9)] brightness-110'; 
-    if (isCritical) return theme.glow; 
+    if (isMatchPoint) return 'drop-shadow-lg'; 
     return ''; 
-  }, [isMatchPoint, isCritical, theme.glow]);
+  }, [isMatchPoint]);
 
   const isFirstPosition = reverseLayout ? teamId === 'B' : teamId === 'A';
 
@@ -238,7 +240,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
                         scoreRefCallback={scoreRefCallback} 
                         numberRef={numberRef}
                         isCritical={isCritical}
-                        isServing={!!isServing}
                         isMatchPoint={isMatchPoint}
                     />
                 </div>

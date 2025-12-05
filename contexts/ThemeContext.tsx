@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 
 type Theme = 'light' | 'dark';
 
@@ -10,46 +10,50 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<Theme>('dark');
+  // Initialize state lazily, checking what is ALREADY in the DOM (from head script) or localStorage
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window !== 'undefined') {
+       // Check class list first (set by index.html script)
+       if (document.documentElement.classList.contains('dark')) return 'dark';
+       
+       // Fallback checks
+       const saved = localStorage.getItem('appTheme') as Theme;
+       if (saved === 'dark') return 'dark';
+       if (saved === 'light') return 'light';
+       
+       if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+    }
+    return 'light'; // Default
+  });
 
-  useEffect(() => {
-    // Lógica de Inicialização Única
-    const savedTheme = localStorage.getItem('appTheme') as Theme;
+  const applyThemeToDOM = useCallback((newTheme: Theme) => {
+    const root = window.document.documentElement;
+    const isDark = newTheme === 'dark';
 
-    let initialTheme: Theme;
-
-    if (savedTheme && ['light', 'dark'].includes(savedTheme)) {
-        // Se já existe preferência salva, usa ela
-        initialTheme = savedTheme;
+    // Apply Class
+    if (isDark) {
+        root.classList.add('dark');
+        root.classList.remove('light');
     } else {
-        // Primeiro uso: Detecta sistema UMA VEZ e salva como preferência manual
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        initialTheme = systemPrefersDark ? 'dark' : 'light';
-        localStorage.setItem('appTheme', initialTheme);
+        root.classList.add('light');
+        root.classList.remove('dark');
     }
 
-    // Aplica o tema inicial
-    setThemeState(initialTheme);
-    applyThemeToDOM(initialTheme);
+    // Apply Meta Theme Color (for mobile browser chrome)
+    const metaThemeColor = document.querySelector("meta[name=theme-color]");
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute("content", isDark ? "#020617" : "#f1f5f9");
+    }
   }, []);
-  
-  const applyThemeToDOM = (t: Theme) => {
-      const root = window.document.documentElement;
-      const isDark = t === 'dark';
-      
-      root.classList.remove('light', 'dark');
-      root.classList.add(t);
 
-      const metaThemeColor = document.querySelector("meta[name=theme-color]");
-      if (metaThemeColor) {
-        metaThemeColor.setAttribute("content", isDark ? "#020617" : "#f1f5f9");
-      }
-  };
+  // Sync state changes to DOM & Storage
+  useEffect(() => {
+    applyThemeToDOM(theme);
+    localStorage.setItem('appTheme', theme);
+  }, [theme, applyThemeToDOM]);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    localStorage.setItem('appTheme', newTheme);
-    applyThemeToDOM(newTheme);
   };
 
   return (

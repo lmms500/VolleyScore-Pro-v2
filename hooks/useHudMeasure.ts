@@ -1,3 +1,4 @@
+
 import { useState, useLayoutEffect, useCallback } from 'react';
 
 export interface HudPlacement {
@@ -50,33 +51,29 @@ export function useHudMeasure({
     const windowH = window.innerHeight;
 
     // Fixed Centralized Positioning
-    // The user requested the HUD to be strictly fixed in the center of the screen,
-    // both vertically and horizontally.
-    
     const centerX = windowW / 2;
     const centerY = windowH / 2;
     
     // Scale Logic: Ensure it fits on smaller screens
-    // Base width of HUD is approx 200px.
+    // UPDATED: Reduced scale factors for a more subtle HUD
     const isPortrait = windowH > windowW;
-    const minDimension = Math.min(windowW, windowH);
     
     let scale = 1;
     
     if (isPortrait) {
         // In portrait, width is the constraint
-        scale = Math.min(1, windowW / 300); 
+        scale = Math.min(0.85, windowW / 320); 
     } else {
-        // In landscape, height might be constraint if text is huge, but width is usually fine.
-        scale = Math.min(1, windowH / 250); 
+        // In landscape
+        scale = Math.min(0.85, windowH / 300); 
     }
 
     setPlacement({
         visible: true,
         left: centerX,
         top: centerY,
-        width: 200, // Nominal width
-        scale: Math.max(0.6, scale) // Prevent it from becoming microscopic
+        width: 180, // Reduced nominal width slightly
+        scale: Math.max(0.5, scale) 
     });
 
   }, [enabled, maxSets]);

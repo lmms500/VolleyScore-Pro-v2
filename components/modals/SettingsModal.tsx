@@ -1,10 +1,8 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameConfig } from '../../types';
-import { Check, Trophy, Sun, Zap, Download, Smartphone, Menu, Moon, AlertTriangle, Volume2, Umbrella, Activity, Globe, Scale, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Check, Trophy, Sun, Zap, Download, Smartphone, Menu, Moon, AlertTriangle, Volume2, Umbrella, Activity, Globe, Scale, ToggleLeft, ToggleRight, Share, MoreVertical } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -35,10 +33,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }, [isOpen, config]);
 
   // --- SMART RESET LOGIC ---
-  // Only specific "structural" keys trigger a game reset.
-  // Changing things like Sound, Theme, or Player Stats should NOT reset the score.
   const structuralKeys: (keyof GameConfig)[] = ['maxSets', 'pointsPerSet', 'hasTieBreak', 'tieBreakPoints', 'deuceType', 'mode'];
-  
   const requiresReset = isMatchActive && structuralKeys.some(key => localConfig[key] !== config[key]);
 
   const handleSave = () => {
@@ -76,6 +71,69 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title={t('settings.title')}>
       <div className="space-y-6 pb-2">
         
+        {/* --- INSTALL PROMPT (Top Priority if not installed) --- */}
+        {isStandalone === false && (
+             <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col gap-3">
+                 <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-2">
+                        <div className="p-2 bg-indigo-500 rounded-lg text-white shadow-lg shadow-indigo-500/20">
+                            <Smartphone size={18} />
+                        </div>
+                        <div>
+                            <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300 leading-tight block">
+                                {t('install.title')}
+                            </span>
+                            <span className="text-[10px] text-indigo-600/70 dark:text-indigo-400/70 font-medium">
+                                {t('install.description')}
+                            </span>
+                        </div>
+                     </div>
+                 </div>
+                 
+                 {canInstall ? (
+                    <Button onClick={onInstall} size="md" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20">
+                        <Download size={16} /> {t('install.installNow')}
+                    </Button>
+                 ) : (
+                    <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-indigo-500/10">
+                        {isIOS ? (
+                            <div className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded">1</span>
+                                    <span>{t('install.ios.tap')} <Share size={12} className="inline text-blue-500" /></span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded">2</span>
+                                    <span>{t('install.ios.then')} <span className="font-bold">{t('install.ios.addToHome')}</span></span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded">1</span>
+                                    <span>{t('install.android.tap')} <MoreVertical size={12} className="inline" /> (Menu)</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded">2</span>
+                                    <span>{t('install.android.then')} <span className="font-bold">"{t('install.android.installApp')}"</span></span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                 )}
+             </div>
+        )}
+
+        {/* --- PRESETS --- */}
+        <div>
+            <label className={labelClass}>{t('settings.rules.title')}</label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                <PresetButton active={isFIVB} onClick={setPresetFIVB} icon={Trophy} label={t('presets.fivb.label')} sub={t('presets.fivb.sub')} colorClass="indigo-500" borderClass="border-indigo-500" bgActive="bg-indigo-500/20" textActive="text-indigo-600 dark:text-indigo-300"/>
+                <PresetButton active={isBeach} onClick={setPresetBeach} icon={Umbrella} label={t('presets.beach.label')} sub={t('presets.beach.sub')} colorClass="orange-500" borderClass="border-orange-500" bgActive="bg-orange-500/20" textActive="text-orange-600 dark:text-orange-300"/>
+                <PresetButton active={isSegunda} onClick={setPresetSegunda} icon={Zap} label={t('presets.custom.label')} sub={t('presets.custom.sub')} colorClass="emerald-500" borderClass="border-emerald-500" bgActive="bg-emerald-500/20" textActive="text-emerald-600 dark:text-emerald-300"/>
+            </div>
+        </div>
+
         {/* --- APPEARANCE (Theme + Language) --- */}
         <div className={sectionClass}>
           <label className={labelClass}>{t('settings.appearance.title')}</label>
@@ -119,19 +177,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
-        {/* --- PRESETS --- */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-           <PresetButton active={isFIVB} onClick={setPresetFIVB} icon={Trophy} label={t('presets.fivb.label')} sub={t('presets.fivb.sub')} colorClass="indigo-500" borderClass="border-indigo-500" bgActive="bg-indigo-500/20" textActive="text-indigo-600 dark:text-indigo-300"/>
-           <PresetButton active={isBeach} onClick={setPresetBeach} icon={Umbrella} label={t('presets.beach.label')} sub={t('presets.beach.sub')} colorClass="orange-500" borderClass="border-orange-500" bgActive="bg-orange-500/20" textActive="text-orange-600 dark:text-orange-300"/>
-           <PresetButton active={isSegunda} onClick={setPresetSegunda} icon={Zap} label={t('presets.custom.label')} sub={t('presets.custom.sub')} colorClass="emerald-500" borderClass="border-emerald-500" bgActive="bg-emerald-500/20" textActive="text-emerald-600 dark:text-emerald-300"/>
-        </div>
-
-        {/* --- RULES (Sets, Points, Tie-Break, Deuce) --- */}
+        {/* --- DETAILED RULES --- */}
         <div className={sectionClass}>
-          <label className={labelClass}>{t('settings.rules.title')}</label>
           <div className="space-y-4">
              
-             {/* Mode Selector (New Feature) */}
+             {/* Mode Selector */}
              <div className="flex items-center justify-between">
                 <span className="text-slate-700 dark:text-slate-300 text-sm flex items-center gap-2">
                     <Trophy size={16} className="text-slate-400" />
@@ -267,31 +317,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
              </div>
         </div>
-        
-        {/* --- INSTALL PROMPT --- */}
-        {isStandalone === false && (
-             <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-between gap-4">
-                 <div className="flex-1">
-                     <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                        <Smartphone size={12} /> {t('install.title')}
-                     </span>
-                     <p className="text-xs text-slate-500 dark:text-slate-400">{t('install.description')}</p>
-                 </div>
-                 
-                 {canInstall ? (
-                    <Button onClick={onInstall} size="sm" className="bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/40">
-                        <Download size={14} /> {t('install.installNow')}
-                    </Button>
-                 ) : (
-                    <div className="flex flex-col items-end text-right">
-                         <span className="text-[10px] text-slate-500 flex items-center gap-1">
-                            {t('install.android.tap')} <Menu size={10} /> {t('install.android.then')}
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">"{t('install.android.installApp')}"</span>
-                    </div>
-                 )}
-             </div>
-        )}
 
         {requiresReset && (
             <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">

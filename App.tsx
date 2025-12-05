@@ -283,10 +283,14 @@ function App() {
   const colorLeft = state.swappedSides ? colorB : colorA;
   const colorRight = state.swappedSides ? colorA : colorB;
   
+  // Derived serving state for HUD
+  const isServingLeft = state.swappedSides ? state.servingTeam === 'B' : state.servingTeam === 'A';
+  const isServingRight = state.swappedSides ? state.servingTeam === 'A' : state.servingTeam === 'B';
+
   return (
     <ErrorBoundary>
       <LayoutProvider>
-        <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative">
+        <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative transition-colors duration-700 ease-in-out">
           
           <BackgroundGlow 
             isSwapped={state.swappedSides} 
@@ -345,6 +349,8 @@ function App() {
               duration={state.matchDurationSeconds} 
               setsA={state.setsA}
               setsB={state.setsB}
+              colorA={colorA}
+              colorB={colorB}
             />
           </div>
           
@@ -360,8 +366,8 @@ function App() {
                     teamNameB={state.swappedSides ? state.teamAName : state.teamBName}
                     colorA={colorLeft}
                     colorB={colorRight}
-                    isServingLeft={state.swappedSides ? state.servingTeam === 'B' : state.servingTeam === 'A'}
-                    isServingRight={state.swappedSides ? state.servingTeam === 'A' : state.servingTeam === 'B'}
+                    isServingLeft={isServingLeft}
+                    isServingRight={isServingRight}
                     onSetServerA={state.swappedSides ? handleSetServerB : handleSetServerA}
                     onSetServerB={state.swappedSides ? handleSetServerA : handleSetServerB}
                     timeoutsA={state.swappedSides ? state.timeoutsB : state.timeoutsA}

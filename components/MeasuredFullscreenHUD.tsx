@@ -1,5 +1,4 @@
 
-
 import React, { memo } from 'react';
 import { HudPlacement } from '../hooks/useHudMeasure';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
@@ -27,21 +26,30 @@ const flipVariants: Variants = {
 
 const SetNumber = memo(({ value, color }: { value: number, color: TeamColor }) => {
     const theme = resolveTheme(color);
-    // We construct a specific text style here for the HUD
     const textColor = color === 'rose' || color === 'amber' || color === 'fuchsia'
         ? `${theme.text} drop-shadow-[0_0_20px_currentColor] brightness-125 saturate-150`
         : `${theme.text} drop-shadow-[0_0_20px_currentColor]`;
 
     return (
-        <div className="w-[80px] flex justify-center items-center">
+        <div className="w-[60px] flex flex-col justify-center items-center relative">
             <motion.span
-                key={value}
-                initial={{ scale: 1 }}
-                animate={{ scale: [1, 1.25, 1] }} // Bounce effect (ScaleUpBounce)
-                transition={{ duration: 0.18, ease: "easeOut" }}
-                className={`font-black text-6xl leading-none tabular-nums ${textColor}`}
+                key={value} // Triggers animation on change
+                initial={{ scale: 0.5, opacity: 0, filter: 'blur(10px)' }}
+                animate={{ 
+                    scale: [1.5, 1], 
+                    opacity: 1, 
+                    filter: 'blur(0px)',
+                    textShadow: [
+                        `0 0 50px currentColor`, 
+                        `0 4px 12px rgba(0,0,0,0.5)`
+                    ]
+                }} 
+                transition={{ 
+                    duration: 0.6, 
+                    ease: [0.16, 1, 0.3, 1] // Ultra snappy spring-like bezier
+                }}
+                className={`font-black text-5xl leading-none tabular-nums ${textColor}`}
                 style={{ 
-                    textShadow: '0 4px 12px rgba(0,0,0,0.5)',
                     display: 'inline-block'
                 }}
             >
@@ -90,12 +98,12 @@ export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = memo(
                 {/* Neo-Glass Container */}
                 <div className={`
                     relative flex items-center justify-center gap-0 
-                    px-8 py-4 rounded-[2rem]
-                    bg-white/10 dark:bg-black/20 
-                    backdrop-blur-2xl border border-white/10 
-                    shadow-[0_0_40px_rgba(0,0,0,0.6)]
+                    px-6 py-3 rounded-[1.5rem]
+                    bg-white/20 dark:bg-black/20 
+                    backdrop-blur-2xl border border-white/20 dark:border-white/10 
+                    shadow-[0_0_40px_rgba(0,0,0,0.2)] dark:shadow-[0_0_40px_rgba(0,0,0,0.6)]
                     overflow-hidden
-                    min-w-[260px] min-h-[110px]
+                    min-w-[200px] min-h-[80px]
                     flex-shrink-0
                 `}>
                     {/* Fixed Internal Glow */}
@@ -107,11 +115,11 @@ export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = memo(
                     />
 
                     {/* Content Layer */}
-                    <div className="relative z-10 flex items-center justify-center gap-2">
+                    <div className="relative z-10 flex items-center justify-center gap-1">
                         <SetNumber value={setsLeft} color={colorLeft} />
 
                         {/* Divider */}
-                        <div className="h-12 w-[1px] bg-gradient-to-b from-transparent via-white/20 to-transparent mx-2" />
+                        <div className="h-10 w-[1px] bg-gradient-to-b from-transparent via-black/20 dark:via-white/20 to-transparent mx-1" />
 
                         <SetNumber value={setsRight} color={colorRight} />
                     </div>

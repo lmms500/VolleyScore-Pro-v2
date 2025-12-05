@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -10,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ResultCard } from '../Share/ResultCard';
 import { useSocialShare } from '../../hooks/useSocialShare';
 import { resolveTheme } from '../../utils/colors';
+import { Confetti } from '../ui/Confetti';
 
 interface MatchOverModalProps {
   isOpen: boolean;
@@ -35,8 +35,7 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   const winnerColorKey = isA ? colorA : colorB;
   const winnerTheme = resolveTheme(winnerColorKey);
   
-  // Mapping for background blur - using standard Tailwind Colors since Hex arbitrary values in bg- are harder to map dynamically for simple strings
-  // But we can use the hex directly if it is one
+  // Mapping for background blur
   const getBgColor = (c: string) => {
       if (c.startsWith('#')) return `bg-[${c}]`;
       const mapping: any = {
@@ -105,31 +104,40 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
           />
       )}
 
-      <div className="flex flex-col items-center text-center space-y-6">
+      {/* Confetti Overlay inside the modal content area but positioned absolute to fill it */}
+      <div className="absolute inset-0 overflow-hidden rounded-[2rem] pointer-events-none z-0 opacity-50">
+          <Confetti color={winnerColorKey} />
+      </div>
+
+      <div className="flex flex-col items-center text-center space-y-6 relative z-10">
         
         <div className="relative group mt-2">
-            <div className={`absolute inset-0 blur-[50px] rounded-full opacity-40 ${winnerBgColor}`}></div>
+            <div className={`absolute inset-0 blur-[60px] rounded-full opacity-60 ${winnerBgColor}`}></div>
             <div className="relative flex flex-col items-center">
-                <Trophy size={64} className={`${winnerTheme.text} ${winnerTheme.textDark} drop-shadow-[0_0_25px_currentColor] animate-bounce`} />
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-2 uppercase tracking-tighter">{winnerName}</h2>
-                <span className="text-xs font-bold tracking-widest text-slate-500 dark:text-slate-400 uppercase">{t('matchOver.wins')}</span>
+                <Trophy size={72} className={`${winnerTheme.text} ${winnerTheme.textDark} drop-shadow-[0_0_30px_currentColor] animate-bounce`} />
+                <h2 className="text-3xl font-black text-slate-900 dark:text-white mt-4 uppercase tracking-tighter drop-shadow-sm">{winnerName}</h2>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="h-px w-8 bg-slate-400/50"></span>
+                    <span className="text-[10px] font-bold tracking-widest text-slate-500 dark:text-slate-400 uppercase">{t('matchOver.wins')}</span>
+                    <span className="h-px w-8 bg-slate-400/50"></span>
+                </div>
             </div>
         </div>
 
-        <div className="flex items-center gap-6 text-3xl font-black font-inter bg-black/20 dark:bg-black/40 px-6 py-3 rounded-2xl border border-black/10 dark:border-white/10 shadow-inner">
-            <span className={isA ? `${winnerTheme.text} ${winnerTheme.textDark} drop-shadow-[0_0_10px_currentColor]` : 'text-slate-500 dark:text-slate-600'}>{state.setsA}</span>
-            <span className="w-1 h-6 bg-black/10 dark:bg-white/10 rounded-full"></span>
-            <span className={!isA ? `${winnerTheme.text} ${winnerTheme.textDark} drop-shadow-[0_0_10px_currentColor]` : 'text-slate-500 dark:text-slate-600'}>{state.setsB}</span>
+        <div className="flex items-center gap-6 text-4xl font-black font-inter bg-white/40 dark:bg-black/40 px-8 py-4 rounded-3xl border border-white/20 dark:border-white/10 shadow-xl backdrop-blur-xl">
+            <span className={isA ? `${winnerTheme.text} ${winnerTheme.textDark} drop-shadow-[0_0_15px_currentColor]` : 'text-slate-400 dark:text-slate-600'}>{state.setsA}</span>
+            <div className="h-8 w-[2px] bg-slate-300 dark:bg-slate-700 rounded-full opacity-30"></div>
+            <span className={!isA ? `${winnerTheme.text} ${winnerTheme.textDark} drop-shadow-[0_0_15px_currentColor]` : 'text-slate-400 dark:text-slate-600'}>{state.setsB}</span>
         </div>
 
         {report && (
-            <div className="w-full bg-black/[0.03] dark:bg-white/[0.03] rounded-2xl p-4 text-left border border-black/5 dark:border-white/5 space-y-3 backdrop-blur-sm">
+            <div className="w-full bg-white/50 dark:bg-white/[0.03] rounded-2xl p-4 text-left border border-black/5 dark:border-white/5 space-y-3 backdrop-blur-md shadow-sm">
                 <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
                      <h3 className="font-bold text-slate-500 dark:text-slate-500 uppercase text-[10px] tracking-widest">{t('matchOver.rotationReport.title')}</h3>
                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">{t('matchOver.rotationReport.entering', { teamName: report.incomingTeam.name })}</span>
                 </div>
                 
-                <div className="flex items-center justify-between text-xs mb-4 bg-black/10 dark:bg-black/20 p-2 rounded-lg">
+                <div className="flex items-center justify-between text-xs mb-4 bg-black/5 dark:bg-black/20 p-2 rounded-lg">
                     <div className="text-slate-500 dark:text-slate-500">
                         <span className="text-[9px] font-bold block uppercase opacity-50">{t('matchOver.rotationReport.leaving')}</span>
                         <span className="font-bold text-black/50 dark:text-white/50 line-through decoration-rose-500/50">{report.outgoingTeam.name}</span>
@@ -148,7 +156,7 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
                         </p>
                         <div className="flex flex-wrap gap-1.5">
                             {coreSquad.map(p => (
-                                <span key={p.id} className="text-[10px] text-slate-700 dark:text-slate-300 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded border border-black/5 dark:border-white/5">
+                                <span key={p.id} className="text-[10px] text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-white/5 px-2 py-0.5 rounded border border-black/5 dark:border-white/5 shadow-sm">
                                     {p.name}
                                 </span>
                             ))}
@@ -166,7 +174,7 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                                 {reinforcements.map(p => (
-                                    <span key={p.id} className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 dark:text-amber-200 bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded">
+                                    <span key={p.id} className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 dark:text-amber-200 bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded shadow-sm">
                                         <UserPlus size={10} /> {p.name}
                                     </span>
                                 ))}
@@ -180,7 +188,7 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
                     <div className="mt-4">
                         <button 
                             onClick={() => setShowLogs(!showLogs)} 
-                            className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-black/5 dark:bg-white/5 rounded-lg border border-black/5 dark:border-white/5"
+                            className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-black/5 dark:bg-white/5 rounded-lg border border-black/5 dark:border-white/5 transition-colors"
                         >
                             <span className="flex items-center gap-2"><Terminal size={12} /> {t('matchOver.debugLogs')}</span>
                             {showLogs ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -208,26 +216,26 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
             </div>
         )}
 
-        <div className="flex flex-col w-full gap-3">
+        <div className="flex flex-col w-full gap-3 mt-4">
             <div className="flex gap-3">
                  <Button 
                     onClick={handleShare} 
                     disabled={isSharing}
                     variant="secondary"
-                    className="flex-shrink-0 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 hover:text-indigo-400 border-indigo-500/20"
+                    className="flex-shrink-0 bg-white/50 dark:bg-indigo-500/10 hover:bg-white dark:hover:bg-indigo-500/20 text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 border-indigo-500/20 shadow-sm"
                     title={t('matchOver.share')}
                 >
                     {isSharing ? <Loader2 size={20} className="animate-spin" /> : <Share2 size={20} />}
                 </Button>
                 
-                <Button onClick={onRotate} size="lg" className="w-full shadow-emerald-500/10 bg-emerald-600 hover:bg-emerald-500 border-t border-white/20">
+                <Button onClick={onRotate} size="lg" className="w-full shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-500 border-t border-white/20 text-white font-black tracking-wide">
                     <RefreshCw size={18} />
                     {t('matchOver.nextGameButton')}
                 </Button>
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-                <Button onClick={onUndo} size="md" variant="secondary" className="w-full">
+                <Button onClick={onUndo} size="md" variant="secondary" className="w-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10">
                     <Undo2 size={16} />
                     {t('controls.undo')}
                 </Button>

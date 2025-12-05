@@ -1,15 +1,16 @@
 
 import React, { useState, useMemo } from 'react';
 import { Match } from '../../stores/historyStore';
-import { Player, SkillType } from '../../types';
+import { Player, SkillType, SetHistory, TeamColor } from '../../types';
 import { downloadJSON } from '../../services/io';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { 
   ArrowLeft, Download, Clock, Calendar, 
   Shield, Swords, Target, AlertTriangle, 
-  Activity, Crown, BarChart2, Zap
+  Activity, Crown, BarChart2, Zap, TrendingUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { resolveTheme, getHexFromColor } from '../../utils/colors';
 
 interface MatchDetailProps {
   match: Match;
@@ -24,47 +25,225 @@ const StatBar = ({ label, valueA, valueB, colorA, colorB, icon: Icon }: any) => 
     const percentB = Math.round((valueB / total) * 100);
 
     return (
-        <div className="flex flex-col gap-1 w-full">
-            <div className="flex justify-between items-end px-1">
-                <span className={`text-xs font-bold ${colorA}`}>{valueA}</span>
-                <div className="flex items-center gap-1 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                    {Icon && <Icon size={10} />} {label}
+        <div className="flex flex-col gap-1.5 w-full">
+            {/* Header Row - Improved Layout to prevent overlapping */}
+            <div className="flex items-center gap-2 px-0.5 w-full">
+                <span className={`text-xs font-bold w-10 text-left tabular-nums ${colorA.text} ${colorA.textDark}`}>{valueA}</span>
+                
+                <div className="flex-1 flex items-center justify-center gap-1.5 min-w-0 overflow-hidden">
+                    {Icon && <Icon size={12} className="flex-shrink-0 text-slate-400" />} 
+                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider truncate">{label}</span>
                 </div>
-                <span className={`text-xs font-bold ${colorB}`}>{valueB}</span>
+                
+                <span className={`text-xs font-bold w-10 text-right tabular-nums ${colorB.text} ${colorB.textDark}`}>{valueB}</span>
             </div>
-            <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-slate-800">
+
+            {/* Bar */}
+            <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800">
                 <motion.div 
                     initial={{ width: 0 }} animate={{ width: `${percentA}%` }} 
-                    className="h-full bg-indigo-500" 
+                    className={`h-full ${colorA.halo}`} // Halo usually contains the solid bg class
                 />
                 <motion.div 
                     initial={{ width: 0 }} animate={{ width: `${percentB}%` }} 
-                    className="h-full bg-rose-500" 
+                    className={`h-full ${colorB.halo}`} 
                 />
             </div>
         </div>
     );
 };
 
-const TeamHero = ({ name, winner, isRight = false }: { name: string, winner: boolean, isRight?: boolean }) => {
+const MomentumChart = ({ actionLog, sets, hexA, hexB }: { actionLog: any[], sets: SetHistory[], hexA: string, hexB: string }) => {
+    // 1. Calculate the flow
+    const dataPoints = useMemo(() => {
+        let scoreA = 0;
+        let scoreB = 0;
+        const points = [{ x: 0, y: 0 }]; // Start at 0 diff
+
+        // Filter only score events to ensure X-axis is accurate to points played
+        const scoreEvents = actionLog.filter(l => l.type === 'POINT');
+        
+        scoreEvents.forEach((log, index) => {
+            if (log.team === 'A') scoreA++;
+            else scoreB++;
+            
+            // Y = Global Score Difference (A - B)
+            points.push({ x: index + 1, y: scoreA - scoreB });
+        });
+        
+        return points;
+    }, [actionLog]);
+
+    // 2. Calculate Set Markers (Vertical Lines)
+    const setMarkers = useMemo(() => {
+        let cumulativePoints = 0;
+        return sets.map((set, i) => {
+            const pointsInSet = set.scoreA + set.scoreB;
+            cumulativePoints += pointsInSet;
+            return {
+                setLabel: `S${set.setNumber}`,
+                xIndex: cumulativePoints,
+                winner: set.winner
+            };
+        });
+    }, [sets]);
+
+    if (dataPoints.length < 2) return (
+        <div className="w-full h-32 flex items-center justify-center text-xs text-slate-400 italic bg-slate-50 dark:bg-white/5 rounded-xl border border-dashed border-slate-200 dark:border-white/10 mt-4 mb-2">
+            Not enough data for chart
+        </div>
+    );
+
+    // Dimensions (Internal SVG Units)
+    const SVG_W = 100;
+    const SVG_H = 60;
+    const PADDING_Y = 12; // Internal padding inside SVG for text clearance
+    const GRAPH_H = SVG_H - (PADDING_Y * 2);
+    
+    // Scale Functions
+    const maxVal = Math.max(...dataPoints.map(p => Math.abs(p.y)), 3); // Minimum range of 3
+    const maxY = maxVal * 1.1; // Add 10% headroom to prevent clipping
+    
+    const totalPoints = dataPoints.length - 1;
+    // Safety check for empty log but existing sets (legacy data issue prevention)
+    const maxX = Math.max(totalPoints, setMarkers[setMarkers.length-1]?.xIndex || 1);
+
+    const getX = (index: number) => (index / maxX) * SVG_W;
+    
+    // Map Y: +maxY -> PADDING_Y, -maxY -> SVG_H - PADDING_Y
+    // 0 -> SVG_H / 2
+    const midY = SVG_H / 2;
+    const getY = (val: number) => midY - (val / maxY) * (GRAPH_H / 2);
+
+    const pathD = `M ${dataPoints.map((p, i) => `${getX(i).toFixed(2)},${getY(p.y).toFixed(2)}`).join(' L ')}`;
+    
+    // Area paths
+    const areaD = `${pathD} V ${midY} H ${getX(0)} Z`;
+
+    return (
+        <div className="w-full h-56 relative mt-4 mb-2 select-none flex flex-col justify-between py-1">
+            
+            {/* Floating Labels - Positioned absolutely but with Neo-Glass backing to sit ON TOP of chart safely */}
+            <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/90 dark:bg-black/60 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-sm pointer-events-none">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: hexA }} />
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 leading-none">Lead</span>
+            </div>
+            
+            <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/90 dark:bg-black/60 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-sm pointer-events-none">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: hexB }} />
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 leading-none">Lead</span>
+            </div>
+            
+            <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
+                
+                {/* Defs for Gradients */}
+                <defs>
+                    <linearGradient id="gradientA" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={hexA} stopOpacity="0.4" />
+                        <stop offset="100%" stopColor={hexA} stopOpacity="0" />
+                    </linearGradient>
+                    <linearGradient id="gradientB" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={hexB} stopOpacity="0" />
+                        <stop offset="100%" stopColor={hexB} stopOpacity="0.4" />
+                    </linearGradient>
+                    <clipPath id="clipTop">
+                        <rect x="0" y={0} width={SVG_W} height={midY} />
+                    </clipPath>
+                    <clipPath id="clipBottom">
+                        <rect x="0" y={midY} width={SVG_W} height={midY} />
+                    </clipPath>
+                </defs>
+
+                {/* Zero Line (Dotted) */}
+                <line x1="0" y1={midY} x2={SVG_W} y2={midY} stroke="currentColor" strokeOpacity="0.1" strokeWidth="0.2" strokeDasharray="1 1" />
+
+                {/* Fill Areas */}
+                <g clipPath="url(#clipTop)">
+                    <path d={`${areaD}`} fill="url(#gradientA)" />
+                </g>
+                <g clipPath="url(#clipBottom)">
+                    <path d={`${areaD}`} fill="url(#gradientB)" />
+                </g>
+
+                {/* The Graph Line */}
+                <motion.path 
+                    d={pathD} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="0.4" 
+                    className="text-slate-500 dark:text-slate-400"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 1.5, ease: "easeInOut" }}
+                />
+
+                {/* Set Dividers & Labels */}
+                {setMarkers.map((marker, idx) => {
+                    const xPos = getX(marker.xIndex);
+                    // Don't draw line for last set if it's at the very end
+                    const isLast = idx === setMarkers.length - 1;
+                    const prevX = idx === 0 ? 0 : getX(setMarkers[idx-1].xIndex);
+                    const labelX = prevX + (xPos - prevX) / 2;
+
+                    return (
+                        <g key={`marker-${idx}`}>
+                            {/* Vertical Line for End of Set */}
+                            {!isLast && (
+                                <line 
+                                    x1={xPos} y1={PADDING_Y - 5} 
+                                    x2={xPos} y2={SVG_H - (PADDING_Y - 5)} 
+                                    stroke="currentColor" 
+                                    strokeWidth="0.15" 
+                                    strokeDasharray="0.5 0.5"
+                                    className="text-slate-400 dark:text-slate-600 opacity-40"
+                                />
+                            )}
+                            
+                            {/* Set Label Centered in Segment at Top */}
+                            {/* Backing pill for contrast */}
+                            <rect 
+                                x={labelX - 4} y={1} 
+                                width={8} height={4} rx={1} 
+                                className="text-white dark:text-slate-900 fill-current opacity-80" 
+                            />
+                            <text 
+                                x={labelX} 
+                                y={3.2} 
+                                textAnchor="middle" 
+                                fill={marker.winner === 'A' ? hexA : hexB}
+                                className="text-[2.5px] font-black uppercase tracking-widest"
+                                style={{ dominantBaseline: 'middle' }}
+                            >
+                                {marker.setLabel}
+                            </text>
+                        </g>
+                    );
+                })}
+
+            </svg>
+        </div>
+    );
+};
+
+const TeamHero = ({ name, winner, isRight = false, theme }: { name: string, winner: boolean, isRight?: boolean, theme: any }) => {
     return (
         <div className={`flex flex-col justify-center ${isRight ? 'items-center md:items-end text-center md:text-right' : 'items-center md:items-start text-center md:text-left'} relative z-10 w-full min-w-0`}>
              <div className="flex items-center gap-2 max-w-full justify-center md:justify-start">
-                 {winner && !isRight && <Crown size={18} className="text-indigo-400 fill-indigo-400/20 drop-shadow-[0_0_10px_rgba(129,140,248,0.5)] flex-shrink-0" />}
+                 {winner && !isRight && <Crown size={18} className={`${theme.crown} drop-shadow-[0_0_10px_currentColor] flex-shrink-0`} />}
                  
                  <h2 className={`
                     text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight leading-tight break-words
                     ${winner 
-                        ? (isRight ? 'text-rose-500 dark:text-rose-400 drop-shadow-[0_0_15px_rgba(244,63,94,0.4)]' : 'text-indigo-500 dark:text-indigo-400 drop-shadow-[0_0_15px_rgba(129,140,248,0.4)]') 
+                        ? `${theme.text} ${theme.textDark} drop-shadow-[0_0_15px_currentColor]`
                         : 'text-slate-500 dark:text-slate-400'}
                  `}>
                     {name}
                  </h2>
                  
-                 {winner && isRight && <Crown size={18} className="text-rose-400 fill-rose-400/20 drop-shadow-[0_0_10px_rgba(244,63,94,0.5)] flex-shrink-0" />}
+                 {winner && isRight && <Crown size={18} className={`${theme.crown} drop-shadow-[0_0_10px_currentColor] flex-shrink-0`} />}
              </div>
              {winner && (
-                <div className={`h-1 rounded-full mt-2 w-12 ${isRight ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.6)]' : 'bg-indigo-500 shadow-[0_0_10px_rgba(129,140,248,0.6)]'}`} />
+                <div className={`h-1 rounded-full mt-2 w-12 ${theme.halo} shadow-[0_0_10px_currentColor]`} />
              )}
         </div>
     );
@@ -81,10 +260,11 @@ interface CalculatedStat {
     ace: number;
 }
 
-const PlayerStatRow = ({ stats, isMVP, rank }: { stats: CalculatedStat, isMVP: boolean, rank: number }) => {
+const PlayerStatRow = ({ stats, isMVP, rank, themeA, themeB }: { stats: CalculatedStat, isMVP: boolean, rank: number, themeA: any, themeB: any }) => {
     if (stats.total === 0) return null;
 
-    const teamColor = stats.team === 'A' ? 'text-indigo-500 dark:text-indigo-400' : (stats.team === 'B' ? 'text-rose-500 dark:text-rose-400' : 'text-slate-400');
+    const theme = stats.team === 'A' ? themeA : (stats.team === 'B' ? themeB : { text: 'text-slate-400', textDark: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/20' });
+    const teamColorClass = `${theme.text} ${theme.textDark}`;
     
     return (
         <div className={`
@@ -106,7 +286,7 @@ const PlayerStatRow = ({ stats, isMVP, rank }: { stats: CalculatedStat, isMVP: b
                     <div className={`text-sm sm:text-base font-bold truncate leading-tight ${isMVP ? 'text-amber-700 dark:text-amber-300' : 'text-slate-800 dark:text-slate-200'}`}>
                         {stats.name}
                     </div>
-                    <div className={`text-[10px] font-bold uppercase tracking-wider opacity-80 truncate ${teamColor}`}>
+                    <div className={`text-[10px] font-bold uppercase tracking-wider opacity-80 truncate ${teamColorClass}`}>
                         {stats.team === 'Unknown' ? 'Guest' : `Team ${stats.team}`}
                     </div>
                 </div>
@@ -117,7 +297,7 @@ const PlayerStatRow = ({ stats, isMVP, rank }: { stats: CalculatedStat, isMVP: b
                 
                 {/* Attack Pill */}
                 {stats.attack > 0 && (
-                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20" title="Kills">
+                    <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg ${theme.bg} ${theme.text} ${theme.textDark} ${theme.border} border`} title="Kills">
                         <Swords size={12} strokeWidth={2.5} />
                         <span className="text-xs font-bold tabular-nums">{stats.attack}</span>
                     </div>
@@ -161,12 +341,15 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
   const [replayIndex, setReplayIndex] = useState<number>(-1);
 
   // --- DERIVED STATS ---
-  const totalPointsA = useMemo(() => match.sets.reduce((acc, s) => acc + s.scoreA, 0), [match.sets]);
-  const totalPointsB = useMemo(() => match.sets.reduce((acc, s) => acc + s.scoreB, 0), [match.sets]);
-  
   const hasDetailedStats = useMemo(() => {
-      return (match as any).actionLog?.some((log: any) => log.type === 'POINT' && log.playerId);
+      return (match as any).actionLog?.some((log: any) => log.type === 'POINT');
   }, [match]);
+
+  // Resolve Colors
+  const themeA = resolveTheme(match.teamARoster?.color || 'indigo');
+  const themeB = resolveTheme(match.teamBRoster?.color || 'rose');
+  const hexA = getHexFromColor(match.teamARoster?.color || 'indigo');
+  const hexB = getHexFromColor(match.teamBRoster?.color || 'rose');
 
   // Aggregate Stats Logic
   const { playerStats, teamStats } = useMemo(() => {
@@ -259,17 +442,17 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
             {/* 1. HERO SCOREBOARD */}
             <div className="flex flex-col items-center relative py-6">
                 <div className="w-full flex flex-col md:flex-row items-center justify-between gap-6 z-10">
-                    <div className="flex-1 w-full"><TeamHero name={match.teamAName} winner={match.winner === 'A'} isRight={false} /></div>
+                    <div className="flex-1 w-full"><TeamHero name={match.teamAName} winner={match.winner === 'A'} isRight={false} theme={themeA} /></div>
                     
                     <div className="flex-shrink-0 flex items-center justify-center bg-slate-200 dark:bg-white/5 rounded-2xl px-6 py-2 border border-black/5 dark:border-white/5">
                         <div className="flex items-center gap-4 font-black font-inter tracking-tighter tabular-nums leading-none">
-                            <span className={`text-5xl md:text-6xl ${match.winner === 'A' ? 'text-indigo-500' : 'text-slate-400'}`}>{match.setsA}</span>
+                            <span className={`text-5xl md:text-6xl ${match.winner === 'A' ? `${themeA.text} ${themeA.textDark}` : 'text-slate-400'}`}>{match.setsA}</span>
                             <span className="text-slate-300 dark:text-slate-600 text-3xl">:</span>
-                            <span className={`text-5xl md:text-6xl ${match.winner === 'B' ? 'text-rose-500' : 'text-slate-400'}`}>{match.setsB}</span>
+                            <span className={`text-5xl md:text-6xl ${match.winner === 'B' ? `${themeB.text} ${themeB.textDark}` : 'text-slate-400'}`}>{match.setsB}</span>
                         </div>
                     </div>
 
-                    <div className="flex-1 w-full"><TeamHero name={match.teamBName} winner={match.winner === 'B'} isRight={true} /></div>
+                    <div className="flex-1 w-full"><TeamHero name={match.teamBName} winner={match.winner === 'B'} isRight={true} theme={themeB} /></div>
                 </div>
             </div>
 
@@ -302,7 +485,7 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                 </div>
                 
                 {/* Content */}
-                <div className="p-6 min-h-[140px] flex items-center justify-center overflow-hidden">
+                <div className="p-6 min-h-[140px] flex flex-col items-center justify-center overflow-hidden">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={replayIndex}
@@ -312,18 +495,39 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                             className="w-full"
                         >
                             {replayIndex === -1 ? (
-                                /* Summary View - Scrollable Horizontal Row */
-                                <div className="w-full overflow-x-auto no-scrollbar pb-2">
-                                    <div className="flex gap-3 px-1 min-w-full md:justify-center">
-                                        {match.sets.map((set, idx) => (
-                                            <div key={idx} className="flex-shrink-0 flex flex-col items-center p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/5 min-w-[100px] snap-center">
-                                                <span className="text-[10px] font-bold text-slate-400 mb-1">SET {set.setNumber}</span>
-                                                <div className="text-2xl font-black tabular-nums tracking-tight">
-                                                    <span className={set.winner === 'A' ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}>{set.scoreA}</span>
-                                                    <span className="mx-1 opacity-20 text-slate-400">-</span>
-                                                    <span className={set.winner === 'B' ? 'text-rose-500' : 'text-slate-400 dark:text-slate-500'}>{set.scoreB}</span>
-                                                </div>
+                                /* Summary View - Momentum Chart + Set Breakdown */
+                                <div className="flex flex-col gap-6">
+                                    {/* MOMENTUM CHART */}
+                                    {hasDetailedStats && (
+                                        <div className="w-full bg-slate-50 dark:bg-white/5 rounded-2xl p-4 border border-black/5 dark:border-white/5">
+                                            <div className="flex items-center gap-2 mb-2 text-slate-400">
+                                                <TrendingUp size={14} />
+                                                <span className="text-[10px] font-bold uppercase tracking-widest">Match Flow (Score Gap)</span>
                                             </div>
+                                            <MomentumChart 
+                                                actionLog={(match as any).actionLog || []} 
+                                                sets={match.sets}
+                                                hexA={hexA}
+                                                hexB={hexB}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Sets Grid - Interactive Navigation */}
+                                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 w-full">
+                                        {match.sets.map((set, idx) => (
+                                            <button 
+                                                key={idx} 
+                                                onClick={() => setReplayIndex(idx)}
+                                                className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:border-indigo-500/30 transition-all group active:scale-95"
+                                            >
+                                                <span className="text-[10px] font-bold text-slate-400 group-hover:text-indigo-500 mb-1 transition-colors">SET {set.setNumber}</span>
+                                                <div className="text-xl sm:text-2xl font-black tabular-nums tracking-tight">
+                                                    <span className={set.winner === 'A' ? `${themeA.text} ${themeA.textDark}` : 'text-slate-400 dark:text-slate-500'}>{set.scoreA}</span>
+                                                    <span className="mx-0.5 opacity-20 text-slate-400">-</span>
+                                                    <span className={set.winner === 'B' ? `${themeB.text} ${themeB.textDark}` : 'text-slate-400 dark:text-slate-500'}>{set.scoreB}</span>
+                                                </div>
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
@@ -331,14 +535,14 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                                 currentReplaySet && (
                                     <div className="flex flex-col items-center w-full">
                                         <div className="flex items-center gap-8 md:gap-16">
-                                            <span className={`text-6xl font-black tabular-nums ${currentReplaySet.winner === 'A' ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-700'}`}>
+                                            <span className={`text-6xl font-black tabular-nums ${currentReplaySet.winner === 'A' ? `${themeA.text} ${themeA.textDark}` : 'text-slate-300 dark:text-slate-700'}`}>
                                                 {currentReplaySet.scoreA}
                                             </span>
                                             <div className="flex flex-col items-center">
                                                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">SET</span>
                                                 <span className="text-3xl font-black text-slate-800 dark:text-white">{currentReplaySet.setNumber}</span>
                                             </div>
-                                            <span className={`text-6xl font-black tabular-nums ${currentReplaySet.winner === 'B' ? 'text-rose-500' : 'text-slate-300 dark:text-slate-700'}`}>
+                                            <span className={`text-6xl font-black tabular-nums ${currentReplaySet.winner === 'B' ? `${themeB.text} ${themeB.textDark}` : 'text-slate-300 dark:text-slate-700'}`}>
                                                 {currentReplaySet.scoreB}
                                             </span>
                                         </div>
@@ -364,25 +568,25 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                             <StatBar 
                                 label="Total Kills" 
                                 valueA={teamStats.A.attack} valueB={teamStats.B.attack} 
-                                colorA="text-indigo-500" colorB="text-rose-500" 
+                                colorA={themeA} colorB={themeB} 
                                 icon={Swords}
                             />
                             <StatBar 
                                 label="Blocks" 
                                 valueA={teamStats.A.block} valueB={teamStats.B.block} 
-                                colorA="text-indigo-500" colorB="text-rose-500" 
+                                colorA={themeA} colorB={themeB} 
                                 icon={Shield}
                             />
                             <StatBar 
                                 label="Service Aces" 
                                 valueA={teamStats.A.ace} valueB={teamStats.B.ace} 
-                                colorA="text-indigo-500" colorB="text-rose-500" 
+                                colorA={themeA} colorB={themeB} 
                                 icon={Target}
                             />
                              <StatBar 
                                 label="Opponent Errors" 
                                 valueA={teamStats.A.error_gain} valueB={teamStats.B.error_gain} 
-                                colorA="text-indigo-500" colorB="text-rose-500" 
+                                colorA={themeA} colorB={themeB} 
                                 icon={AlertTriangle}
                             />
                         </div>
@@ -404,6 +608,8 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                                     stats={stat} 
                                     rank={idx + 1}
                                     isMVP={idx === 0 && stat.total > 0} 
+                                    themeA={themeA}
+                                    themeB={themeB}
                                 />
                             ))}
                         </div>

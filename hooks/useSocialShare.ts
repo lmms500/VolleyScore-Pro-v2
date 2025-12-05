@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 
@@ -15,13 +16,33 @@ export const useSocialShare = () => {
       // 1. Force font loading check or wait a tick to ensure rendering
       await document.fonts.ready;
       
-      // 2. Generate PNG with High Quality settings
-      const dataUrl = await toPng(node, { 
-        cacheBust: true, 
-        pixelRatio: 2, // 2x is usually enough for retina and sharing, 3x might be too heavy for mobile memory
-        backgroundColor: '#020617', // Ensure bg is solid deep slate
-        skipAutoScale: true
-      });
+      // Helper to generate image with fallback mechanism
+      const generateImage = async () => {
+        try {
+          // Attempt 1: High Fidelity (With Fonts)
+          return await toPng(node, { 
+            cacheBust: true, 
+            pixelRatio: 2, 
+            backgroundColor: '#020617', // Ensure solid background
+            skipAutoScale: true,
+            fetchRequestInit: { mode: 'cors' } // Explicitly request CORS for external assets
+          });
+        } catch (innerError) {
+          console.warn('High-fidelity image generation failed (likely CORS/Fonts). Retrying without fonts.', innerError);
+          
+          // Attempt 2: Fallback (Skip Fonts)
+          return await toPng(node, { 
+            cacheBust: true, 
+            pixelRatio: 2, 
+            backgroundColor: '#020617', 
+            skipAutoScale: true,
+            skipFonts: true // Bypass font embedding to ensure success
+          });
+        }
+      };
+
+      // 2. Generate PNG
+      const dataUrl = await generateImage();
 
       // 3. Convert to Blob
       const blob = await (await fetch(dataUrl)).blob();

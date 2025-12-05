@@ -30,7 +30,7 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
               },
               cacheableResponse: {
-                statuses: [0, 200]
+                statuses: [200] // Only cache valid CORS responses
               }
             }
           },
@@ -44,7 +44,7 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
               },
               cacheableResponse: {
-                statuses: [0, 200]
+                statuses: [200] // Only cache valid CORS responses
               }
             }
           }

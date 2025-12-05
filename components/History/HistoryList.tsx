@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useHistoryStore, Match } from '../../stores/historyStore';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -10,6 +9,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../ui/Button';
 import { MatchDetail } from './MatchDetail';
+import { resolveTheme, getHexFromColor } from '../../utils/colors';
 
 // --- SUB-COMPONENTS ---
 
@@ -116,6 +116,13 @@ const HistoryCard: React.FC<{
     const isWinnerA = match.winner === 'A';
     const isWinnerB = match.winner === 'B';
 
+    // Resolve Themes dynamically
+    const themeA = resolveTheme(match.teamARoster?.color || 'indigo');
+    const themeB = resolveTheme(match.teamBRoster?.color || 'rose');
+    
+    const hexA = getHexFromColor(match.teamARoster?.color || 'indigo');
+    const hexB = getHexFromColor(match.teamBRoster?.color || 'rose');
+
     return (
         <motion.div 
             layout
@@ -125,11 +132,18 @@ const HistoryCard: React.FC<{
             className="group relative rounded-3xl bg-white dark:bg-slate-900/40 backdrop-blur-md border border-black/5 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-md transition-all"
         >
             {/* Subtle Gradient Wash for Winner */}
-            <div className={`
-                absolute inset-0 opacity-[0.03] dark:opacity-[0.08] pointer-events-none transition-colors duration-500
-                ${isWinnerA ? 'bg-gradient-to-r from-indigo-500 via-transparent to-transparent' : ''}
-                ${isWinnerB ? 'bg-gradient-to-l from-rose-500 via-transparent to-transparent' : ''}
-            `} />
+            {isWinnerA && (
+                <div 
+                    className="absolute inset-0 opacity-[0.05] pointer-events-none transition-colors duration-500"
+                    style={{ background: `linear-gradient(90deg, ${hexA}, transparent)` }}
+                />
+            )}
+            {isWinnerB && (
+                <div 
+                    className="absolute inset-0 opacity-[0.05] pointer-events-none transition-colors duration-500"
+                    style={{ background: `linear-gradient(-90deg, ${hexB}, transparent)` }}
+                />
+            )}
 
             {/* Main Content Area */}
             <div 
@@ -153,25 +167,25 @@ const HistoryCard: React.FC<{
                     
                     {/* Team A - Flexible Width, Right Align */}
                     <div className={`flex-1 min-w-0 flex items-center justify-end gap-2 text-right ${isWinnerA ? 'opacity-100' : 'opacity-60 grayscale-[0.5]'}`}>
-                        <span className={`text-sm sm:text-base leading-tight break-words line-clamp-2 ${isWinnerA ? 'font-black text-indigo-600 dark:text-indigo-400' : 'font-medium text-slate-600 dark:text-slate-400'}`}>
+                        <span className={`text-sm sm:text-base leading-tight break-words line-clamp-2 ${isWinnerA ? `font-black ${themeA.text} ${themeA.textDark}` : 'font-medium text-slate-600 dark:text-slate-400'}`}>
                             {match.teamAName}
                         </span>
-                        {isWinnerA && <Crown size={14} className="text-indigo-500 flex-shrink-0" fill="currentColor" />}
+                        {isWinnerA && <Crown size={14} className={`${themeA.crown} flex-shrink-0`} fill="currentColor" />}
                     </div>
 
                     {/* Score Box - Fixed Center */}
                     <div className="flex-shrink-0 flex flex-col items-center justify-center px-3 py-1 bg-slate-100/50 dark:bg-black/20 rounded-xl border border-black/5 dark:border-white/5 min-w-[60px] sm:min-w-[80px]">
                         <div className="flex items-center gap-1 font-inter text-lg sm:text-xl font-black tabular-nums leading-none">
-                            <span className={isWinnerA ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}>{match.setsA}</span>
+                            <span className={isWinnerA ? `${themeA.text} ${themeA.textDark}` : 'text-slate-400'}>{match.setsA}</span>
                             <span className="text-slate-300 dark:text-slate-600 text-sm">:</span>
-                            <span className={isWinnerB ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}>{match.setsB}</span>
+                            <span className={isWinnerB ? `${themeB.text} ${themeB.textDark}` : 'text-slate-400'}>{match.setsB}</span>
                         </div>
                     </div>
 
                     {/* Team B - Flexible Width, Left Align */}
                     <div className={`flex-1 min-w-0 flex items-center justify-start gap-2 text-left ${isWinnerB ? 'opacity-100' : 'opacity-60 grayscale-[0.5]'}`}>
-                        {isWinnerB && <Crown size={14} className="text-rose-500 flex-shrink-0" fill="currentColor" />}
-                        <span className={`text-sm sm:text-base leading-tight break-words line-clamp-2 ${isWinnerB ? 'font-black text-rose-600 dark:text-rose-400' : 'font-medium text-slate-600 dark:text-slate-400'}`}>
+                        {isWinnerB && <Crown size={14} className={`${themeB.crown} flex-shrink-0`} fill="currentColor" />}
+                        <span className={`text-sm sm:text-base leading-tight break-words line-clamp-2 ${isWinnerB ? `font-black ${themeB.text} ${themeB.textDark}` : 'font-medium text-slate-600 dark:text-slate-400'}`}>
                             {match.teamBName}
                         </span>
                     </div>
@@ -198,19 +212,21 @@ const HistoryCard: React.FC<{
                             {/* Sets History Strip */}
                             <div className="w-full overflow-x-auto pb-1 no-scrollbar flex justify-center">
                                 <div className="flex gap-2">
-                                    {match.sets.map((set, idx) => (
-                                        <div key={idx} className="flex flex-col items-center flex-shrink-0">
-                                            <span className="text-[9px] font-bold text-slate-300 uppercase mb-1">{t('history.setLabel', {setNumber: set.setNumber})}</span>
-                                            <div className={`
-                                                min-w-[3rem] text-center px-2 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm
-                                                ${set.winner === 'A' 
-                                                    ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border-indigo-500/20' 
-                                                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-300 border-rose-500/20'}
-                                            `}>
-                                                {set.scoreA}-{set.scoreB}
+                                    {match.sets.map((set, idx) => {
+                                        const isSetWinnerA = set.winner === 'A';
+                                        const setTheme = isSetWinnerA ? themeA : themeB;
+                                        return (
+                                            <div key={idx} className="flex flex-col items-center flex-shrink-0">
+                                                <span className="text-[9px] font-bold text-slate-300 uppercase mb-1">{t('history.setLabel', {setNumber: set.setNumber})}</span>
+                                                <div className={`
+                                                    min-w-[3rem] text-center px-2 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-sm
+                                                    ${setTheme.bg} ${setTheme.text} ${setTheme.textDark} ${setTheme.border}
+                                                `}>
+                                                    {set.scoreA}-{set.scoreB}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
 

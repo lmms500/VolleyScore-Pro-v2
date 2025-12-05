@@ -100,6 +100,16 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
     }
 };
 
+const HEX_MAP: Record<string, string> = {
+    indigo: '#6366f1',
+    rose: '#f43f5e',
+    emerald: '#10b981',
+    sky: '#0ea5e9',
+    violet: '#8b5cf6',
+    slate: '#64748b',
+    fuchsia: '#d946ef'
+};
+
 export const COLOR_KEYS = Object.keys(TEAM_COLORS);
 
 /**
@@ -115,9 +125,6 @@ export const resolveTheme = (color: TeamColor | undefined): ColorTheme => {
     }
 
     // 2. Assume it is a Hex Code (or any valid CSS color string)
-    // We attempt to generate valid arbitrary values. 
-    // Note: This relies on the JIT engine picking up these classes or the browser handling them if injected via style.
-    // For production builds without safe-listing, inline styles are safer, but we stick to the class interface here.
     const safeColor = color.trim();
     
     return {
@@ -127,9 +134,19 @@ export const resolveTheme = (color: TeamColor | undefined): ColorTheme => {
         bgDark: `dark:bg-[${safeColor}]/20`,
         border: `border-[${safeColor}]/30`,
         halo: `bg-[${safeColor}]`,
-        glow: `shadow-[0_0_15px_${safeColor}80]`, // Hex alpha approximation
+        glow: `shadow-[0_0_15px_${safeColor}80]`,
         crown: `text-[${safeColor}]`,
         ring: `ring-[${safeColor}]`,
         gradient: `from-[${safeColor}]/10 to-transparent`
     };
+};
+
+/**
+ * Returns a valid HEX code for Canvas/SVG usage.
+ */
+export const getHexFromColor = (color: TeamColor | undefined): string => {
+    if (!color) return HEX_MAP['slate'];
+    if (HEX_MAP[color]) return HEX_MAP[color];
+    if (color.startsWith('#')) return color;
+    return HEX_MAP['slate']; // Fallback
 };

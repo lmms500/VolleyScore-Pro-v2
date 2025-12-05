@@ -1,0 +1,119 @@
+
+import React, { useEffect, useRef } from 'react';
+import { resolveTheme } from '../../utils/colors';
+import { TeamColor } from '../../types';
+
+interface ConfettiProps {
+  color: TeamColor;
+}
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+  rotation: number;
+  rotationSpeed: number;
+  opacity: number;
+}
+
+export const Confetti: React.FC<ConfettiProps> = ({ color }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const theme = resolveTheme(color);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationId: number;
+    let particles: Particle[] = [];
+    
+    // Extract raw colors from theme or defaults
+    const primaryColor = theme.halo.replace('bg-[', '').replace(']', '').replace('bg-', ''); 
+    // Fallback colors if regex fails or using tailwind classes
+    const colors = [
+       primaryColor.startsWith('#') ? primaryColor : '#6366f1', // Primary
+       '#ffffff', // Sparkle
+       color === 'rose' ? '#f43f5e' : (color === 'indigo' ? '#818cf8' : '#cbd5e1') // Secondary
+    ];
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    const createParticle = (): Particle => {
+      return {
+        x: Math.random() * canvas.width,
+        y: -20 - Math.random() * 100,
+        vx: (Math.random() - 0.5) * 4,
+        vy: Math.random() * 3 + 2,
+        size: Math.random() * 8 + 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rotation: Math.random() * 360,
+        rotationSpeed: (Math.random() - 0.5) * 10,
+        opacity: 1
+      };
+    };
+
+    const init = () => {
+      resize();
+      particles = Array.from({ length: 150 }, createParticle);
+    };
+
+    const update = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rotation += p.rotationSpeed;
+        p.vy += 0.05; // Gravity
+        p.vx *= 0.99; // Air resistance
+
+        // Wrap around horizontally
+        if (p.x > canvas.width) p.x = 0;
+        if (p.x < 0) p.x = canvas.width;
+
+        // Reset if fell off screen
+        if (p.y > canvas.height) {
+           particles[i] = createParticle();
+        }
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rotation * Math.PI) / 180);
+        ctx.globalAlpha = p.opacity;
+        ctx.fillStyle = p.color;
+        
+        // Draw confetti shape (rect)
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+        ctx.restore();
+      });
+
+      animationId = requestAnimationFrame(update);
+    };
+
+    window.addEventListener('resize', resize);
+    init();
+    update();
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animationId);
+    };
+  }, [color, theme]);
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      className="absolute inset-0 pointer-events-none z-0"
+      style={{ width: '100%', height: '100%' }}
+    />
+  );
+};

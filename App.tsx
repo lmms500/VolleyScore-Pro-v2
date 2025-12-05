@@ -179,11 +179,16 @@ function App() {
     if (!document.fullscreenElement) {
         try {
             await document.documentElement.requestFullscreen();
+            
             // Force Landscape on supported devices (Android/Chrome)
-            // @ts-ignore
-            if (screen.orientation && screen.orientation.lock) {
-                // @ts-ignore
-                await screen.orientation.lock('landscape').catch(e => console.log('Orientation lock failed:', e));
+            // This is critical for the "Table Scoreboard" feel
+            if (screen.orientation && 'lock' in screen.orientation) {
+                try {
+                    // @ts-ignore - Some TS versions miss specific orientation types
+                    await screen.orientation.lock('landscape');
+                } catch (e) {
+                    console.warn('Orientation lock failed:', e);
+                }
             }
         } catch (e) {
             console.log('Fullscreen request failed:', e);
@@ -191,10 +196,8 @@ function App() {
     } else {
         try {
             await document.exitFullscreen();
-            // Unlock orientation
-            // @ts-ignore
-            if (screen.orientation && screen.orientation.unlock) {
-                // @ts-ignore
+            // Unlock orientation when exiting
+            if (screen.orientation && 'unlock' in screen.orientation) {
                 screen.orientation.unlock();
             }
         } catch (e) {

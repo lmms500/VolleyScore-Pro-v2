@@ -10,11 +10,10 @@ interface UseScoreGesturesProps {
 }
 
 // Constants for gesture detection
-// UPDATED: Relaxed thresholds to ensure reliability on mobile touchscreens
-// TAP_MAX_MOVE increased to 40px to accommodate "finger jitter" on high-res screens
-const SWIPE_THRESHOLD = 40; 
-const TAP_MAX_DURATION_MS = 800; // Allow slower taps
-const TAP_MAX_MOVE = 40; 
+// UPDATED: Much more relaxed thresholds to ensuring taps work reliably on all screen sizes
+const SWIPE_THRESHOLD = 50; 
+const TAP_MAX_DURATION_MS = 800; // Increased to 800ms to allow for slower taps
+const TAP_MAX_MOVE = 40; // Increased to 40px to tolerate finger movement during tap
 
 export const useScoreGestures = ({ 
   onAdd, 
@@ -80,6 +79,8 @@ export const useScoreGestures = ({
            onSubtract(); 
         }
     }
+    // Rule 3: Fallback for ambiguity - if user moved barely above TAP_MAX but not enough for SWIPE
+    // We do nothing to prevent accidental triggers.
     
     startX.current = null;
     startY.current = null;

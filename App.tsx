@@ -34,6 +34,13 @@ const ConfirmationModal = lazy(() => import('./components/modals/ConfirmationMod
 const HistoryModal = lazy(() => import('./components/modals/HistoryModal').then(module => ({ default: module.HistoryModal })));
 const TutorialModal = lazy(() => import('./components/modals/TutorialModal').then(module => ({ default: module.TutorialModal })));
 
+// Haptic Helper
+const vibrate = (pattern: number | number[]) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(pattern);
+    }
+};
+
 function App() {
   const game = useVolleyGame();
   const { 
@@ -95,18 +102,26 @@ function App() {
 
   // Track sets to detect Set Changes for Audio
   const prevSetsRef = useRef({ a: 0, b: 0 });
+  
+  // Track Status to detect transition into Critical States (Set/Match Point)
+  const prevStatusRef = useRef({ 
+      setPointA: false, matchPointA: false, 
+      setPointB: false, matchPointB: false 
+  });
 
   useEffect(() => {
     // 1. Detect Set Win (Audio Only)
     const setsChanged = state.setsA > prevSetsRef.current.a || state.setsB > prevSetsRef.current.b;
     if (setsChanged && !state.isMatchOver) {
         audio.playSetWin();
+        vibrate([100, 50, 100]); // Victory Vibration
     }
     prevSetsRef.current = { a: state.setsA, b: state.setsB };
 
     // 2. Match Over Logic
     if (state.isMatchOver && !savedMatchIdRef.current && state.matchWinner) {
       audio.playMatchWin(); // Play Win Sound
+      vibrate([200, 100, 200, 100, 400]); // Grand Victory Vibration
 
       const newId = uuidv4();
       historyStore.addMatch({
@@ -141,24 +156,42 @@ function App() {
     }
     game.undo();
     audio.playUndo();
+    vibrate(30); // Medium haptic for undo
   }, [state.isMatchOver, game.undo, historyStore, audio]);
 
   // Handle Beach Switch Alert
   useEffect(() => {
       if (state.pendingSideSwitch) {
           audio.playWhistle();
-          // Optional: Vibrate
-          if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+          vibrate([300, 100, 300]);
       }
   }, [state.pendingSideSwitch, audio]);
 
-  // Handle Critical Moments (Audio)
+  // Handle Critical Moments (Audio Transition)
   useEffect(() => {
-      if (game.isMatchPointA || game.isMatchPointB || game.isSetPointA || game.isSetPointB) {
-          // Play subtle tension sound only once when entering state
-          // (Implementation depends on user preference, kept subtle here)
-          // audio.playCritical(); 
+      const current = {
+          setPointA: game.isSetPointA,
+          matchPointA: game.isMatchPointA,
+          setPointB: game.isSetPointB,
+          matchPointB: game.isMatchPointB
+      };
+      
+      const prev = prevStatusRef.current;
+
+      // Check if we entered Match Point (Higher priority)
+      const enteredMatchPoint = (current.matchPointA && !prev.matchPointA) || (current.matchPointB && !prev.matchPointB);
+      // Check if we entered Set Point (and NOT match point)
+      const enteredSetPoint = (current.setPointA && !prev.setPointA && !current.matchPointA) || (current.setPointB && !prev.setPointB && !current.matchPointB);
+
+      if (enteredMatchPoint) {
+          audio.playMatchPointAlert();
+          vibrate([50, 50, 50, 50]); // Intense flutter
+      } else if (enteredSetPoint) {
+          audio.playSetPointAlert();
+          vibrate([50, 100]); // Warning tap
       }
+
+      prevStatusRef.current = current;
   }, [game.isMatchPointA, game.isMatchPointB, game.isSetPointA, game.isSetPointB, audio]);
 
   // Fullscreen Logic
@@ -187,8 +220,6 @@ function App() {
             await screen.orientation.lock(mode);
         } catch (e) {
             console.warn(`Orientation lock to ${mode} failed:`, e);
-            // If locking to portrait fails (common in browser tabs), we try to unlock to let system handle it
-            // but we prioritize the attempt to lock.
             if (mode === 'portrait' && 'unlock' in screen.orientation) {
                 screen.orientation.unlock();
             }
@@ -198,23 +229,18 @@ function App() {
 
   const toggleFullscreen = async () => {
     audio.playTap();
+    vibrate(10);
     if (!document.fullscreenElement) {
         try {
             await document.documentElement.requestFullscreen();
-            
-            // Force Landscape when entering Fullscreen
             await lockOrientation('landscape');
-            
         } catch (e) {
             console.log('Fullscreen request failed:', e);
         }
     } else {
         try {
             await document.exitFullscreen();
-            
-            // Force Portrait when exiting Fullscreen
             await lockOrientation('portrait');
-            
         } catch (e) {
              console.log('Exit fullscreen failed:', e);
         }
@@ -225,8 +251,6 @@ function App() {
     const handleFullscreenChange = () => {
         const isFull = !!document.fullscreenElement;
         setIsFullscreen(isFull);
-        
-        // Re-enforce orientation state on external changes (e.g. Esc key)
         if (!isFull) {
             lockOrientation('portrait');
         } else {
@@ -234,7 +258,6 @@ function App() {
         }
     };
     
-    // Attempt initial lock on mount (Best effort for installed PWAs)
     lockOrientation('portrait');
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -243,6 +266,7 @@ function App() {
 
   const toggleTimer = useCallback(() => {
     audio.playTap();
+    vibrate(10);
     game.setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
   }, [game, audio]);
 
@@ -251,14 +275,13 @@ function App() {
   const handleInteractionStartB = useCallback(() => setInteractingTeam('B'), []);
   const handleInteractionEnd = useCallback(() => setInteractingTeam(null), []);
   
-  // --- UPDATED HANDLERS FOR SCOUT MODE & AUDIO ---
-  // Ensure we pass a metadata object if playerId exists
+  // --- UPDATED HANDLERS FOR SCOUT MODE & AUDIO & HAPTICS ---
   const handleAddA = useCallback((teamId: TeamId, playerId?: string, skill?: any) => {
     const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
     
-    // Play sound BEFORE state update for responsiveness, unless scout modal handles it
     if (!playerId && !state.config.enablePlayerStats) {
          audio.playScore(); 
+         vibrate(15); // Light tap for adding point
     }
     
     addPoint('A', metadata);
@@ -266,6 +289,7 @@ function App() {
 
   const handleSubA = useCallback(() => {
     audio.playUndo();
+    vibrate(30); // Heavier tap for subtract
     subtractPoint('A');
   }, [subtractPoint, audio]);
 
@@ -273,41 +297,41 @@ function App() {
     const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
     if (!playerId && !state.config.enablePlayerStats) {
          audio.playScore(); 
+         vibrate(15);
     }
     addPoint('B', metadata);
   }, [addPoint, state.config.enablePlayerStats, audio]);
   
   const handleSubB = useCallback(() => {
     audio.playUndo();
+    vibrate(30);
     subtractPoint('B');
   }, [subtractPoint, audio]);
   
-  const handleSetServerA = useCallback(() => { audio.playTap(); setServer('A'); }, [setServer, audio]);
-  const handleSetServerB = useCallback(() => { audio.playTap(); setServer('B'); }, [setServer, audio]);
+  const handleSetServerA = useCallback(() => { audio.playTap(); vibrate(10); setServer('A'); }, [setServer, audio]);
+  const handleSetServerB = useCallback(() => { audio.playTap(); vibrate(10); setServer('B'); }, [setServer, audio]);
   
-  const handleTimeoutA = useCallback(() => { audio.playWhistle(); useTimeout('A'); }, [useTimeout, audio]);
-  const handleTimeoutB = useCallback(() => { audio.playWhistle(); useTimeout('B'); }, [useTimeout, audio]);
+  const handleTimeoutA = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('A'); }, [useTimeout, audio]);
+  const handleTimeoutB = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('B'); }, [useTimeout, audio]);
 
-  // Modal Open Wrappers with Sound
-  const openSettings = () => { audio.playTap(); setShowSettings(true); };
-  const openManager = () => { audio.playTap(); setShowManager(true); };
-  const openHistory = () => { audio.playTap(); setShowHistory(true); };
-  const openReset = () => { audio.playTap(); setShowResetConfirm(true); };
-  const toggleSwap = () => { audio.playTap(); toggleSides(); };
+  // Modal Open Wrappers with Sound & Haptic
+  const openSettings = () => { audio.playTap(); vibrate(10); setShowSettings(true); };
+  const openManager = () => { audio.playTap(); vibrate(10); setShowManager(true); };
+  const openHistory = () => { audio.playTap(); vibrate(10); setShowHistory(true); };
+  const openReset = () => { audio.playTap(); vibrate(10); setShowResetConfirm(true); };
+  const toggleSwap = () => { audio.playTap(); vibrate(20); toggleSides(); };
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
   const setsLeft = state.swappedSides ? state.setsB : state.setsA;
   const setsRight = state.swappedSides ? state.setsA : state.setsB;
   
-  // DYNAMIC COLOR RESOLUTION
   const colorA = state.teamARoster.color || 'indigo';
   const colorB = state.teamBRoster.color || 'rose';
   
   const colorLeft = state.swappedSides ? colorB : colorA;
   const colorRight = state.swappedSides ? colorA : colorB;
   
-  // Derived serving state for HUD
   const isServingLeft = state.swappedSides ? state.servingTeam === 'B' : state.servingTeam === 'A';
   const isServingRight = state.swappedSides ? state.servingTeam === 'A' : state.servingTeam === 'B';
 
@@ -324,11 +348,8 @@ function App() {
           />
 
           <SuddenDeathOverlay active={state.inSuddenDeath} />
-          
-          {/* PWA Update & Offline Notifier */}
           <ReloadPrompt />
           
-          {/* Install Reminder (Periodic) */}
           <InstallReminder 
              isVisible={tutorial.showReminder}
              onInstall={pwa.promptInstall}
@@ -337,7 +358,6 @@ function App() {
              isIOS={pwa.isIOS}
           />
 
-          {/* Beach Mode Switch Alert Overlay */}
           <AnimatePresence>
              {state.pendingSideSwitch && (
                  <motion.div 
@@ -345,7 +365,7 @@ function App() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-                    onClick={toggleSwap} // Clicking anywhere swaps
+                    onClick={toggleSwap}
                  >
                      <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl border border-indigo-500 text-center flex flex-col items-center gap-4 animate-bounce-subtle">
                          <RefreshCw size={48} className="text-indigo-500 animate-spin-slow" />
@@ -361,7 +381,6 @@ function App() {
              )}
           </AnimatePresence>
 
-          {/* History Bar */}
           <div className={`
               z-30 transition-all duration-500 flex-none
               ${isFullscreen 
@@ -470,7 +489,6 @@ function App() {
                     </>
                  ) : (
                     <LayoutGroup>
-                      {/* Team A Wrapper */}
                       <motion.div 
                         layout 
                         key="card-wrapper-A"
@@ -493,7 +511,7 @@ function App() {
                             isDeuce={game.isDeuce}
                             inSuddenDeath={state.inSuddenDeath}
                             setsNeededToWin={game.setsNeededToWin}
-                            colorTheme={colorA} // Dynamic Color
+                            colorTheme={colorA} 
                             isLocked={interactingTeam !== null && interactingTeam !== 'A'}
                             onInteractionStart={handleInteractionStartA}
                             onInteractionEnd={handleInteractionEnd}
@@ -501,7 +519,6 @@ function App() {
                         />
                       </motion.div>
 
-                      {/* Team B Wrapper */}
                       <motion.div 
                         layout 
                         key="card-wrapper-B"
@@ -524,7 +541,7 @@ function App() {
                             isDeuce={game.isDeuce}
                             inSuddenDeath={state.inSuddenDeath}
                             setsNeededToWin={game.setsNeededToWin}
-                            colorTheme={colorB} // Dynamic Color
+                            colorTheme={colorB} 
                             isLocked={interactingTeam !== null && interactingTeam !== 'B'}
                             onInteractionStart={handleInteractionStartB}
                             onInteractionEnd={handleInteractionEnd}
@@ -571,7 +588,7 @@ function App() {
                 canUndo={game.canUndo}
                 onSwap={toggleSwap}
                 onReset={openReset}
-                onMenu={() => { audio.playTap(); setShowFullscreenMenu(true); }}
+                onMenu={() => { audio.playTap(); vibrate(10); setShowFullscreenMenu(true); }}
             />
           )}
 
@@ -585,7 +602,6 @@ function App() {
           />
 
           <Suspense fallback={null}>
-            {/* Tutorial Modal */}
             {tutorial.showTutorial && (
               <TutorialModal 
                 isOpen={tutorial.showTutorial}

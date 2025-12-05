@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 
 interface UseScoreGesturesProps {
@@ -9,10 +10,15 @@ interface UseScoreGesturesProps {
 }
 
 // Constants for gesture detection
-// UPDATED: Much more relaxed thresholds to ensuring taps work reliably on all screen sizes
 const SWIPE_THRESHOLD = 50; 
-const TAP_MAX_DURATION_MS = 800; // Increased to 800ms to allow for slower taps
-const TAP_MAX_MOVE = 40; // Increased to 40px to tolerate finger movement during tap
+const TAP_MAX_DURATION_MS = 800;
+const TAP_MAX_MOVE = 40;
+
+const vibrate = (pattern: number | number[]) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(pattern);
+    }
+};
 
 export const useScoreGestures = ({ 
   onAdd, 
@@ -28,11 +34,6 @@ export const useScoreGestures = ({
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (isLocked) return; 
-    
-    // Attempt to suppress native behaviors like text selection or context menus
-    // causing interference, while still allowing the pointer events to flow.
-    // Note: We don't preventDefault here always because it might block scrolling 
-    // if touch-action isn't set, but we set touch-action: none in CSS.
     
     try {
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -67,30 +68,25 @@ export const useScoreGestures = ({
     const absDeltaX = Math.abs(deltaX);
     const absDeltaY = Math.abs(deltaY);
 
-    // Rule 1: TAP (Relaxed logic to catch "sloppy" taps)
-    // If movement is small enough, treat as tap regardless of slight drag
+    // Rule 1: TAP (Relaxed logic)
     if (deltaTime < TAP_MAX_DURATION_MS && absDeltaX < TAP_MAX_MOVE && absDeltaY < TAP_MAX_MOVE) {
-      // CRITICAL: Prevent default to stop the browser from firing a compatibility 'click' event
-      // after this pointerUp. This 'ghost click' would otherwise hit elements that appear
-      // instantly (like Modals) and close them immediately.
       if (e.cancelable) e.preventDefault();
+      // Haptics handled in callback usually, but we can double ensure responsiveness here if needed
+      // However, App.tsx handles the specific type (Add vs Sub)
       onAdd();
     } 
     // Rule 2: Swipes (Significant Vertical Movement)
     else if (absDeltaY > SWIPE_THRESHOLD && absDeltaY > absDeltaX) {
         if (e.cancelable) e.preventDefault();
         
-        // Vertical Swipe Dominant
         if (deltaY < 0) {
-           // Swipe Up -> Dragging score UP -> ADD
+           // Swipe Up -> ADD
            onAdd(); 
         } else {
-           // Swipe Down -> Dragging score DOWN -> SUBTRACT
+           // Swipe Down -> SUBTRACT
            onSubtract(); 
         }
     }
-    // Rule 3: Fallback for ambiguity - if user moved barely above TAP_MAX but not enough for SWIPE
-    // We do nothing to prevent accidental triggers.
     
     startX.current = null;
     startY.current = null;
@@ -104,8 +100,6 @@ export const useScoreGestures = ({
     startTime.current = null;
   };
 
-  // Add a dedicated click handler to swallow the ghost clicks aggressively.
-  // Since we rely on PointerEvents, the Click event is redundant and harmful here.
   const handleClick = (e: React.MouseEvent) => {
       e.stopPropagation();
       e.preventDefault();

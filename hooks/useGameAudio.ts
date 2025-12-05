@@ -1,5 +1,4 @@
 
-
 import { useCallback, useRef } from 'react';
 import { GameConfig } from '../types';
 
@@ -108,21 +107,25 @@ export const useGameAudio = (config: GameConfig) => {
     pingOsc.stop(t + 0.3);
   }, [config.enableSound, getContext]);
 
-  // 3. Undo / Error (Subtle Low Tone)
+  // 3. Undo / Subtract (Updated: Clearer, higher pitch for mobile)
   const playUndo = useCallback(() => {
     if (!config.enableSound) return;
     const ctx = getContext();
     if (!ctx || !masterGainRef.current) return;
 
     const t = ctx.currentTime;
+    
+    // Use Sine + Triangle mix for visibility on small speakers
+    // Pitch drops from 600Hz to 300Hz (Middle frequencies cut through better than 100Hz)
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(150, t);
-    osc.frequency.linearRampToValueAtTime(100, t + 0.1);
+    osc.type = 'sine'; 
+    osc.frequency.setValueAtTime(600, t);
+    osc.frequency.exponentialRampToValueAtTime(300, t + 0.15);
 
-    gain.gain.setValueAtTime(0.2, t);
+    // Snappy envelope
+    gain.gain.setValueAtTime(0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
 
     osc.connect(gain);
@@ -171,34 +174,78 @@ export const useGameAudio = (config: GameConfig) => {
     osc.stop(t + 0.5);
   }, [config.enableSound, getContext]);
 
-  // 5. Critical Moment (Heartbeat / Tension)
-  const playCritical = useCallback(() => {
+  // 5. Set Point Alert (Warning Bell)
+  const playSetPointAlert = useCallback(() => {
     if (!config.enableSound) return;
     const ctx = getContext();
     if (!ctx || !masterGainRef.current) return;
 
     const t = ctx.currentTime;
-    const osc = ctx.createOscillator();
+    
+    // FM Bell Tone
+    const carrier = ctx.createOscillator();
+    const modulator = ctx.createOscillator();
     const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
+    const modGain = ctx.createGain();
 
-    // Deep throb
-    osc.frequency.setValueAtTime(60, t);
-    filter.type = 'lowpass';
-    filter.frequency.value = 150;
+    carrier.frequency.setValueAtTime(660, t); // E5
+    modulator.frequency.setValueAtTime(440, t); // Harmonic ratio
+    modGain.gain.setValueAtTime(300, t);
+    modGain.gain.exponentialRampToValueAtTime(10, t + 0.5);
 
-    gain.gain.setValueAtTime(0.3, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
 
-    osc.connect(filter);
-    filter.connect(gain);
+    modulator.connect(modGain);
+    modGain.connect(carrier.frequency);
+    carrier.connect(gain);
     gain.connect(masterGainRef.current);
 
-    osc.start(t);
-    osc.stop(t + 0.5);
+    carrier.start(t);
+    modulator.start(t);
+    carrier.stop(t + 1.0);
+    modulator.stop(t + 1.0);
   }, [config.enableSound, getContext]);
 
-  // 6. Set Win (Ascending Chord)
+  // 6. Match Point Alert (Intense Pulse)
+  const playMatchPointAlert = useCallback(() => {
+    if (!config.enableSound) return;
+    const ctx = getContext();
+    if (!ctx || !masterGainRef.current) return;
+
+    const t = ctx.currentTime;
+    
+    // Two rapid pulses
+    const times = [t, t + 0.2];
+    
+    times.forEach(start => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, start); // A4
+        // Pitch bend up slightly for tension
+        osc.frequency.linearRampToValueAtTime(450, start + 0.15); 
+
+        // Filter to take edge off
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(800, start);
+
+        gain.gain.setValueAtTime(0.2, start);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.15);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(masterGainRef.current!);
+        
+        osc.start(start);
+        osc.stop(start + 0.2);
+    });
+  }, [config.enableSound, getContext]);
+
+  // 7. Set Win (Ascending Chord)
   const playSetWin = useCallback(() => {
     if (!config.enableSound) return;
     const ctx = getContext();
@@ -227,37 +274,44 @@ export const useGameAudio = (config: GameConfig) => {
     });
   }, [config.enableSound, getContext]);
 
-  // 7. Match Win (Grand Fanfare)
+  // 8. Match Win (Grand Fanfare)
   const playMatchWin = useCallback(() => {
     if (!config.enableSound) return;
     const ctx = getContext();
     if (!ctx || !masterGainRef.current) return;
 
     const t = ctx.currentTime;
-    // Majestic C Major Add9 Chord
-    const notes = [
-        261.63, // C4
-        392.00, // G4
-        523.25, // C5
-        659.25, // E5
-        783.99, // G5
-        1174.66 // D6 (The 9th)
-    ];
+    
+    // Power Chord Fanfare
+    const chord1 = [392.00, 523.25, 783.99]; // G Major
+    const chord2 = [523.25, 659.25, 783.99, 1046.50]; // C Major with high C
 
-    notes.forEach((freq, i) => {
+    // Play Chord 1
+    chord1.forEach((freq) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.15, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        osc.connect(gain);
+        gain.connect(masterGainRef.current!);
+        osc.start(t);
+        osc.stop(t + 0.3);
+    });
+
+    // Play Chord 2 (Main) slightly later
+    chord2.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const start = t + 0.35 + (i * 0.02); // Slight strum
         
-        // Staggered entry
-        const start = t + (i * 0.05);
-        
-        // Mix wave types for richness
-        osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+        osc.type = i % 2 === 0 ? 'sine' : 'triangle'; // Richer texture
         osc.frequency.value = freq;
 
         gain.gain.setValueAtTime(0, start);
-        gain.gain.linearRampToValueAtTime(0.2 - (i * 0.02), start + 0.1); // Lower notes louder
-        gain.gain.exponentialRampToValueAtTime(0.001, start + 2.5); // Long sustain
+        gain.gain.linearRampToValueAtTime(0.2, start + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 3.0); // Long sustain
 
         osc.connect(gain);
         gain.connect(masterGainRef.current!);
@@ -271,7 +325,8 @@ export const useGameAudio = (config: GameConfig) => {
     playScore,
     playUndo,
     playWhistle,
-    playCritical,
+    playSetPointAlert,
+    playMatchPointAlert,
     playSetWin,
     playMatchWin
   };

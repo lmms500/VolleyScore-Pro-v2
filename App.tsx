@@ -49,6 +49,7 @@ function App() {
     removePlayer, 
     movePlayer, 
     updateTeamName, 
+    updateTeamColor,
     updatePlayerName,
     updatePlayerSkill,
     addPlayer, 
@@ -173,13 +174,32 @@ function App() {
       version: layoutVersion
   });
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
     audio.playTap();
     if (!document.fullscreenElement) {
-        const element = document.documentElement;
-        if (element.requestFullscreen) element.requestFullscreen().catch(() => {});
+        try {
+            await document.documentElement.requestFullscreen();
+            // Force Landscape on supported devices (Android/Chrome)
+            // @ts-ignore
+            if (screen.orientation && screen.orientation.lock) {
+                // @ts-ignore
+                await screen.orientation.lock('landscape').catch(e => console.log('Orientation lock failed:', e));
+            }
+        } catch (e) {
+            console.log('Fullscreen request failed:', e);
+        }
     } else {
-        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+        try {
+            await document.exitFullscreen();
+            // Unlock orientation
+            // @ts-ignore
+            if (screen.orientation && screen.orientation.unlock) {
+                // @ts-ignore
+                screen.orientation.unlock();
+            }
+        } catch (e) {
+             console.log('Exit fullscreen failed:', e);
+        }
     }
   };
   
@@ -364,7 +384,6 @@ function App() {
                           isSetPoint={game.isSetPointA}
                           isDeuce={game.isDeuce}
                           inSuddenDeath={state.inSuddenDeath}
-                          colorTheme="indigo"
                           isLocked={interactingTeam !== null && interactingTeam !== 'A'}
                           onInteractionStart={handleInteractionStartA}
                           onInteractionEnd={handleInteractionEnd}
@@ -384,7 +403,6 @@ function App() {
                           isSetPoint={game.isSetPointB}
                           isDeuce={game.isDeuce}
                           inSuddenDeath={state.inSuddenDeath}
-                          colorTheme="rose"
                           isLocked={interactingTeam !== null && interactingTeam !== 'B'}
                           onInteractionStart={handleInteractionStartB}
                           onInteractionEnd={handleInteractionEnd}
@@ -540,6 +558,7 @@ function App() {
                 onRemove={removePlayer}
                 onMove={movePlayer}
                 onUpdateTeamName={updateTeamName}
+                onUpdateTeamColor={updateTeamColor}
                 onUpdatePlayerName={updatePlayerName}
                 onUpdatePlayerSkill={updatePlayerSkill}
                 onSaveProfile={savePlayerToProfile}

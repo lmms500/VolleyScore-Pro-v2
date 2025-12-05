@@ -8,10 +8,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { pulseHeartbeat, layoutTransition } from '../utils/animations';
 import { useGameAudio } from '../hooks/useGameAudio';
 import { ScoutModal } from './modals/ScoutModal';
+import { TEAM_COLORS } from '../utils/colors';
 
 interface ScoreCardFullscreenProps {
   teamId: TeamId;
-  team: Team; // New: Needed for Scout Mode
+  team: Team; 
   score: number;
   onAdd: (teamId: TeamId, playerId?: string, skill?: SkillType) => void;
   onSubtract: () => void;
@@ -19,7 +20,7 @@ interface ScoreCardFullscreenProps {
   isSetPoint: boolean;
   isDeuce?: boolean;
   inSuddenDeath?: boolean;
-  colorTheme: 'indigo' | 'rose';
+  colorTheme?: any; // Deprecated
   isLocked?: boolean;
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
@@ -27,7 +28,7 @@ interface ScoreCardFullscreenProps {
   scoreRefCallback?: (node: HTMLElement | null) => void;
   isServing?: boolean;
   alignment?: 'left' | 'right';
-  config: GameConfig; // New: Audio & Scout Config
+  config: GameConfig; 
 }
 
 const ScoreNumberDisplay = memo(({ 
@@ -38,17 +39,11 @@ const ScoreNumberDisplay = memo(({
     scoreRefCallback, 
     numberRef, 
     isCritical,
-    colorTheme,
     isServing,
     isMatchPoint
 }: any) => {
 
-    const glowTheme = {
-        indigo: { haloColor: 'bg-indigo-500' },
-        rose: { haloColor: 'bg-rose-600' }
-    }[colorTheme as 'indigo' | 'rose'];
-
-    const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : glowTheme.haloColor;
+    const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : theme.halo;
 
     return (
         <div 
@@ -103,6 +98,7 @@ const ScoreNumberDisplay = memo(({
                         className={`
                             font-black leading-none tracking-tighter transition-all duration-300
                             ${theme.text}
+                            ${theme.textDark}
                             ${textEffectClass}
                             ${isPressed ? 'brightness-125' : ''}
                         `}
@@ -118,7 +114,7 @@ const ScoreNumberDisplay = memo(({
 
 export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
   teamId, team, score, onAdd, onSubtract,
-  isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, colorTheme,
+  isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, 
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
   scoreRefCallback, isServing, alignment = 'left', config
 }) => {
@@ -167,24 +163,16 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
     onInteractionEnd: handleEnd
   });
 
-  const theme = useMemo(() => ({
-    indigo: {
-      text: 'text-white',
-      glowShadow: 'drop-shadow-[0_0_50px_rgba(99,102,241,0.6)]'
-    },
-    rose: {
-      text: 'text-white', 
-      glowShadow: 'drop-shadow-[0_0_60px_rgba(244,63,94,0.8)]'
-    }
-  })[colorTheme], [colorTheme]);
+  // Resolve Theme
+  const theme = TEAM_COLORS[team.color || 'slate'];
 
   const isCritical = isMatchPoint || isSetPoint;
   
   const textEffectClass = useMemo(() => {
     if (isMatchPoint) return 'drop-shadow-[0_0_60px_rgba(251,191,36,0.9)] brightness-110'; 
-    if (isCritical) return theme.glowShadow; 
+    if (isCritical) return theme.glow; 
     return ''; 
-  }, [isMatchPoint, isCritical, theme.glowShadow]);
+  }, [isMatchPoint, isCritical, theme.glow]);
 
   const isFirstPosition = reverseLayout ? teamId === 'B' : teamId === 'A';
 
@@ -204,7 +192,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
             onClose={() => setShowScout(false)}
             team={team}
             onConfirm={handleScoutConfirm}
-            colorTheme={colorTheme}
+            colorTheme={team.color === 'rose' || team.color === 'amber' ? 'rose' : 'indigo'} // Fallback for modal
         />
 
         <motion.div 
@@ -238,7 +226,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
                         scoreRefCallback={scoreRefCallback} 
                         numberRef={numberRef}
                         isCritical={isCritical}
-                        colorTheme={colorTheme}
                         isServing={!!isServing}
                         isMatchPoint={isMatchPoint}
                     />

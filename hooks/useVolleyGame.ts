@@ -31,8 +31,8 @@ const INITIAL_STATE: GameState = {
   pendingSideSwitch: false,
   matchDurationSeconds: 0,
   isTimerRunning: false,
-  teamARoster: { id: 'A', name: 'Home', players: [] },
-  teamBRoster: { id: 'B', name: 'Guest', players: [] },
+  teamARoster: { id: 'A', name: 'Home', color: 'indigo', players: [] },
+  teamBRoster: { id: 'B', name: 'Guest', color: 'rose', players: [] },
   queue: [], 
   rotationReport: null
 };
@@ -95,6 +95,10 @@ export const useVolleyGame = () => {
         
         // Critical Fix: Ensure matchLog exists, or reconstruct/init it
         if(!savedState.matchLog) savedState.matchLog = [...savedState.actionLog]; 
+        
+        // Migration: Ensure color exists on legacy saves
+        if (savedState.teamARoster && !savedState.teamARoster.color) savedState.teamARoster.color = 'indigo';
+        if (savedState.teamBRoster && !savedState.teamBRoster.color) savedState.teamBRoster.color = 'rose';
 
         savedState.teamAName = sanitizeInput(savedState.teamAName);
         savedState.teamBName = sanitizeInput(savedState.teamBName);
@@ -411,6 +415,7 @@ export const useVolleyGame = () => {
     generateTeams: queueManager.generateTeams,
     rotateTeams,
     updateTeamName: queueManager.updateTeamName,
+    updateTeamColor: queueManager.updateTeamColor,
     updatePlayerName: queueManager.updatePlayerName,
     updatePlayerSkill: queueManager.updatePlayerSkill,
     movePlayer: queueManager.movePlayer,

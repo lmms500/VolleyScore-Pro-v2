@@ -14,6 +14,9 @@ export type PlayerId = string; // UUID v4
 
 export type SyncStatus = 'synced' | 'desynced' | 'unlinked';
 
+// Supported Theme Colors
+export type TeamColor = 'indigo' | 'rose' | 'emerald' | 'amber' | 'sky' | 'violet' | 'slate' | 'fuchsia';
+
 // 1. O PERFIL MESTRE (Persistente / Banco de Dados Local)
 export interface PlayerProfile {
   id: PlayerId;
@@ -49,6 +52,7 @@ export interface Player {
 export interface Team {
   id: string; 
   name: string;
+  color: TeamColor; // New visual property
   players: Player[];
 }
 

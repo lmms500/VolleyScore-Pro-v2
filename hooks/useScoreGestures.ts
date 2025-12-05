@@ -11,9 +11,10 @@ interface UseScoreGesturesProps {
 
 // Constants for gesture detection
 // UPDATED: Relaxed thresholds to ensure reliability on mobile touchscreens
-const SWIPE_THRESHOLD = 50; // Min distance to be a swipe (increased to differentiate from sloppy taps)
-const TAP_MAX_DURATION_MS = 600; // Max time for a tap (increased from 200ms to allow slower presses)
-const TAP_MAX_MOVE = 25; // Max movement for a tap (increased from 10px to allow finger jitter)
+// TAP_MAX_MOVE increased to 40px to accommodate "finger jitter" on high-res screens
+const SWIPE_THRESHOLD = 40; 
+const TAP_MAX_DURATION_MS = 800; // Allow slower taps
+const TAP_MAX_MOVE = 40; 
 
 export const useScoreGestures = ({ 
   onAdd, 
@@ -63,7 +64,8 @@ export const useScoreGestures = ({
     const absDeltaX = Math.abs(deltaX);
     const absDeltaY = Math.abs(deltaY);
 
-    // Rule 1: TAP (Relaxed)
+    // Rule 1: TAP (Relaxed logic to catch "sloppy" taps)
+    // If movement is small enough, treat as tap regardless of slight drag
     if (deltaTime < TAP_MAX_DURATION_MS && absDeltaX < TAP_MAX_MOVE && absDeltaY < TAP_MAX_MOVE) {
       onAdd();
     } 

@@ -1,4 +1,4 @@
-import { Player, Team, RotationReport } from '../types';
+import { Player, Team, RotationReport, TeamColor } from '../types';
 import { PLAYER_LIMIT_ON_COURT } from '../constants';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -19,10 +19,11 @@ const getTotalSkill = (players: Player[]): number => {
     return players.reduce((acc, p) => acc + p.skillLevel, 0);
 };
 
-const createTeamContainer = (id: string, name: string, players: Player[]): Team => ({
+const createTeamContainer = (id: string, name: string, players: Player[], color: TeamColor = 'slate'): Team => ({
   id,
   name,
-  players
+  players,
+  color
 });
 
 // Simple internal logger
@@ -145,6 +146,7 @@ export const balanceTeamsSnake = (
           newQueue.push({
               id: existing?.id || uuidv4(),
               name: existing?.name || `Team ${i + 1}`,
+              color: existing?.color || 'slate',
               players: buckets[i]
           });
       }
@@ -210,7 +212,8 @@ export const distributeStandard = (
             const existingQTeam = currentQueue[i - 2];
             const tId = existingQTeam ? existingQTeam.id : uuidv4();
             const tName = existingQTeam ? existingQTeam.name : `Team ${i + 1}`;
-            newQueue.push({ id: tId, name: tName, players: buckets[i] });
+            const tColor = existingQTeam ? existingQTeam.color : 'slate';
+            newQueue.push({ id: tId, name: tName, players: buckets[i], color: tColor });
         }
     }
   

@@ -1,8 +1,9 @@
 
+
 import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { Team, Player, RotationMode, PlayerProfile } from '../../types';
+import { Team, Player, RotationMode, PlayerProfile, TeamColor } from '../../types';
 import { calculateTeamStrength } from '../../utils/balanceUtils';
 import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List, Lock } from 'lucide-react';
 import {
@@ -22,6 +23,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '../../contexts/LanguageContext';
+import { TEAM_COLORS, COLOR_KEYS } from '../../utils/colors';
 
 const SortableContextFixed = SortableContext as any;
 const DragOverlayFixed = DragOverlay as any;
@@ -41,6 +43,7 @@ interface TeamManagerModalProps {
   onRemove: (id: string) => void;
   onMove: (playerId: string, fromId: string, toId: string) => void;
   onUpdateTeamName: (teamId: string, name: string) => void;
+  onUpdateTeamColor: (teamId: string, color: TeamColor) => void; // NEW
   onUpdatePlayerName: (playerId: string, name: string) => void;
   onUpdatePlayerSkill: (playerId: string, skill: number) => void;
   onSaveProfile: (playerId: string) => void;
@@ -73,6 +76,25 @@ const SkillSelector = memo(({ level, onChange }: { level: number, onChange: (l: 
                         className={i <= level ? "fill-amber-400 text-amber-400" : "text-slate-300 dark:text-slate-700"} 
                     />
                 </button>
+            ))}
+        </div>
+    );
+});
+
+const ColorPicker = memo(({ selected, onChange }: { selected: TeamColor, onChange: (c: TeamColor) => void }) => {
+    return (
+        <div className="flex gap-1.5 flex-wrap py-1">
+            {COLOR_KEYS.map(color => (
+                 <button
+                    key={color}
+                    onClick={() => onChange(color)}
+                    className={`
+                        w-5 h-5 rounded-full transition-all border
+                        ${TEAM_COLORS[color].bg.replace('/10', '')} 
+                        ${selected === color ? 'ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 border-transparent scale-110' : 'border-black/5 hover:scale-105 opacity-60 hover:opacity-100'}
+                    `}
+                    title={color.charAt(0).toUpperCase() + color.slice(1)}
+                 />
             ))}
         </div>
     );
@@ -247,7 +269,7 @@ const ProfileCard = memo(({
 const PlayerCard = memo(({ 
     player, 
     locationId, 
-    profiles, // Note: passing whole Map can break memo if Map ref changes. Better to pass profile-derived props or ensure Map stability.
+    profiles, 
     onToggleFixed, 
     onRemove, 
     onUpdateName, 
@@ -275,8 +297,6 @@ const PlayerCard = memo(({
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, touchAction: 'none' };
   const isFixed = player.isFixed;
   
-  // Extract profile logic here to avoid passing map deep down if possible, 
-  // but for now keeping it compatible with current arch.
   const profile = player.profileId ? profiles.get(player.profileId) : undefined;
   const hasProfile = !!profile;
   const profileMatch = hasProfile && profile!.name === player.name && profile!.skillLevel === player.skillLevel;
@@ -395,19 +415,20 @@ const TeamColumn = memo(({
     team, 
     profiles,
     onUpdateTeamName, 
+    onUpdateTeamColor,
     onUpdatePlayerName, 
     onUpdateSkill,
     onSaveProfile,
     onRevertProfile,
     onAddPlayer, 
     onToggleFixed, 
-    onRemove, 
-    color 
+    onRemove
 }: { 
     id: string; 
     team: Team; 
     profiles: Map<string, PlayerProfile>;
     onUpdateTeamName: (id: string, name: string) => void; 
+    onUpdateTeamColor: (id: string, color: TeamColor) => void;
     onUpdatePlayerName: (pid: string, n: string) => void; 
     onUpdateSkill: (pid: string, s: number) => void;
     onSaveProfile: (pid: string) => void;
@@ -415,7 +436,6 @@ const TeamColumn = memo(({
     onAddPlayer: (name: string) => void; 
     onToggleFixed: (playerId: string) => void; 
     onRemove: (id: string) => void; 
-    color: 'indigo' | 'rose' | 'slate'; 
 }) => {
   const { t } = useTranslation();
   const isFull = team.players.length >= 6;
@@ -423,31 +443,33 @@ const TeamColumn = memo(({
   
   const teamStrength = useMemo(() => calculateTeamStrength(team.players), [team.players]);
 
-  const theme = {
-    indigo: { bg: 'bg-indigo-50/50 dark:bg-indigo-900/10', border: 'border-indigo-100 dark:border-indigo-500/20', text: 'text-indigo-700 dark:text-indigo-300', glow: 'bg-indigo-500' },
-    rose: { bg: 'bg-rose-50/50 dark:bg-rose-900/10', border: 'border-rose-100 dark:border-rose-500/20', text: 'text-rose-700 dark:text-rose-300', glow: 'bg-rose-500' },
-    slate: { bg: 'bg-slate-50/50 dark:bg-slate-900/30', border: 'border-slate-200 dark:border-slate-800', text: 'text-slate-600 dark:text-slate-400', glow: 'bg-slate-500' }
-  };
+  const colorConfig = TEAM_COLORS[team.color || 'slate'];
 
   const handleUpdateName = useCallback((n: string) => onUpdateTeamName(id, n), [onUpdateTeamName, id]);
+  const handleUpdateColor = useCallback((c: TeamColor) => onUpdateTeamColor(id, c), [onUpdateTeamColor, id]);
 
   return (
-    <div ref={setNodeRef} className={`flex flex-col w-full h-fit ${theme[color].bg} p-3 rounded-2xl ${theme[color].border} border transition-all duration-300 ${isOver && !isFull ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900' : ''}`}>
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-black/5 dark:border-white/5 gap-2">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className={`w-1.5 h-6 rounded-full flex-shrink-0 ${theme[color].glow}`}></div>
-            <div className="flex flex-col min-w-0 flex-1">
-                <span className={`text-[9px] font-bold uppercase tracking-wider opacity-60 ${theme[color].text}`}>{t('teamManager.teamLabel')}</span>
-                <EditableTitle name={team.name} onSave={handleUpdateName} className={`font-black uppercase tracking-tight text-sm ${theme[color].text}`} />
+    <div ref={setNodeRef} className={`flex flex-col w-full h-fit ${colorConfig.bg} p-3 rounded-2xl ${colorConfig.border} border transition-all duration-300 ${isOver && !isFull ? `ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ${colorConfig.ring}` : ''}`}>
+      <div className="flex flex-col mb-3 pb-2 border-b border-black/5 dark:border-white/5 gap-2">
+        <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className={`w-1.5 h-6 rounded-full flex-shrink-0 ${colorConfig.halo}`}></div>
+                <div className="flex flex-col min-w-0 flex-1">
+                    <span className={`text-[9px] font-bold uppercase tracking-wider opacity-60 ${colorConfig.text}`}>{t('teamManager.teamLabel')}</span>
+                    <EditableTitle name={team.name} onSave={handleUpdateName} className={`font-black uppercase tracking-tight text-sm ${colorConfig.text}`} />
+                </div>
+            </div>
+            
+            <div className="flex flex-col items-end flex-shrink-0">
+                <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white dark:bg-black/20 ${colorConfig.text} flex items-center gap-1 shadow-sm border border-black/5 dark:border-white/5 mb-0.5`}>
+                    <Star size={10} className="fill-current" /> {teamStrength}
+                </div>
+                <span className={`${isFull ? 'text-rose-500 dark:text-rose-400' : 'text-slate-400'} text-[10px] font-bold`}>{team.players.length}/6</span>
             </div>
         </div>
         
-        <div className="flex flex-col items-end flex-shrink-0">
-            <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white dark:bg-black/20 ${theme[color].text} flex items-center gap-1 shadow-sm border border-black/5 dark:border-white/5 mb-0.5`}>
-                <Star size={10} className="fill-current" /> {teamStrength}
-            </div>
-            <span className={`${isFull ? 'text-rose-500 dark:text-rose-400' : 'text-slate-400'} text-[10px] font-bold`}>{team.players.length}/6</span>
-        </div>
+        {/* Color Picker inside the card header */}
+        <ColorPicker selected={team.color || 'slate'} onChange={handleUpdateColor} />
       </div>
 
       <div className="min-h-[60px] space-y-2">
@@ -501,7 +523,6 @@ const BatchInputSection = memo(({ onGenerate }: { onGenerate: (names: string[]) 
 
 export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   const { t } = useTranslation();
-  // Moved rawNames state to BatchInputSection to prevent re-renders of the whole modal on typing
   const [activeTab, setActiveTab] = useState<'roster' | 'profiles' | 'input'>('roster');
   const [activePlayer, setActivePlayer] = useState<Player | null>(null);
   const [undoVisible, setUndoVisible] = useState(false);
@@ -661,14 +682,14 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
           <div className="flex flex-col md:grid md:grid-cols-2 xl:grid-cols-3 gap-6 items-start pb-24 px-1 min-h-[60vh]">
             
             <TeamColumn 
-                id="A" team={props.courtA} color="indigo"
+                id="A" team={props.courtA}
                 {...props}
                 onUpdateSkill={props.onUpdatePlayerSkill} 
                 onAddPlayer={handleAddA} 
             />
             
             <TeamColumn 
-                id="B" team={props.courtB} color="rose"
+                id="B" team={props.courtB}
                 {...props}
                 onUpdateSkill={props.onUpdatePlayerSkill} 
                 onAddPlayer={handleAddB} 
@@ -681,7 +702,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                   {props.queue.length === 0 && <div className="text-center py-8 text-slate-400 italic text-sm border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl col-span-full">{t('teamManager.queueEmpty')}</div>}
                   {props.queue.map(team => (
                     <TeamColumn 
-                        key={team.id} id={team.id} team={team} color="slate"
+                        key={team.id} id={team.id} team={team}
                         {...props}
                         onUpdateSkill={props.onUpdatePlayerSkill} 
                         onAddPlayer={_ => {}} // Queue teams don't add via input here

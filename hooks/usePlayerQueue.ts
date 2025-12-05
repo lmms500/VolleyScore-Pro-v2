@@ -1,6 +1,7 @@
 
+
 import { useState, useCallback, useEffect } from 'react';
-import { Player, Team, TeamId, RotationReport, RotationMode, PlayerProfile } from '../types';
+import { Player, Team, TeamId, RotationReport, RotationMode, PlayerProfile, TeamColor } from '../types';
 import { PLAYER_LIMIT_ON_COURT, PLAYERS_PER_TEAM } from '../constants';
 import { sanitizeInput } from '../utils/security';
 import { usePlayerProfiles } from './usePlayerProfiles';
@@ -22,8 +23,8 @@ interface DeletedPlayerRecord {
 }
 
 const INITIAL_QUEUE_STATE: QueueState = {
-  courtA: { id: 'A', name: 'Home', players: [] },
-  courtB: { id: 'B', name: 'Guest', players: [] },
+  courtA: { id: 'A', name: 'Home', color: 'indigo', players: [] },
+  courtB: { id: 'B', name: 'Guest', color: 'rose', players: [] },
   queue: [],
   lastReport: null,
   mode: 'standard'
@@ -91,9 +92,10 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
       };
   };
 
-  const createTeam = (name: string, players: Player[]): Team => ({
+  const createTeam = (name: string, players: Player[], color: TeamColor = 'slate'): Team => ({
     id: uuidv4(),
     name: sanitizeInput(name),
+    color,
     players
   });
 
@@ -235,6 +237,16 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     });
   }, []);
 
+  const updateTeamColor = useCallback((teamId: string, color: TeamColor) => {
+    setQueueState(prev => {
+      const newState = { ...prev };
+      if (teamId === 'A' || teamId === prev.courtA.id) newState.courtA = { ...prev.courtA, color };
+      else if (teamId === 'B' || teamId === prev.courtB.id) newState.courtB = { ...prev.courtB, color };
+      else newState.queue = prev.queue.map(t => t.id === teamId ? { ...t, color } : t);
+      return newState;
+    });
+  }, []);
+
   // --- ROTATION & MOVEMENT ---
 
   const getRotationPreview = useCallback((winnerId: TeamId): RotationReport | null => {
@@ -325,7 +337,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
                   const last = newQueue[newQueue.length - 1];
                   newQueue[newQueue.length - 1] = { ...last, players: [...last.players, newPlayer] };
               } else {
-                  newQueue.push(createTeam(`Queue Team ${newQueue.length + 1}`, [newPlayer]));
+                  newQueue.push(createTeam(`Queue Team ${newQueue.length + 1}`, [newPlayer], 'slate'));
               }
               return { ...prev, queue: newQueue };
           }
@@ -386,7 +398,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
              if (originId === 'B') return { ...qs, courtB: { ...qs.courtB, players: [...qs.courtB.players, player] }};
              const newQueue = [...qs.queue];
              if(newQueue.length > 0) newQueue[newQueue.length -1].players.push(player);
-             else newQueue.push(createTeam("Restored", [player]));
+             else newQueue.push(createTeam("Restored", [player], 'slate'));
              return { ...qs, queue: newQueue };
         });
         return history;
@@ -452,6 +464,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     queueState,
     generateTeams,
     updateTeamName,
+    updateTeamColor,
     updatePlayerName: (id: string, name: string) => updatePlayer(id, { name }),
     updatePlayerSkill: (id: string, skillLevel: number) => updatePlayer(id, { skillLevel }),
     rotateTeams,

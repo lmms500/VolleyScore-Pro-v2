@@ -10,6 +10,7 @@ import { ScoreTicker } from './ui/ScoreTicker';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { layoutTransition, stampVariants } from '../utils/animations';
 import { ScoutModal } from './modals/ScoutModal';
+import { TEAM_COLORS } from '../utils/colors';
 
 interface ScoreCardNormalProps {
   teamId: TeamId;
@@ -28,7 +29,7 @@ interface ScoreCardNormalProps {
   inSuddenDeath?: boolean;
   reverseLayout?: boolean; 
   setsNeededToWin: number;
-  colorTheme: 'indigo' | 'rose';
+  colorTheme?: any; // Deprecated but kept for type compatibility if needed upstream
   isLocked?: boolean;
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
@@ -37,7 +38,7 @@ interface ScoreCardNormalProps {
 
 export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
   teamId, team, score, setsWon, isServing, onAdd, onSubtract, onSetServer, timeouts, onTimeout, 
-  isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, reverseLayout, setsNeededToWin, colorTheme, 
+  isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, reverseLayout, setsNeededToWin, 
   isLocked = false, onInteractionStart, onInteractionEnd, config
 }) => {
   const { t } = useTranslation();
@@ -54,7 +55,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
         // Direct point add
         onAdd(teamId);
         // Sound is handled by App.tsx observing state or callback wrapper to avoid double triggers
-        // But for direct feedback, let's rely on App.tsx which wraps this function
     }
   }, [config.enablePlayerStats, onAdd, teamId, audio]);
 
@@ -74,24 +74,8 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
     isLocked, onInteractionStart, onInteractionEnd
   });
 
-  const theme = {
-    indigo: {
-      text: 'text-indigo-600 dark:text-indigo-300',
-      glow: 'shadow-[0_0_15px_rgba(99,102,241,0.5)]',
-      haloColor: 'bg-indigo-500',
-      badgeBg: 'bg-indigo-500/20',
-      badgeBorder: 'border-indigo-500/30',
-      badgeText: 'text-indigo-600 dark:text-indigo-300',
-    },
-    rose: {
-      text: 'text-rose-600 dark:text-rose-300',
-      glow: 'shadow-[0_0_15px_rgba(244,63,94,0.5)]',
-      haloColor: 'bg-rose-500',
-      badgeBg: 'bg-rose-500/20',
-      badgeBorder: 'border-rose-500/30',
-      badgeText: 'text-rose-600 dark:text-rose-300',
-    }
-  }[colorTheme];
+  // Resolve Dynamic Theme
+  const theme = TEAM_COLORS[team.color || 'slate'];
 
   const orderClass = reverseLayout ? (teamId === 'A' ? 'order-last' : 'order-first') : (teamId === 'A' ? 'order-first' : 'order-last');
   const timeoutsExhausted = timeouts >= 2;
@@ -117,7 +101,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
       badgeConfig = { 
           icon: Zap, 
           text: t('status.set_point'), 
-          className: `${theme.badgeBg} ${theme.badgeText} ${theme.badgeBorder}`,
+          className: `${theme.bg} ${theme.text} ${theme.border}`,
           animateIcon: false
       };
   } else if (isDeuce) {
@@ -132,7 +116,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
   // Determine Halo State
   const haloColorClass = isMatchPoint 
     ? 'bg-amber-500 saturate-150' 
-    : theme.haloColor;
+    : theme.halo;
 
   const haloVariants: Variants = {
     idle: { scale: 1, opacity: isServing ? 0.4 : 0 },
@@ -163,7 +147,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             onClose={() => setShowScout(false)} 
             team={team} 
             onConfirm={handleScoutConfirm}
-            colorTheme={colorTheme}
+            colorTheme={team.color === 'rose' || team.color === 'amber' ? 'rose' : 'indigo'} // Fallback for modal theming
       />
       
       <div className="flex flex-col h-full w-full relative z-10 py-2 md:py-4 px-2 justify-between items-center">
@@ -214,7 +198,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                         className={`
                             w-2.5 h-2.5 rounded-full transition-all duration-500 border border-black/5 dark:border-white/5
                             ${i < setsWon 
-                                ? `${theme.haloColor} ${theme.glow} scale-110` 
+                                ? `${theme.halo} ${theme.glow} scale-110` 
                                 : 'bg-black/10 dark:bg-white/10'}
                         `} 
                     />
@@ -325,7 +309,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                             transition-all duration-300 rounded-full w-1.5 h-1.5
                             ${isUsed 
                             ? 'bg-black/20 dark:bg-white/20' 
-                            : `${theme.haloColor} shadow-[0_0_8px_currentColor] scale-110`}
+                            : `${theme.halo} shadow-[0_0_8px_currentColor] scale-110`}
                         `}
                         />
                      );

@@ -207,9 +207,19 @@
     "title": "Match History",
     "empty": "No matches recorded yet.",
     "searchPlaceholder": "Search teams...",
-    "filterAll": "All Matches",
-    "filterWinnerA": "Winner: A",
-    "filterWinnerB": "Winner: B",
+    "filters": {
+      "title": "Filters",
+      "all": "All Matches",
+      "winnerA": "Winner: Team A",
+      "winnerB": "Winner: Team B",
+      "scouted": "With Stats (Scouted)"
+    },
+    "sort": {
+      "newest": "Newest First",
+      "oldest": "Oldest First",
+      "longest": "Longest Duration",
+      "shortest": "Shortest Duration"
+    },
     "export": "Export JSON",
     "import": "Import JSON",
     "importSuccess": "History imported successfully!",

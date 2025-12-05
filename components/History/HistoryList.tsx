@@ -1,17 +1,101 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useHistoryStore, Match } from '../../stores/historyStore';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { downloadJSON, parseJSONFile } from '../../services/io';
 import { 
   Search, Clock, Trash2, ChevronDown, ChevronUp, 
-  Download, Upload, Filter, AlertCircle, BarChart2, Crown, Calendar
+  Download, Upload, Filter, AlertCircle, BarChart2, Crown, Calendar, SortDesc, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../ui/Button';
 import { MatchDetail } from './MatchDetail';
 
 // --- SUB-COMPONENTS ---
+
+// CUSTOM SELECT COMPONENT
+interface CustomSelectProps {
+    value: string;
+    onChange: (value: string) => void;
+    options: { value: string; label: string }[];
+    icon?: React.ReactNode;
+    align?: 'left' | 'right';
+}
+
+const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, icon, align = 'left' }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const selectedLabel = options.find(o => o.value === value)?.label || value;
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        if(isOpen) document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
+
+    return (
+        <div className="relative w-full group" ref={containerRef}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className={`
+                    w-full flex items-center justify-between
+                    bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 
+                    rounded-xl pl-4 pr-3 py-2.5 
+                    text-xs font-bold uppercase tracking-wider 
+                    text-slate-600 dark:text-slate-300 
+                    hover:bg-slate-50 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/20
+                    transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/30
+                    ${isOpen ? 'ring-2 ring-indigo-500/30 bg-slate-50 dark:bg-white/10' : ''}
+                `}
+            >
+                <span className="truncate mr-2 min-w-0">{selectedLabel}</span>
+                <div className="text-slate-400 flex-shrink-0">
+                    {icon || (isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+                </div>
+            </button>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className={`
+                            absolute top-full ${align === 'right' ? 'right-0' : 'left-0'} mt-2 z-50 
+                            min-w-full w-max max-w-[280px]
+                            bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl 
+                            border border-black/5 dark:border-white/10 
+                            rounded-xl shadow-2xl shadow-black/20 
+                            overflow-hidden max-h-60 overflow-y-auto custom-scrollbar
+                        `}
+                    >
+                        {options.map((opt) => (
+                            <button
+                                key={opt.value}
+                                onClick={() => { onChange(opt.value); setIsOpen(false); }}
+                                className={`
+                                    w-full flex items-center justify-between px-4 py-3 text-left
+                                    text-xs font-bold uppercase tracking-wide transition-colors
+                                    hover:bg-black/5 dark:hover:bg-white/10
+                                    ${value === opt.value ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10' : 'text-slate-600 dark:text-slate-300'}
+                                `}
+                            >
+                                <span className="mr-2 whitespace-nowrap">{opt.label}</span>
+                                {value === opt.value && <Check size={14} className="text-indigo-500 flex-shrink-0" />}
+                            </button>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
 
 const HistoryCard: React.FC<{ 
     match: Match; 
@@ -157,12 +241,17 @@ const HistoryCard: React.FC<{
 
 // --- MAIN COMPONENT ---
 
+type FilterType = 'all' | 'A' | 'B' | 'scouted';
+type SortType = 'newest' | 'oldest' | 'longest' | 'shortest';
+
 export const HistoryList: React.FC = () => {
     const { matches, deleteMatch, importJSON, exportJSON } = useHistoryStore();
     const { t } = useTranslation();
     
     const [searchTerm, setSearchTerm] = useState('');
-    const [winnerFilter, setWinnerFilter] = useState<'all' | 'A' | 'B'>('all');
+    const [filterType, setFilterType] = useState<FilterType>('all');
+    const [sortOrder, setSortOrder] = useState<SortType>('newest');
+    
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [selectedMatch, setSelectedMatch] = useState<Match | null>(null); // Navigation state
     const [importMsg, setImportMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -171,18 +260,32 @@ export const HistoryList: React.FC = () => {
 
     // Filter Logic
     const filteredMatches = useMemo(() => {
-        return matches.filter(m => {
+        let filtered = matches.filter(m => {
             const matchesSearch = 
                 m.teamAName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                 m.teamBName.toLowerCase().includes(searchTerm.toLowerCase());
             
-            const matchesWinner = 
-                winnerFilter === 'all' || 
-                m.winner === winnerFilter;
+            let matchesFilter = true;
+            if (filterType === 'A') matchesFilter = m.winner === 'A';
+            if (filterType === 'B') matchesFilter = m.winner === 'B';
+            if (filterType === 'scouted') {
+                // Check if match has any scouted points (playerId exists)
+                matchesFilter = (m.actionLog || []).some((log: any) => log.type === 'POINT' && log.playerId);
+            }
 
-            return matchesSearch && matchesWinner;
+            return matchesSearch && matchesFilter;
         });
-    }, [matches, searchTerm, winnerFilter]);
+
+        // Sorting
+        return filtered.sort((a, b) => {
+            if (sortOrder === 'newest') return b.timestamp - a.timestamp;
+            if (sortOrder === 'oldest') return a.timestamp - b.timestamp;
+            if (sortOrder === 'longest') return b.durationSeconds - a.durationSeconds;
+            if (sortOrder === 'shortest') return a.durationSeconds - b.durationSeconds;
+            return 0;
+        });
+
+    }, [matches, searchTerm, filterType, sortOrder]);
 
     // Handlers
     const handleExport = () => {
@@ -226,6 +329,20 @@ export const HistoryList: React.FC = () => {
         return <MatchDetail match={selectedMatch} onBack={() => setSelectedMatch(null)} />;
     }
 
+    const filterOptions = [
+        { value: 'all', label: t('historyList.filters.all') },
+        { value: 'A', label: t('historyList.filters.winnerA') },
+        { value: 'B', label: t('historyList.filters.winnerB') },
+        { value: 'scouted', label: t('historyList.filters.scouted') },
+    ];
+
+    const sortOptions = [
+        { value: 'newest', label: t('historyList.sort.newest') },
+        { value: 'oldest', label: t('historyList.sort.oldest') },
+        { value: 'longest', label: t('historyList.sort.longest') },
+        { value: 'shortest', label: t('historyList.sort.shortest') },
+    ];
+
     return (
         <div className="flex flex-col h-full min-h-[50vh]">
             
@@ -238,54 +355,70 @@ export const HistoryList: React.FC = () => {
                 onChange={handleFileChange}
             />
 
-            {/* Controls Bar */}
-            <div className="flex flex-col gap-4 mb-6 sticky top-0 bg-slate-100/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl z-20 py-2 border-b border-black/5 dark:border-white/5">
-                <div className="flex gap-2">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                        <input 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder={t('historyList.searchPlaceholder')}
-                            className="w-full bg-white dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400"
+            {/* --- Control Deck (Enhanced UI) --- */}
+            <div className="sticky top-0 z-30 mb-6 -mx-1 px-1">
+                <div className="bg-slate-100/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl p-3 shadow-lg shadow-black/5 dark:shadow-black/20">
+                    
+                    {/* Row 1: Search & Actions */}
+                    <div className="flex gap-2 mb-2">
+                        <div className="relative flex-1 group">
+                            <div className="absolute inset-0 bg-white dark:bg-white/5 rounded-xl transition-all group-focus-within:ring-2 group-focus-within:ring-indigo-500/30"></div>
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                            <input 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder={t('historyList.searchPlaceholder')}
+                                className="relative w-full bg-transparent border border-black/5 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none placeholder:text-slate-400"
+                            />
+                        </div>
+                        
+                        <div className="flex gap-1">
+                            {/* Export: UP Arrow (Upload Icon) */}
+                            <button onClick={handleExport} className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors" title={t('historyList.export')}>
+                                <Upload size={18} /> 
+                            </button>
+                            {/* Import: DOWN Arrow (Download Icon) */}
+                            <button onClick={handleImportClick} className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors" title={t('historyList.import')}>
+                                <Download size={18} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Row 2: Filters & Sort - FIXED GRID LAYOUT */}
+                    <div className="grid grid-cols-2 gap-2 relative z-20">
+                        <CustomSelect 
+                            value={filterType}
+                            onChange={(val) => setFilterType(val as FilterType)}
+                            options={filterOptions}
+                            icon={<Filter size={14} />}
+                            align="left"
+                        />
+                        <CustomSelect 
+                            value={sortOrder}
+                            onChange={(val) => setSortOrder(val as SortType)}
+                            options={sortOptions}
+                            icon={<SortDesc size={14} />}
+                            align="right"
                         />
                     </div>
-                    
-                    <div className="relative">
-                        <select 
-                            value={winnerFilter}
-                            onChange={(e) => setWinnerFilter(e.target.value as any)}
-                            className="appearance-none bg-white dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl pl-4 pr-10 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 h-full transition-all"
-                        >
-                            <option value="all">{t('historyList.filterAll')}</option>
-                            <option value="A">{t('historyList.filterWinnerA')}</option>
-                            <option value="B">{t('historyList.filterWinnerB')}</option>
-                        </select>
-                        <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
-                    </div>
-                </div>
 
-                <div className="flex gap-2">
-                    <Button onClick={handleExport} size="sm" variant="secondary" className="flex-1 text-xs">
-                        <Download size={14} /> {t('historyList.export')}
-                    </Button>
-                    <Button onClick={handleImportClick} size="sm" variant="secondary" className="flex-1 text-xs">
-                        <Upload size={14} /> {t('historyList.import')}
-                    </Button>
+                    {/* Import Status Message */}
+                    <AnimatePresence>
+                        {importMsg && (
+                            <motion.div 
+                                initial={{ opacity: 0, height: 0, marginTop: 0 }} 
+                                animate={{ opacity: 1, height: 'auto', marginTop: 8 }}
+                                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                                className={`text-xs px-3 py-2 rounded-xl font-bold flex items-center gap-2 ${importMsg.type === 'success' ? 'bg-emerald-500/20 text-emerald-600' : 'bg-rose-500/20 text-rose-600'}`}
+                            >
+                                <AlertCircle size={14} /> {importMsg.text}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
-
-                {importMsg && (
-                    <motion.div 
-                        initial={{ opacity: 0, height: 0 }} 
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className={`text-xs px-3 py-2 rounded-lg font-bold flex items-center gap-2 ${importMsg.type === 'success' ? 'bg-emerald-500/20 text-emerald-600' : 'bg-rose-500/20 text-rose-600'}`}
-                    >
-                        <AlertCircle size={14} /> {importMsg.text}
-                    </motion.div>
-                )}
             </div>
 
-            {/* List */}
+            {/* --- List Content --- */}
             <div className="space-y-4 flex-1 overflow-y-auto pb-8 min-h-0 px-1 custom-scrollbar">
                 {filteredMatches.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-slate-400 opacity-60">

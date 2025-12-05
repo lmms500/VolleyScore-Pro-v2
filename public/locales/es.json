@@ -137,6 +137,8 @@
     "title": "Resultado del Partido",
     "wins": "Gana el Partido",
     "nextGameButton": "Iniciar Siguiente Partido",
+    "share": "Compartir",
+    "generating": "Creando Imagen...",
     "rotationReport": {
       "title": "Reporte de Rotación",
       "entering": "Entra {teamName}",
@@ -205,9 +207,19 @@
     "title": "Historial de Partidos",
     "empty": "No hay partidos guardados todavía.",
     "searchPlaceholder": "Buscar equipos...",
-    "filterAll": "Todos",
-    "filterWinnerA": "Ganador: A",
-    "filterWinnerB": "Ganador: B",
+    "filters": {
+      "title": "Filtros",
+      "all": "Todos",
+      "winnerA": "Ganador: Equipo A",
+      "winnerB": "Ganador: Equipo B",
+      "scouted": "Con Estadísticas"
+    },
+    "sort": {
+      "newest": "Más Recientes",
+      "oldest": "Más Antiguos",
+      "longest": "Mayor Duración",
+      "shortest": "Menor Duración"
+    },
     "export": "Exportar JSON",
     "import": "Importar JSON",
     "importSuccess": "¡Historial importado con éxito!",

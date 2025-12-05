@@ -1,4 +1,3 @@
-
 import React, { useState, memo, useMemo, useRef, useCallback } from 'react';
 import { TeamId, Team, SkillType, GameConfig, TeamColor } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
@@ -38,7 +37,8 @@ const ScoreNumberDisplay = memo(({
     scoreRefCallback, 
     numberRef, 
     isCritical,
-    isMatchPoint
+    isMatchPoint,
+    isServing
 }: any) => {
 
     const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : theme.halo;
@@ -80,7 +80,7 @@ const ScoreNumberDisplay = memo(({
                         }
                         : { 
                             scale: 1, 
-                            opacity: 0 // Hidden when not critical/serving/pressed to keep UI clean
+                            opacity: isServing ? 0.4 : 0 // Show brilliance if serving/scored
                         }
                 }
                 transition={
@@ -102,8 +102,7 @@ const ScoreNumberDisplay = memo(({
                         value={score}
                         className={`
                             font-black leading-none tracking-tighter transition-all duration-300
-                            ${theme.text}
-                            ${theme.textDark}
+                            text-slate-900 dark:text-white
                             ${textEffectClass}
                             ${isPressed ? 'brightness-110 scale-95' : ''}
                         `}
@@ -241,6 +240,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
                         numberRef={numberRef}
                         isCritical={isCritical}
                         isMatchPoint={isMatchPoint}
+                        isServing={isServing}
                     />
                 </div>
             </div>

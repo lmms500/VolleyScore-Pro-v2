@@ -60,7 +60,7 @@ function App() {
     undoRemovePlayer, 
     commitDeletions, 
     rotateTeams,
-    setRotationMode,
+    setRotationMode, 
     balanceTeams,
     savePlayerToProfile,
     revertPlayerChanges,
@@ -179,32 +179,42 @@ function App() {
       version: layoutVersion
   });
 
+  // Strict Orientation Management
+  const lockOrientation = useCallback(async (mode: 'portrait' | 'landscape') => {
+    if (screen.orientation && 'lock' in screen.orientation) {
+        try {
+            // @ts-ignore
+            await screen.orientation.lock(mode);
+        } catch (e) {
+            console.warn(`Orientation lock to ${mode} failed:`, e);
+            // If locking to portrait fails (common in browser tabs), we try to unlock to let system handle it
+            // but we prioritize the attempt to lock.
+            if (mode === 'portrait' && 'unlock' in screen.orientation) {
+                screen.orientation.unlock();
+            }
+        }
+    }
+  }, []);
+
   const toggleFullscreen = async () => {
     audio.playTap();
     if (!document.fullscreenElement) {
         try {
             await document.documentElement.requestFullscreen();
             
-            // Force Landscape on supported devices (Android/Chrome)
-            // This is critical for the "Table Scoreboard" feel
-            if (screen.orientation && 'lock' in screen.orientation) {
-                try {
-                    // @ts-ignore - Some TS versions miss specific orientation types
-                    await screen.orientation.lock('landscape');
-                } catch (e) {
-                    console.warn('Orientation lock failed:', e);
-                }
-            }
+            // Force Landscape when entering Fullscreen
+            await lockOrientation('landscape');
+            
         } catch (e) {
             console.log('Fullscreen request failed:', e);
         }
     } else {
         try {
             await document.exitFullscreen();
-            // Unlock orientation when exiting
-            if (screen.orientation && 'unlock' in screen.orientation) {
-                screen.orientation.unlock();
-            }
+            
+            // Force Portrait when exiting Fullscreen
+            await lockOrientation('portrait');
+            
         } catch (e) {
              console.log('Exit fullscreen failed:', e);
         }
@@ -212,10 +222,24 @@ function App() {
   };
   
   useEffect(() => {
-    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+    const handleFullscreenChange = () => {
+        const isFull = !!document.fullscreenElement;
+        setIsFullscreen(isFull);
+        
+        // Re-enforce orientation state on external changes (e.g. Esc key)
+        if (!isFull) {
+            lockOrientation('portrait');
+        } else {
+            lockOrientation('landscape');
+        }
+    };
+    
+    // Attempt initial lock on mount (Best effort for installed PWAs)
+    lockOrientation('portrait');
+
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
+  }, [lockOrientation]);
 
   const toggleTimer = useCallback(() => {
     audio.playTap();

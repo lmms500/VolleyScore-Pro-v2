@@ -1,9 +1,13 @@
+
+
 import React, { useLayoutEffect, useRef, memo } from 'react';
 import { motion } from 'framer-motion';
+import { TeamColor } from '../../types';
+import { resolveTheme } from '../../utils/colors';
 
 interface TrackingGlowProps {
   targetRef: React.RefObject<HTMLElement>;
-  colorTheme: 'indigo' | 'rose';
+  colorTheme: TeamColor;
   isServing: boolean;
   isCritical: boolean;
   isMatchPoint: boolean;
@@ -64,12 +68,8 @@ export const TrackingGlow: React.FC<TrackingGlowProps> = memo(({
     };
   }, [targetRef]); // Dependency on targetRef ensures we re-bind if the target changes
 
-  const theme = {
-    indigo: { haloColor: 'bg-indigo-500' },
-    rose: { haloColor: 'bg-rose-600' }
-  }[colorTheme];
-
-  const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : theme.haloColor;
+  const theme = resolveTheme(colorTheme);
+  const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : theme.halo;
 
   return (
     <motion.div

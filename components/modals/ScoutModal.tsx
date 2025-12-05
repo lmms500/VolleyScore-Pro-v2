@@ -1,11 +1,9 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Team, SkillType, TeamColor } from '../../types';
 import { Swords, Shield, Target, AlertTriangle, X, User, ChevronLeft } from 'lucide-react';
 import { motion, AnimatePresence, PanInfo, useDragControls, Transition } from 'framer-motion';
-import { TEAM_COLORS } from '../../utils/colors';
+import { resolveTheme } from '../../utils/colors';
 
 interface ScoutModalProps {
   isOpen: boolean;
@@ -39,6 +37,8 @@ export const ScoutModal: React.FC<ScoutModalProps> = ({
     colorTheme 
 }) => {
     const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+    const [isReadyToClose, setIsReadyToClose] = useState(false);
+    
     const containerRef = useRef<HTMLDivElement>(null);
     const dragControls = useDragControls();
 
@@ -46,8 +46,21 @@ export const ScoutModal: React.FC<ScoutModalProps> = ({
     useEffect(() => {
         if (isOpen) {
             setSelectedPlayerId(null);
+            // Safety: Do not allow closing via backdrop for the first 300ms.
+            // This absorbs "ghost clicks" from the trigger button if they propagate.
+            const timer = setTimeout(() => setIsReadyToClose(true), 300);
+            return () => {
+                clearTimeout(timer);
+                setIsReadyToClose(false);
+            };
         }
     }, [isOpen]);
+
+    const handleBackdropClick = () => {
+        if (isReadyToClose) {
+            onClose();
+        }
+    };
 
     const handlePlayerSelect = (pid: string) => {
         setSelectedPlayerId(pid);
@@ -75,7 +88,7 @@ export const ScoutModal: React.FC<ScoutModalProps> = ({
     ];
 
     // Dynamic Theme Resolution
-    const theme = TEAM_COLORS[colorTheme] || TEAM_COLORS.indigo;
+    const theme = resolveTheme(colorTheme);
 
     // Sort players: Fixed players first, then alphabetical
     const sortedPlayers = [...team.players].sort((a, b) => {
@@ -96,7 +109,7 @@ export const ScoutModal: React.FC<ScoutModalProps> = ({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
-                        onClick={onClose}
+                        onClick={handleBackdropClick}
                     />
                     
                     {/* Bottom Sheet Container */}
@@ -115,9 +128,9 @@ export const ScoutModal: React.FC<ScoutModalProps> = ({
                         style={{
                             boxShadow: `0 -20px 60px -20px ${colorTheme === 'slate' ? 'rgba(0,0,0,0.5)' : theme.text.replace('text-', 'rgba(').replace('-600', ',0.2)')}`
                         }}
-                        initial={{ y: "110%" }}
+                        initial={{ y: "100%" }} 
                         animate={{ y: 0 }}
-                        exit={{ y: "110%" }}
+                        exit={{ y: "100%" }}
                         transition={sheetTransition}
                         drag="y"
                         dragControls={dragControls}

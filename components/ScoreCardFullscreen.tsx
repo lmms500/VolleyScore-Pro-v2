@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { pulseHeartbeat, layoutTransition } from '../utils/animations';
 import { useGameAudio } from '../hooks/useGameAudio';
 import { ScoutModal } from './modals/ScoutModal';
-import { TEAM_COLORS } from '../utils/colors';
+import { resolveTheme } from '../utils/colors';
 
 interface ScoreCardFullscreenProps {
   teamId: TeamId;
@@ -176,7 +176,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
 
   // Resolve Theme
   const resolvedColor = colorTheme || team.color || 'slate';
-  const theme = TEAM_COLORS[resolvedColor];
+  const theme = resolveTheme(resolvedColor);
 
   const isCritical = isMatchPoint || isSetPoint;
   
@@ -204,7 +204,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
             onClose={handleScoutClose}
             team={team}
             onConfirm={handleScoutConfirm}
-            colorTheme={team.color === 'rose' || team.color === 'amber' ? 'rose' : 'indigo'} // Fallback for modal
+            colorTheme={team.color || 'indigo'}
         />
 
         <motion.div 

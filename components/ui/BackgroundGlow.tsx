@@ -1,7 +1,9 @@
+
+
 import React, { memo } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { TeamColor } from '../../types';
-import { TEAM_COLORS } from '../../utils/colors';
+import { resolveTheme } from '../../utils/colors';
 
 interface BackgroundGlowProps {
   isSwapped: boolean;
@@ -53,23 +55,17 @@ export const BackgroundGlow: React.FC<BackgroundGlowProps> = memo(({ isSwapped, 
   };
 
   // Resolve Tailwind classes dynamically
-  const colorAClass = TEAM_COLORS[colorA].halo.replace('bg-', 'bg-') + '-600'; // Hacky but functional mapping if colors.ts aligns
-  const colorBClass = TEAM_COLORS[colorB].halo.replace('bg-', 'bg-') + '-600';
+  const themeA = resolveTheme(colorA);
+  const themeB = resolveTheme(colorB);
   
-  // Explicit Map for safety in case halo classes drift
-  const colorMap: Record<TeamColor, string> = {
-      indigo: 'bg-indigo-600',
-      rose: 'bg-rose-600',
-      emerald: 'bg-emerald-600',
-      amber: 'bg-amber-600',
-      sky: 'bg-sky-600',
-      violet: 'bg-violet-600',
-      slate: 'bg-slate-600',
-      fuchsia: 'bg-fuchsia-600'
-  };
+  // Extract Background Color - Needs slight hack if arbitrary value, but resolveTheme provides bg-classes.
+  // We need the raw color class for the blob. For arbitrary values like `bg-[#f00]/10`, it's tricky to get just the color for the blob.
+  // We will assume `theme.halo` is a solid background class (bg-indigo-500 or bg-[#hex]) which works for the blob.
+  const colorAClass = themeA.halo;
+  const colorBClass = themeB.halo;
 
-  const topColor = isSwapped ? colorMap[colorB] : colorMap[colorA];
-  const bottomColor = isSwapped ? colorMap[colorA] : colorMap[colorB];
+  const topColor = isSwapped ? colorBClass : colorAClass;
+  const bottomColor = isSwapped ? colorAClass : colorBClass;
 
   return (
     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden select-none" aria-hidden="true">

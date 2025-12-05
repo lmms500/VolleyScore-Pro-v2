@@ -1,11 +1,9 @@
-
-
 import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Team, Player, RotationMode, PlayerProfile, TeamColor } from '../../types';
 import { calculateTeamStrength } from '../../utils/balanceUtils';
-import { Pin, Trash2, Shuffle, ArrowRight, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List, Lock, Hash } from 'lucide-react';
+import { Pin, Trash2, Shuffle, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List, Lock, Hash } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -23,7 +21,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '../../contexts/LanguageContext';
-import { TEAM_COLORS, COLOR_KEYS } from '../../utils/colors';
+import { TEAM_COLORS, COLOR_KEYS, resolveTheme } from '../../utils/colors';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const SortableContextFixed = SortableContext as any;
@@ -44,9 +42,9 @@ interface TeamManagerModalProps {
   onRemove: (id: string) => void;
   onMove: (playerId: string, fromId: string, toId: string) => void;
   onUpdateTeamName: (teamId: string, name: string) => void;
-  onUpdateTeamColor: (teamId: string, color: TeamColor) => void; // NEW
+  onUpdateTeamColor: (teamId: string, color: TeamColor) => void;
   onUpdatePlayerName: (playerId: string, name: string) => void;
-  onUpdatePlayerNumber: (playerId: string, number: string) => void; // NEW
+  onUpdatePlayerNumber: (playerId: string, number: string) => void;
   onUpdatePlayerSkill: (playerId: string, skill: number) => void;
   onSaveProfile: (playerId: string) => void;
   onRevertProfile: (playerId: string) => void;
@@ -83,45 +81,61 @@ const SkillSelector = memo(({ level, onChange }: { level: number, onChange: (l: 
     );
 });
 
-// PREMIUM COLOR PICKER - Fix Scroll Bug by removing outer AnimatePresence
-const ColorPicker = memo(({ selected, onChange }: { selected: TeamColor, onChange: (c: TeamColor) => void }) => {
+// PREMIUM COLOR PICKER - Simplified, No RGB, Locked Colors
+const ColorPicker = memo(({ 
+    selected, 
+    onChange, 
+    usedColors 
+}: { 
+    selected: TeamColor, 
+    onChange: (c: TeamColor) => void,
+    usedColors: Set<string>
+}) => {
+    
     return (
         <div 
-            className="flex items-center gap-3 overflow-x-auto py-3 px-2 no-scrollbar"
-            style={{ 
-                maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
-                WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)'
-            }}
+            className="flex flex-col gap-2 relative z-50 touch-pan-x" 
+            onPointerDown={(e) => e.stopPropagation()} // Prevents DND drag activation
         >
-            {COLOR_KEYS.map(color => {
-                 const isSelected = selected === color;
-                 const theme = TEAM_COLORS[color];
-                 
-                 return (
-                     <button
-                        key={color}
-                        onClick={() => onChange(color)}
-                        className={`
-                            relative w-6 h-6 rounded-full transition-all flex items-center justify-center shrink-0
-                            ${theme.bg.replace('/10', '')}
-                            ${isSelected ? 'ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ring-slate-400 dark:ring-slate-500 shadow-md scale-110' : 'hover:scale-110 opacity-60 hover:opacity-100'}
-                        `}
-                        title={color.charAt(0).toUpperCase() + color.slice(1)}
-                     >
-                        <AnimatePresence>
+            <div className="flex items-center gap-2 overflow-x-auto py-3 px-2 no-scrollbar mask-linear-fade-right">
+                {COLOR_KEYS.map(color => {
+                     const isSelected = selected === color;
+                     // Disable if used by ANOTHER team (not the current one)
+                     const isTaken = usedColors.has(color) && !isSelected;
+                     
+                     const theme = TEAM_COLORS[color];
+                     
+                     return (
+                         <button
+                            key={color}
+                            onClick={() => !isTaken && onChange(color)}
+                            disabled={isTaken}
+                            className={`
+                                relative w-6 h-6 rounded-full transition-all flex items-center justify-center shrink-0
+                                ${theme.bg.replace('/10', '')}
+                                ${isSelected 
+                                    ? 'ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ring-slate-400 dark:ring-slate-500 shadow-md scale-110 opacity-100' 
+                                    : isTaken
+                                        ? 'opacity-20 grayscale cursor-not-allowed scale-90 border border-black/10'
+                                        : 'hover:scale-110 opacity-60 hover:opacity-100 cursor-pointer'
+                                }
+                            `}
+                            title={isTaken ? 'Color taken' : color.charAt(0).toUpperCase() + color.slice(1)}
+                         >
                             {isSelected && (
                                 <motion.div 
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    exit={{ scale: 0 }}
+                                    layoutId="selected-color-check"
                                     className="w-2.5 h-2.5 bg-white rounded-full shadow-sm"
                                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                                 />
                             )}
-                        </AnimatePresence>
-                     </button>
-                 );
-            })}
+                            {isTaken && !isSelected && (
+                                <div className="w-[120%] h-[1px] bg-slate-500 absolute rotate-45" />
+                            )}
+                         </button>
+                     );
+                })}
+            </div>
         </div>
     );
 });
@@ -347,7 +361,8 @@ const PlayerCard = memo(({
     onUpdateNumber,
     onUpdateSkill,
     onSaveProfile,
-    onRevertProfile
+    onRevertProfile,
+    isCompact = false
 }: { 
     player: Player; 
     locationId: string; 
@@ -359,6 +374,7 @@ const PlayerCard = memo(({
     onUpdateSkill: (id: string, skill: number) => void;
     onSaveProfile: (id: string) => void;
     onRevertProfile: (id: string) => void;
+    isCompact?: boolean;
 }) => {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -384,7 +400,8 @@ const PlayerCard = memo(({
 
   return (
     <div ref={setNodeRef} style={style} className={`
-        group relative flex items-center justify-between p-1.5 rounded-xl border transition-all duration-300
+        group relative flex items-center justify-between rounded-xl border transition-all duration-300
+        ${isCompact ? 'p-1.5 min-h-[40px]' : 'p-2 min-h-[56px]'}
         ${isFixed 
             ? 'bg-amber-500/10 border-amber-500/40 shadow-sm shadow-amber-500/10 ring-1 ring-amber-500/20' 
             : 'bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/20 shadow-sm'
@@ -398,13 +415,16 @@ const PlayerCard = memo(({
         </div>
         
         {/* Editable Number */}
-        <EditableNumber number={player.number} onSave={handleSaveNumber} />
+        {!isCompact && <EditableNumber number={player.number} onSave={handleSaveNumber} />}
+        {isCompact && player.number && <span className="text-xs font-bold text-slate-500">#{player.number}</span>}
 
         <div className="flex flex-col min-w-0 flex-1 pr-0.5 relative">
-          <EditableTitle name={player.name} onSave={handleSaveName} isPlayer={true} className="font-bold text-sm text-slate-800 dark:text-slate-200" />
-          <div className="mt-0.5 relative z-20">
-             <SkillSelector level={player.skillLevel} onChange={handleUpdateSkill} />
-          </div>
+          <EditableTitle name={player.name} onSave={handleSaveName} isPlayer={true} className={`font-bold ${isCompact ? 'text-xs' : 'text-sm'} text-slate-800 dark:text-slate-200`} />
+          {!isCompact && (
+              <div className="mt-0.5 relative z-20">
+                <SkillSelector level={player.skillLevel} onChange={handleUpdateSkill} />
+              </div>
+          )}
         </div>
       </div>
       
@@ -428,12 +448,6 @@ const PlayerCard = memo(({
             title={isFixed ? t('teamManager.unlockPlayer') : t('teamManager.lockPlayer')}
         >
             {isFixed ? <Lock size={14} fill="currentColor" /> : <Pin size={14} />}
-            {isFixed && (
-                <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                </span>
-            )}
         </button>
         <button onClick={handleRemove} onPointerDown={e => e.stopPropagation()} className="text-slate-400 hover:text-rose-500 p-1 rounded-lg hover:bg-rose-500/10 transition-colors">
           <Trash2 size={14} />
@@ -442,11 +456,11 @@ const PlayerCard = memo(({
     </div>
   );
 }, (prev, next) => {
-    // Custom comparison for high performance: Only re-render if player data or dragging state changes
     return (
         prev.player === next.player && 
         prev.locationId === next.locationId &&
-        prev.profiles === next.profiles // Map ref check (should be stable from hook)
+        prev.profiles === next.profiles &&
+        prev.isCompact === next.isCompact
     );
 });
 
@@ -500,7 +514,9 @@ const TeamColumn = memo(({
     onRevertProfile,
     onAddPlayer, 
     onToggleFixed, 
-    onRemove
+    onRemove,
+    usedColors,
+    isQueue = false
 }: { 
     id: string; 
     team: Team; 
@@ -515,6 +531,8 @@ const TeamColumn = memo(({
     onAddPlayer: (name: string) => void; 
     onToggleFixed: (playerId: string) => void; 
     onRemove: (id: string) => void; 
+    usedColors: Set<string>;
+    isQueue?: boolean;
 }) => {
   const { t } = useTranslation();
   const isFull = team.players.length >= 6;
@@ -522,20 +540,26 @@ const TeamColumn = memo(({
   
   const teamStrength = useMemo(() => calculateTeamStrength(team.players), [team.players]);
 
-  const colorConfig = TEAM_COLORS[team.color || 'slate'];
+  // Use Dynamic Resolver
+  const colorConfig = resolveTheme(team.color);
 
   const handleUpdateName = useCallback((n: string) => onUpdateTeamName(id, n), [onUpdateTeamName, id]);
   const handleUpdateColor = useCallback((c: TeamColor) => onUpdateTeamColor(id, c), [onUpdateTeamColor, id]);
 
+  // Visual Adjustment for Queue Teams (Faded, Smaller)
+  const fadeClass = isQueue 
+    ? 'opacity-70 hover:opacity-100 bg-opacity-50 dark:bg-opacity-30 border-dashed hover:border-solid scale-95 hover:scale-100 origin-top' 
+    : '';
+
   return (
-    <div ref={setNodeRef} className={`flex flex-col w-full h-fit ${colorConfig.bg} p-3 rounded-2xl ${colorConfig.border} border transition-all duration-300 ${isOver && !isFull ? `ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ${colorConfig.ring}` : ''}`}>
+    <div ref={setNodeRef} className={`flex flex-col w-full h-full ${colorConfig.bg} p-3 rounded-2xl ${colorConfig.border} border transition-all duration-300 ${isOver && !isFull ? `ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ${colorConfig.ring}` : ''} ${fadeClass}`}>
       <div className="flex flex-col mb-2 gap-2">
         <div className="flex items-start justify-between gap-2 border-b border-black/5 dark:border-white/5 pb-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className={`w-1.5 h-8 rounded-full flex-shrink-0 ${colorConfig.halo} shadow-[0_0_10px_currentColor] opacity-80`}></div>
                 <div className="flex flex-col min-w-0 flex-1">
                     <span className={`text-[9px] font-bold uppercase tracking-wider opacity-60 ${colorConfig.text}`}>{t('teamManager.teamLabel')}</span>
-                    <EditableTitle name={team.name} onSave={handleUpdateName} className={`font-black uppercase tracking-tight text-base ${colorConfig.text}`} />
+                    <EditableTitle name={team.name} onSave={handleUpdateName} className={`font-black uppercase tracking-tight ${isQueue ? 'text-sm' : 'text-base'} ${colorConfig.text}`} />
                 </div>
             </div>
             
@@ -547,11 +571,15 @@ const TeamColumn = memo(({
             </div>
         </div>
         
-        {/* Color Picker integrated smoothly */}
-        <ColorPicker selected={team.color || 'slate'} onChange={handleUpdateColor} />
+        {/* Color Picker with Unique Checks */}
+        <ColorPicker 
+            selected={team.color || 'slate'} 
+            onChange={handleUpdateColor} 
+            usedColors={usedColors}
+        />
       </div>
 
-      <div className="min-h-[60px] space-y-2 mt-1">
+      <div className={`flex-1 space-y-1.5 mt-1 ${isQueue ? 'min-h-[40px]' : 'min-h-[60px]'}`}>
         {team.players.length === 0 && <span className="text-xs text-slate-400 italic py-6 block text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">{t('teamManager.dragPlayersHere')}</span>}
         <SortableContextFixed items={team.players.map(p => p.id)} strategy={verticalListSortingStrategy}>
           {team.players.map(p => (
@@ -567,11 +595,12 @@ const TeamColumn = memo(({
                 onUpdateSkill={onUpdateSkill}
                 onSaveProfile={onSaveProfile}
                 onRevertProfile={onRevertProfile}
+                isCompact={isQueue}
             />
           ))}
         </SortableContextFixed>
       </div>
-      <AddPlayerInput onAdd={onAddPlayer} disabled={isFull} />
+      {!isQueue && <AddPlayerInput onAdd={onAddPlayer} disabled={isFull} />}
     </div>
   );
 });
@@ -636,6 +665,15 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
     [...props.courtA.players, ...props.courtB.players, ...props.queue.flatMap(t => t.players)].forEach(p => map.set(p.id, p));
     return map;
   }, [props.courtA, props.courtB, props.queue]);
+
+  // Determine Used Colors
+  const usedColors = useMemo(() => {
+      const set = new Set<string>();
+      if (props.courtA.color) set.add(props.courtA.color);
+      if (props.courtB.color) set.add(props.courtB.color);
+      props.queue.forEach(t => { if(t.color) set.add(t.color) });
+      return set;
+  }, [props.courtA.color, props.courtB.color, props.queue]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const player = playersById.get(event.active.id as string);
@@ -765,20 +803,22 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                 id="A" team={props.courtA}
                 {...props}
                 onUpdateSkill={props.onUpdatePlayerSkill} 
-                onAddPlayer={handleAddA} 
+                onAddPlayer={handleAddA}
+                usedColors={usedColors}
             />
             
             <TeamColumn 
                 id="B" team={props.courtB}
                 {...props}
                 onUpdateSkill={props.onUpdatePlayerSkill} 
-                onAddPlayer={handleAddB} 
+                onAddPlayer={handleAddB}
+                usedColors={usedColors}
             />
             
-            {/* Optimized Queue Column: Reduced padding to maximize card width */}
+            {/* Optimized Queue Column Layout */}
             <div className="w-full md:col-span-2 xl:col-span-1 bg-slate-100 dark:bg-white/[0.02] p-2 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col h-fit">
                 <h3 className="font-bold text-slate-500 dark:text-slate-400 mb-4 px-2 pt-2 text-xs uppercase tracking-widest flex items-center gap-2 flex-none"><div className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-600"></div>{t('teamManager.queue')}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-4">
+                <div className="flex flex-col gap-4">
                   {props.queue.length === 0 && <div className="text-center py-8 text-slate-400 italic text-sm border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl col-span-full">{t('teamManager.queueEmpty')}</div>}
                   {props.queue.map(team => (
                     <TeamColumn 
@@ -786,6 +826,8 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                         {...props}
                         onUpdateSkill={props.onUpdatePlayerSkill} 
                         onAddPlayer={_ => {}} // Queue teams don't add via input here
+                        usedColors={usedColors}
+                        isQueue={true}
                     />
                   ))}
                 </div>

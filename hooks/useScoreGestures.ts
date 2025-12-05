@@ -1,5 +1,3 @@
-
-
 import React, { useRef } from 'react';
 
 interface UseScoreGesturesProps {
@@ -106,9 +104,17 @@ export const useScoreGestures = ({
     startTime.current = null;
   };
 
+  // Add a dedicated click handler to swallow the ghost clicks aggressively.
+  // Since we rely on PointerEvents, the Click event is redundant and harmful here.
+  const handleClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+  };
+
   return {
     onPointerDown: handlePointerDown,
     onPointerUp: handlePointerUp,
-    onPointerCancel: handlePointerCancel
+    onPointerCancel: handlePointerCancel,
+    onClick: handleClick
   };
 };

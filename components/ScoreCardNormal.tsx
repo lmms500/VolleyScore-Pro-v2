@@ -1,3 +1,5 @@
+
+
 import React, { memo, useState, useCallback } from 'react';
 import { Team, TeamId, SkillType, GameConfig, TeamColor } from '../types';
 import { Volleyball, Zap, Timer, Skull, TrendingUp, Trophy } from 'lucide-react';
@@ -8,7 +10,7 @@ import { ScoreTicker } from './ui/ScoreTicker';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { layoutTransition, stampVariants } from '../utils/animations';
 import { ScoutModal } from './modals/ScoutModal';
-import { TEAM_COLORS } from '../utils/colors';
+import { resolveTheme } from '../utils/colors';
 
 interface ScoreCardNormalProps {
   teamId: TeamId;
@@ -86,7 +88,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
 
   // Resolve Dynamic Theme - Prioritize prop, fallback to team property, then slate
   const resolvedColor = colorTheme || team.color || 'slate';
-  const theme = TEAM_COLORS[resolvedColor];
+  const theme = resolveTheme(resolvedColor);
 
   const orderClass = reverseLayout ? (teamId === 'A' ? 'order-last' : 'order-first') : (teamId === 'A' ? 'order-first' : 'order-last');
   const timeoutsExhausted = timeouts >= 2;
@@ -155,7 +157,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             onClose={handleScoutClose} 
             team={team} 
             onConfirm={handleScoutConfirm}
-            colorTheme={team.color === 'rose' || team.color === 'amber' ? 'rose' : 'indigo'} 
+            colorTheme={team.color || 'indigo'} 
       />
       
       <div className="flex flex-col h-full w-full relative z-10 py-2 md:py-4 px-2 justify-between items-center">

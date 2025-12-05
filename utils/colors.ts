@@ -1,4 +1,3 @@
-
 import { TeamColor } from '../types';
 
 interface ColorTheme {
@@ -14,7 +13,7 @@ interface ColorTheme {
     gradient: string;       // Subtle gradient for cards
 }
 
-export const TEAM_COLORS: Record<TeamColor, ColorTheme> = {
+export const TEAM_COLORS: Record<string, ColorTheme> = {
     indigo: {
         text: 'text-indigo-600',
         textDark: 'dark:text-indigo-300',
@@ -50,18 +49,6 @@ export const TEAM_COLORS: Record<TeamColor, ColorTheme> = {
         crown: 'text-emerald-500',
         ring: 'ring-emerald-500',
         gradient: 'from-emerald-500/10 to-transparent'
-    },
-    amber: {
-        text: 'text-amber-600',
-        textDark: 'dark:text-amber-300',
-        bg: 'bg-amber-500/10',
-        bgDark: 'dark:bg-amber-500/20',
-        border: 'border-amber-500/30',
-        halo: 'bg-amber-500',
-        glow: 'shadow-[0_0_15px_rgba(245,158,11,0.5)]',
-        crown: 'text-amber-500',
-        ring: 'ring-amber-500',
-        gradient: 'from-amber-500/10 to-transparent'
     },
     sky: {
         text: 'text-sky-600',
@@ -113,4 +100,36 @@ export const TEAM_COLORS: Record<TeamColor, ColorTheme> = {
     }
 };
 
-export const COLOR_KEYS = Object.keys(TEAM_COLORS) as TeamColor[];
+export const COLOR_KEYS = Object.keys(TEAM_COLORS);
+
+/**
+ * Resolves a color string (preset key or hex code) into a full theme object.
+ * Supports Tailwind Arbitrary Values for Hex codes.
+ */
+export const resolveTheme = (color: TeamColor | undefined): ColorTheme => {
+    if (!color) return TEAM_COLORS['slate'];
+    
+    // 1. Check if it is a preset
+    if (TEAM_COLORS[color]) {
+        return TEAM_COLORS[color];
+    }
+
+    // 2. Assume it is a Hex Code (or any valid CSS color string)
+    // We attempt to generate valid arbitrary values. 
+    // Note: This relies on the JIT engine picking up these classes or the browser handling them if injected via style.
+    // For production builds without safe-listing, inline styles are safer, but we stick to the class interface here.
+    const safeColor = color.trim();
+    
+    return {
+        text: `text-[${safeColor}]`,
+        textDark: `dark:text-[${safeColor}]`,
+        bg: `bg-[${safeColor}]/10`,
+        bgDark: `dark:bg-[${safeColor}]/20`,
+        border: `border-[${safeColor}]/30`,
+        halo: `bg-[${safeColor}]`,
+        glow: `shadow-[0_0_15px_${safeColor}80]`, // Hex alpha approximation
+        crown: `text-[${safeColor}]`,
+        ring: `ring-[${safeColor}]`,
+        gradient: `from-[${safeColor}]/10 to-transparent`
+    };
+};

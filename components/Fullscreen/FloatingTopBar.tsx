@@ -1,9 +1,10 @@
 
+
 import React, { memo } from 'react';
 import { Volleyball, Timer, Skull, TrendingUp, Scale, Hash } from 'lucide-react';
 import { motion, AnimatePresence, LayoutGroup, Variants } from 'framer-motion';
 import { useTranslation } from '../../contexts/LanguageContext';
-import { TEAM_COLORS } from '../../utils/colors';
+import { resolveTheme } from '../../utils/colors';
 import { TeamColor } from '../../types';
 
 interface FloatingTopBarProps {
@@ -117,7 +118,7 @@ const TimeoutButton = memo<{
   onTimeout: () => void;
   color: TeamColor;
 }>(({ timeouts, onTimeout, color }) => {
-    const theme = TEAM_COLORS[color];
+    const theme = resolveTheme(color);
     return (
       <motion.button
         layout
@@ -148,7 +149,7 @@ const TeamInfoStealth = memo<{
   isSetPoint: boolean;
 }>(({ name, color, isServing, onSetServer, align, isMatchPoint, isSetPoint }) => {
   const { t } = useTranslation();
-  const theme = TEAM_COLORS[color];
+  const theme = resolveTheme(color);
   const hasBadge = isMatchPoint || isSetPoint;
 
   return (

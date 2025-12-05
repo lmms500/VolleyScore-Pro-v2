@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -7,7 +9,7 @@ import { useTranslation } from '../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ResultCard } from '../Share/ResultCard';
 import { useSocialShare } from '../../hooks/useSocialShare';
-import { TEAM_COLORS } from '../../utils/colors';
+import { resolveTheme } from '../../utils/colors';
 
 interface MatchOverModalProps {
   isOpen: boolean;
@@ -31,14 +33,19 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   const colorB = state.teamBRoster.color || 'rose';
   
   const winnerColorKey = isA ? colorA : colorB;
-  const winnerTheme = TEAM_COLORS[winnerColorKey];
+  const winnerTheme = resolveTheme(winnerColorKey);
   
-  // Mapping for background blur
-  const bgColors: any = {
-      indigo: 'bg-indigo-600', rose: 'bg-rose-600', emerald: 'bg-emerald-600', amber: 'bg-amber-600', 
-      sky: 'bg-sky-600', violet: 'bg-violet-600', slate: 'bg-slate-600', fuchsia: 'bg-fuchsia-600'
+  // Mapping for background blur - using standard Tailwind Colors since Hex arbitrary values in bg- are harder to map dynamically for simple strings
+  // But we can use the hex directly if it is one
+  const getBgColor = (c: string) => {
+      if (c.startsWith('#')) return `bg-[${c}]`;
+      const mapping: any = {
+        indigo: 'bg-indigo-600', rose: 'bg-rose-600', emerald: 'bg-emerald-600', amber: 'bg-amber-600', 
+        sky: 'bg-sky-600', violet: 'bg-violet-600', slate: 'bg-slate-600', fuchsia: 'bg-fuchsia-600'
+      };
+      return mapping[c] || 'bg-indigo-600';
   };
-  const winnerBgColor = bgColors[winnerColorKey];
+  const winnerBgColor = getBgColor(winnerColorKey);
 
   const stolenIds = new Set(report?.stolenPlayers.map(p => p.id) || []);
   const coreSquad = report?.incomingTeam.players.filter(p => !stolenIds.has(p.id)) || [];

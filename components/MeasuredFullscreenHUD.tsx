@@ -1,9 +1,10 @@
 
+
 import React, { memo } from 'react';
 import { HudPlacement } from '../hooks/useHudMeasure';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { TeamColor } from '../types';
-import { TEAM_COLORS } from '../utils/colors';
+import { resolveTheme } from '../utils/colors';
 
 interface MeasuredFullscreenHUDProps {
   placement: HudPlacement;
@@ -25,7 +26,7 @@ const flipVariants: Variants = {
 };
 
 const SetNumber = memo(({ value, color }: { value: number, color: TeamColor }) => {
-    const theme = TEAM_COLORS[color];
+    const theme = resolveTheme(color);
     // We construct a specific text style here for the HUD
     const textColor = color === 'rose' || color === 'amber' || color === 'fuchsia'
         ? `${theme.text} drop-shadow-[0_0_20px_currentColor] brightness-125 saturate-150`

@@ -1,11 +1,12 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { GameState } from '../../types';
-import { Trophy, RefreshCw, ArrowRight, UserPlus, ShieldAlert, Users, RotateCcw, Terminal, ChevronDown, ChevronUp, Undo2 } from 'lucide-react';
+import { GameState, TeamId } from '../../types';
+import { Trophy, RefreshCw, ArrowRight, UserPlus, ShieldAlert, Users, RotateCcw, Terminal, ChevronDown, ChevronUp, Undo2, Share2, Loader2 } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ResultCard } from '../Share/ResultCard';
+import { useSocialShare } from '../../hooks/useSocialShare';
 
 interface MatchOverModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ interface MatchOverModalProps {
 export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, onRotate, onReset, onUndo }) => {
   const { t } = useTranslation();
   const [showLogs, setShowLogs] = useState(false);
+  const { isSharing, shareResult } = useSocialShare();
+
   const winnerName = state.matchWinner === 'A' ? state.teamAName : state.teamBName;
   const isA = state.matchWinner === 'A';
   const report = state.rotationReport;
@@ -27,6 +30,42 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   const reinforcements = report?.stolenPlayers || [];
   const logs = report?.logs || [];
 
+  // --- CALCULATE MVP (Highest Points) ---
+  const mvpData = useMemo(() => {
+     if (!state.matchLog || state.matchLog.length === 0) return null;
+     
+     const pointsMap = new Map<string, { total: number, name: string, team: TeamId }>();
+     
+     // Need to look up names since matchLog stores IDs (sometimes)
+     // Or we assume the names in matchLog if we had them, but matchLog primarily has metadata
+     // We will scan rosters to match IDs to names
+     const playerMap = new Map<string, { name: string, team: TeamId }>();
+     state.teamARoster.players.forEach(p => playerMap.set(p.id, { name: p.name, team: 'A' }));
+     state.teamBRoster.players.forEach(p => playerMap.set(p.id, { name: p.name, team: 'B' }));
+
+     state.matchLog.forEach(log => {
+         if (log.type === 'POINT' && log.playerId && playerMap.has(log.playerId)) {
+             const info = playerMap.get(log.playerId)!;
+             const current = pointsMap.get(log.playerId) || { total: 0, name: info.name, team: info.team };
+             current.total += 1;
+             pointsMap.set(log.playerId, current);
+         }
+     });
+
+     if (pointsMap.size === 0) return null;
+
+     // Sort by points desc
+     const sorted = Array.from(pointsMap.values()).sort((a, b) => b.total - a.total);
+     const top = sorted[0];
+
+     return top.total > 0 ? { name: top.name, totalPoints: top.total, team: top.team } : null;
+
+  }, [state.matchLog, state.teamARoster, state.teamBRoster]);
+
+  const handleShare = () => {
+      shareResult('social-share-card', `volleyscore_result_${Date.now()}.png`);
+  };
+
   return (
     <Modal 
       isOpen={isOpen} 
@@ -35,6 +74,21 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
       showCloseButton={false}
       persistent={true}
     >
+      {/* HIDDEN RENDER TARGET */}
+      {isOpen && (
+          <ResultCard 
+             teamAName={state.teamAName}
+             teamBName={state.teamBName}
+             setsA={state.setsA}
+             setsB={state.setsB}
+             winner={state.matchWinner}
+             setsHistory={state.history}
+             durationSeconds={state.matchDurationSeconds}
+             date={new Date().toLocaleDateString()}
+             mvp={mvpData}
+          />
+      )}
+
       <div className="flex flex-col items-center text-center space-y-6">
         
         <div className="relative group mt-2">
@@ -51,6 +105,17 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
             <span className="w-1 h-6 bg-black/10 dark:bg-white/10 rounded-full"></span>
             <span className={!isA ? 'text-rose-500 dark:text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]' : 'text-slate-500 dark:text-slate-600'}>{state.setsB}</span>
         </div>
+
+        {/* SHARE BUTTON */}
+        <Button 
+            onClick={handleShare} 
+            disabled={isSharing}
+            variant="secondary"
+            className="w-full bg-gradient-to-r from-indigo-500/10 to-rose-500/10 hover:from-indigo-500/20 hover:to-rose-500/20 border-white/10"
+        >
+            {isSharing ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
+            {isSharing ? 'Generating Image...' : 'Share Result'}
+        </Button>
 
         {report && (
             <div className="w-full bg-black/[0.03] dark:bg-white/[0.03] rounded-2xl p-4 text-left border border-black/5 dark:border-white/5 space-y-3 backdrop-blur-sm">

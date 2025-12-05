@@ -11,33 +11,41 @@ export const ReloadPrompt: React.FC = () => {
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       // Registrar SW manualmente para ter controle total dos eventos
-      // Isso substitui o 'virtual:pwa-register/react' que estava causando erro
-      navigator.serviceWorker.register('/sw.js').then((reg) => {
-        setRegistration(reg);
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => {
+          setRegistration(reg);
 
-        // Se já existe um worker esperando (atualização baixada em background)
-        if (reg.waiting) {
-            setNeedRefresh(true);
-        }
-
-        // Monitorar novas atualizações
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed') {
-                if (navigator.serviceWorker.controller) {
-                  // Nova versão disponível (já havia um SW ativo antes)
-                  setNeedRefresh(true);
-                } else {
-                  // Conteúdo cacheado para offline (primeira vez)
-                  setOfflineReady(true);
-                }
-              }
-            });
+          // Se já existe um worker esperando (atualização baixada em background)
+          if (reg.waiting) {
+              setNeedRefresh(true);
           }
+
+          // Monitorar novas atualizações
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    // Nova versão disponível (já havia um SW ativo antes)
+                    setNeedRefresh(true);
+                  } else {
+                    // Conteúdo cacheado para offline (primeira vez)
+                    setOfflineReady(true);
+                  }
+                }
+              });
+            }
+          });
+        })
+        .catch(err => {
+            // Silence specific origin errors common in preview environments
+            if (err.message && (err.message.includes('origin') || err.message.includes('scriptURL'))) {
+                console.warn('Service Worker registration skipped: Origin mismatch in preview environment.');
+            } else {
+                console.error('SW Register Error:', err);
+            }
         });
-      }).catch(err => console.error('SW Register Error:', err));
 
       // Recarregar a página quando o novo SW assumir o controle
       let refreshing = false;

@@ -12,21 +12,22 @@ export const useSocialShare = () => {
         throw new Error(`Element with id ${elementId} not found`);
       }
 
-      // 1. Generate PNG (High Quality)
-      // Force font loading check or simple delay to ensure rendering
+      // 1. Force font loading check or wait a tick to ensure rendering
       await document.fonts.ready;
       
+      // 2. Generate PNG with High Quality settings
       const dataUrl = await toPng(node, { 
         cacheBust: true, 
-        pixelRatio: 3, // Very High Res for crisp text
-        backgroundColor: '#020617' // Ensure bg is solid
+        pixelRatio: 2, // 2x is usually enough for retina and sharing, 3x might be too heavy for mobile memory
+        backgroundColor: '#020617', // Ensure bg is solid deep slate
+        skipAutoScale: true
       });
 
-      // 2. Convert to Blob
+      // 3. Convert to Blob
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], fileName, { type: 'image/png' });
 
-      // 3. Share or Download
+      // 4. Share or Download
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
             await navigator.share({
@@ -48,7 +49,6 @@ export const useSocialShare = () => {
 
     } catch (error) {
       console.error('Social Share Failed:', error);
-      // Optional: Toast error here
     } finally {
       setIsSharing(false);
     }

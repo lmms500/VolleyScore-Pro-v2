@@ -113,6 +113,8 @@
     "title": "Match Result",
     "wins": "Wins the Match",
     "nextGameButton": "Start Next Game",
+    "share": "Share Result",
+    "generating": "Creating Image...",
     "rotationReport": {
       "title": "Rotation Report",
       "entering": "{teamName} Entering",

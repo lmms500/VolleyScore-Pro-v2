@@ -63,7 +63,9 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   }, [state.matchLog, state.teamARoster, state.teamBRoster]);
 
   const handleShare = () => {
-      shareResult('social-share-card', `volleyscore_result_${Date.now()}.png`);
+      // Assuming 'social-share-card' is the ID in ResultCard.tsx
+      const dateStr = new Date().toISOString().split('T')[0];
+      shareResult('social-share-card', `volleyscore_result_${dateStr}.png`);
   };
 
   return (
@@ -74,7 +76,7 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
       showCloseButton={false}
       persistent={true}
     >
-      {/* HIDDEN RENDER TARGET */}
+      {/* HIDDEN RENDER TARGET FOR SHARING */}
       {isOpen && (
           <ResultCard 
              teamAName={state.teamAName}
@@ -105,17 +107,6 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
             <span className="w-1 h-6 bg-black/10 dark:bg-white/10 rounded-full"></span>
             <span className={!isA ? 'text-rose-500 dark:text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]' : 'text-slate-500 dark:text-slate-600'}>{state.setsB}</span>
         </div>
-
-        {/* SHARE BUTTON */}
-        <Button 
-            onClick={handleShare} 
-            disabled={isSharing}
-            variant="secondary"
-            className="w-full bg-gradient-to-r from-indigo-500/10 to-rose-500/10 hover:from-indigo-500/20 hover:to-rose-500/20 border-white/10"
-        >
-            {isSharing ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
-            {isSharing ? 'Generating Image...' : 'Share Result'}
-        </Button>
 
         {report && (
             <div className="w-full bg-black/[0.03] dark:bg-white/[0.03] rounded-2xl p-4 text-left border border-black/5 dark:border-white/5 space-y-3 backdrop-blur-sm">
@@ -204,10 +195,22 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
         )}
 
         <div className="flex flex-col w-full gap-3">
-            <Button onClick={onRotate} size="lg" className="w-full shadow-emerald-500/10 bg-emerald-600 hover:bg-emerald-500 border-t border-white/20">
-                <RefreshCw size={18} />
-                {t('matchOver.nextGameButton')}
-            </Button>
+            <div className="flex gap-3">
+                 <Button 
+                    onClick={handleShare} 
+                    disabled={isSharing}
+                    variant="secondary"
+                    className="flex-shrink-0 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 hover:text-indigo-400 border-indigo-500/20"
+                    title={t('matchOver.share')}
+                >
+                    {isSharing ? <Loader2 size={20} className="animate-spin" /> : <Share2 size={20} />}
+                </Button>
+                
+                <Button onClick={onRotate} size="lg" className="w-full shadow-emerald-500/10 bg-emerald-600 hover:bg-emerald-500 border-t border-white/20">
+                    <RefreshCw size={18} />
+                    {t('matchOver.nextGameButton')}
+                </Button>
+            </div>
             
             <div className="grid grid-cols-2 gap-3">
                 <Button onClick={onUndo} size="md" variant="secondary" className="w-full">

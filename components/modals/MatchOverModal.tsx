@@ -106,17 +106,6 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
             <span className={!isA ? 'text-rose-500 dark:text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]' : 'text-slate-500 dark:text-slate-600'}>{state.setsB}</span>
         </div>
 
-        {/* SHARE BUTTON */}
-        <Button 
-            onClick={handleShare} 
-            disabled={isSharing}
-            variant="secondary"
-            className="w-full bg-gradient-to-r from-indigo-500/10 to-rose-500/10 hover:from-indigo-500/20 hover:to-rose-500/20 border-white/10"
-        >
-            {isSharing ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
-            {isSharing ? 'Generating Image...' : 'Share Result'}
-        </Button>
-
         {report && (
             <div className="w-full bg-black/[0.03] dark:bg-white/[0.03] rounded-2xl p-4 text-left border border-black/5 dark:border-white/5 space-y-3 backdrop-blur-sm">
                 <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
@@ -203,11 +192,23 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
             </div>
         )}
 
+        {/* --- BUTTONS --- */}
         <div className="flex flex-col w-full gap-3">
-            <Button onClick={onRotate} size="lg" className="w-full shadow-emerald-500/10 bg-emerald-600 hover:bg-emerald-500 border-t border-white/20">
-                <RefreshCw size={18} />
-                {t('matchOver.nextGameButton')}
-            </Button>
+            <div className="flex gap-3">
+                <Button 
+                    onClick={handleShare} 
+                    disabled={isSharing}
+                    variant="secondary"
+                    className="flex-1 bg-gradient-to-r from-indigo-500/10 to-rose-500/10 hover:from-indigo-500/20 hover:to-rose-500/20 border-white/10"
+                >
+                    {isSharing ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
+                    <span className="whitespace-nowrap">{isSharing ? t('common.generating') : t('common.share')}</span>
+                </Button>
+                <Button onClick={onRotate} size="lg" className="flex-[2] shadow-emerald-500/10 bg-emerald-600 hover:bg-emerald-500 border-t border-white/20">
+                    <RefreshCw size={18} />
+                    {t('matchOver.nextGameButton')}
+                </Button>
+            </div>
             
             <div className="grid grid-cols-2 gap-3">
                 <Button onClick={onUndo} size="md" variant="secondary" className="w-full">

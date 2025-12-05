@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 
 interface UseScoreGesturesProps {
@@ -9,9 +10,10 @@ interface UseScoreGesturesProps {
 }
 
 // Constants for gesture detection
-const SWIPE_THRESHOLD = 30; // Min distance to be a swipe
-const TAP_MAX_DURATION_MS = 200; // Max time for a tap
-const TAP_MAX_MOVE = 10; // Max movement for a tap
+// UPDATED: Relaxed thresholds to ensure reliability on mobile touchscreens
+const SWIPE_THRESHOLD = 50; // Min distance to be a swipe (increased to differentiate from sloppy taps)
+const TAP_MAX_DURATION_MS = 600; // Max time for a tap (increased from 200ms to allow slower presses)
+const TAP_MAX_MOVE = 25; // Max movement for a tap (increased from 10px to allow finger jitter)
 
 export const useScoreGestures = ({ 
   onAdd, 
@@ -61,7 +63,7 @@ export const useScoreGestures = ({
     const absDeltaX = Math.abs(deltaX);
     const absDeltaY = Math.abs(deltaY);
 
-    // Rule 1: TAP (Fast & Minimal Movement)
+    // Rule 1: TAP (Relaxed)
     if (deltaTime < TAP_MAX_DURATION_MS && absDeltaX < TAP_MAX_MOVE && absDeltaY < TAP_MAX_MOVE) {
       onAdd();
     } 

@@ -7,17 +7,18 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt', // Mudado para 'prompt' para controlar a atualização
-      injectRegister: null, // Desabilita injeção automática (faremos manualmente no componente)
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'], 
+      registerType: 'prompt',
+      injectRegister: null, // Managed manually in ReloadPrompt.tsx for better control
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'logo.svg'],
       devOptions: {
-        enabled: true
+        enabled: true,
+        type: 'module',
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,json,ico,png}'], 
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,json}'],
         cleanupOutdatedCaches: true,
-        clientsClaim: true, 
-        skipWaiting: false, // Importante: FALSE para permitir que o usuário escolha quando atualizar
+        clientsClaim: true,
+        skipWaiting: false, // Wait for user interaction to skip waiting (via ReloadPrompt)
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -26,7 +27,7 @@ export default defineConfig({
               cacheName: 'google-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -40,7 +41,7 @@ export default defineConfig({
               cacheName: 'gstatic-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -53,17 +54,15 @@ export default defineConfig({
         name: 'VolleyScore Pro 2',
         short_name: 'VolleyScore',
         description: 'Professional Volleyball Scoreboard & Team Manager',
-        id: '/', 
         theme_color: '#020617',
         background_color: '#020617',
-        display: 'fullscreen',
-        orientation: 'landscape',
+        display: 'standalone',
+        orientation: 'any',
         start_url: '/',
-        categories: ['sports', 'utilities'],
         icons: [
           {
-            src: 'icon.svg',
-            sizes: '192x192 512x512', 
+            src: 'logo.svg',
+            sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any maskable'
           },
@@ -78,13 +77,12 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
-          },
+          }
         ]
       }
     })
   ],
   build: {
-    minify: 'esbuild', 
-    sourcemap: false, 
+    target: 'esnext',
   }
 });

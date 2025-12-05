@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#020617" />
     <meta name="description" content="Advanced Volleyball Scoreboard & Team Management PWA with rotation logic, sudden death rules, and neo-glass UI.">
     
-    <!-- Security: Content Security Policy (Dev-Unrestricted for Sandbox Compatibility) -->
+    <!-- Security: Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;
       script-src * 'unsafe-inline' 'unsafe-eval' data: blob:;
@@ -22,14 +22,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="VolleyScore" />
     
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <link rel="mask-icon" href="/logo.svg" color="#6366f1" />
     
     <title>VolleyScore Pro 2</title>
+    
+    <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" crossorigin="anonymous">
+    
     <style>
       /* PWA & Mobile Optimizations - True Fullscreen Reset */
       html, body {
@@ -73,29 +79,29 @@
         scrollbar-width: none;
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-    "vite": "https://aistudiocdn.com/vite@^7.2.4",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
-    "vite-plugin-pwa": "https://aistudiocdn.com/vite-plugin-pwa@^1.1.0",
-    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
-    "@dnd-kit/sortable": "https://aistudiocdn.com/@dnd-kit/sortable@^10.0.0",
-    "@dnd-kit/utilities": "https://aistudiocdn.com/@dnd-kit/utilities@^3.2.2",
-    "@dnd-kit/core": "https://aistudiocdn.com/@dnd-kit/core@^6.3.1",
-    "framer-motion": "https://aistudiocdn.com/framer-motion@^11.0.0",
-    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
-    "zustand/": "https://aistudiocdn.com/zustand@^5.0.9/",
-    "zustand": "https://aistudiocdn.com/zustand@^5.0.9",
-    "html-to-image": "https://aistudiocdn.com/html-to-image@^1.11.13"
-  }
-}
-</script>
-</head>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/",
+        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+        "vite": "https://aistudiocdn.com/vite@^7.2.4",
+        "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+        "vite-plugin-pwa": "https://aistudiocdn.com/vite-plugin-pwa@^1.1.0",
+        "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
+        "@dnd-kit/sortable": "https://aistudiocdn.com/@dnd-kit/sortable@^10.0.0",
+        "@dnd-kit/utilities": "https://aistudiocdn.com/@dnd-kit/utilities@^3.2.2",
+        "@dnd-kit/core": "https://aistudiocdn.com/@dnd-kit/core@^6.3.1",
+        "framer-motion": "https://aistudiocdn.com/framer-motion@^11.0.0",
+        "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+        "zustand/": "https://aistudiocdn.com/zustand@^5.0.9/",
+        "zustand": "https://aistudiocdn.com/zustand@^5.0.9",
+        "html-to-image": "https://aistudiocdn.com/html-to-image@^1.11.13"
+      }
+    }
+    </script>
+  </head>
   <body class="bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 antialiased h-screen overflow-hidden selection:bg-indigo-500 selection:text-white">
     <div class="bg-noise"></div>
     <div id="root" class="h-full w-full flex flex-col relative z-10"></div>

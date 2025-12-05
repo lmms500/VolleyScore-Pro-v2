@@ -1,7 +1,7 @@
 
 
 import React, { useState, memo, useMemo, useRef, useCallback } from 'react';
-import { TeamId, Team, SkillType, GameConfig } from '../types';
+import { TeamId, Team, SkillType, GameConfig, TeamColor } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { ScoreTicker } from './ui/ScoreTicker';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,7 +20,7 @@ interface ScoreCardFullscreenProps {
   isSetPoint: boolean;
   isDeuce?: boolean;
   inSuddenDeath?: boolean;
-  colorTheme?: any; // Deprecated
+  colorTheme?: TeamColor; 
   isLocked?: boolean;
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
@@ -116,12 +116,13 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
   teamId, team, score, onAdd, onSubtract,
   isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, 
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
-  scoreRefCallback, isServing, alignment = 'left', config
+  scoreRefCallback, isServing, alignment = 'left', config, colorTheme
 }) => {
   const [isPressed, setIsPressed] = useState(false);
   const [showScout, setShowScout] = useState(false);
-  const numberRef = useRef<HTMLDivElement>(null);
+  const [isInteractionLocked, setIsInteractionLocked] = useState(false);
   
+  const numberRef = useRef<HTMLDivElement>(null);
   const audio = useGameAudio(config);
 
   const handleStart = useCallback(() => {
@@ -134,8 +135,18 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
     onInteractionEnd?.();
   }, [onInteractionEnd]);
 
+  // When modal closes, enforce cooldown
+  const handleScoutClose = useCallback(() => {
+    setShowScout(false);
+    setIsInteractionLocked(true);
+    const t = setTimeout(() => setIsInteractionLocked(false), 300);
+    return () => clearTimeout(t);
+  }, []);
+
   // Audio & Scout Logic Wrappers
   const handleAddWrapper = useCallback(() => {
+      if (isInteractionLocked) return;
+
       if (config.enablePlayerStats) {
           audio.playTap();
           setShowScout(true);
@@ -143,7 +154,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
           onAdd(teamId);
           // Audio handled in App.tsx
       }
-  }, [config.enablePlayerStats, onAdd, teamId, audio]);
+  }, [config.enablePlayerStats, onAdd, teamId, audio, isInteractionLocked]);
 
   const handleScoutConfirm = useCallback((pid: string, skill: SkillType) => {
       onAdd(teamId, pid, skill);
@@ -158,13 +169,14 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
   const gestureHandlers = useScoreGestures({
     onAdd: handleAddWrapper, 
     onSubtract: handleSubtractWrapper, 
-    isLocked, 
+    isLocked: isLocked || isInteractionLocked, 
     onInteractionStart: handleStart, 
     onInteractionEnd: handleEnd
   });
 
   // Resolve Theme
-  const theme = TEAM_COLORS[team.color || 'slate'];
+  const resolvedColor = colorTheme || team.color || 'slate';
+  const theme = TEAM_COLORS[resolvedColor];
 
   const isCritical = isMatchPoint || isSetPoint;
   
@@ -189,7 +201,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
         {/* Render ScoutModal outside the gesture container to isolate events */}
         <ScoutModal 
             isOpen={showScout}
-            onClose={() => setShowScout(false)}
+            onClose={handleScoutClose}
             team={team}
             onConfirm={handleScoutConfirm}
             colorTheme={team.color === 'rose' || team.color === 'amber' ? 'rose' : 'indigo'} // Fallback for modal

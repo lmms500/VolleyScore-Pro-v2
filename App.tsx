@@ -270,8 +270,10 @@ function App() {
 
   const setsLeft = state.swappedSides ? state.setsB : state.setsA;
   const setsRight = state.swappedSides ? state.setsA : state.setsB;
-  const colorLeft = state.swappedSides ? 'rose' : 'indigo';
-  const colorRight = state.swappedSides ? 'indigo' : 'rose';
+  
+  // DYNAMIC COLOR RESOLUTION
+  const colorLeft = state.swappedSides ? state.teamBRoster.color : state.teamARoster.color;
+  const colorRight = state.swappedSides ? state.teamARoster.color : state.teamBRoster.color;
   
   return (
     <ErrorBoundary>
@@ -440,7 +442,7 @@ function App() {
                             isDeuce={game.isDeuce}
                             inSuddenDeath={state.inSuddenDeath}
                             setsNeededToWin={game.setsNeededToWin}
-                            colorTheme="indigo"
+                            colorTheme={state.teamARoster.color} // Using team color directly
                             isLocked={interactingTeam !== null && interactingTeam !== 'A'}
                             onInteractionStart={handleInteractionStartA}
                             onInteractionEnd={handleInteractionEnd}
@@ -471,7 +473,7 @@ function App() {
                             isDeuce={game.isDeuce}
                             inSuddenDeath={state.inSuddenDeath}
                             setsNeededToWin={game.setsNeededToWin}
-                            colorTheme="rose"
+                            colorTheme={state.teamBRoster.color} // Using team color directly
                             isLocked={interactingTeam !== null && interactingTeam !== 'B'}
                             onInteractionStart={handleInteractionStartB}
                             onInteractionEnd={handleInteractionEnd}

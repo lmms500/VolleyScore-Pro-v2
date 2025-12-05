@@ -1,13 +1,16 @@
+
 import React, { memo } from 'react';
 import { HudPlacement } from '../hooks/useHudMeasure';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { TeamColor } from '../types';
+import { TEAM_COLORS } from '../utils/colors';
 
 interface MeasuredFullscreenHUDProps {
   placement: HudPlacement;
   setsLeft: number;
   setsRight: number;
-  colorLeft: 'indigo' | 'rose';
-  colorRight: 'indigo' | 'rose';
+  colorLeft: TeamColor;
+  colorRight: TeamColor;
 }
 
 const flipTransition = {
@@ -21,10 +24,12 @@ const flipVariants: Variants = {
   exit: { rotateY: 90, opacity: 0, scale: 0.95, transition: flipTransition }
 };
 
-const SetNumber = memo(({ value, color }: { value: number, color: 'indigo' | 'rose' }) => {
-    const textColor = color === 'indigo' 
-        ? 'text-indigo-400 drop-shadow-[0_0_20px_rgba(99,102,241,0.5)]' 
-        : 'text-rose-500 drop-shadow-[0_0_20px_rgba(244,63,94,0.5)] brightness-125 saturate-150';
+const SetNumber = memo(({ value, color }: { value: number, color: TeamColor }) => {
+    const theme = TEAM_COLORS[color];
+    // We construct a specific text style here for the HUD
+    const textColor = color === 'rose' || color === 'amber' || color === 'fuchsia'
+        ? `${theme.text} drop-shadow-[0_0_20px_currentColor] brightness-125 saturate-150`
+        : `${theme.text} drop-shadow-[0_0_20px_currentColor]`;
 
     return (
         <div className="w-[80px] flex justify-center items-center">

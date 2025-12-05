@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -24,6 +23,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { TEAM_COLORS, COLOR_KEYS } from '../../utils/colors';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const SortableContextFixed = SortableContext as any;
 const DragOverlayFixed = DragOverlay as any;
@@ -81,21 +81,44 @@ const SkillSelector = memo(({ level, onChange }: { level: number, onChange: (l: 
     );
 });
 
+// PREMIUM COLOR PICKER - Minimalism & Animations
 const ColorPicker = memo(({ selected, onChange }: { selected: TeamColor, onChange: (c: TeamColor) => void }) => {
     return (
-        <div className="flex gap-1.5 flex-wrap py-1">
-            {COLOR_KEYS.map(color => (
-                 <button
-                    key={color}
-                    onClick={() => onChange(color)}
-                    className={`
-                        w-5 h-5 rounded-full transition-all border
-                        ${TEAM_COLORS[color].bg.replace('/10', '')} 
-                        ${selected === color ? 'ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 border-transparent scale-110' : 'border-black/5 hover:scale-105 opacity-60 hover:opacity-100'}
-                    `}
-                    title={color.charAt(0).toUpperCase() + color.slice(1)}
-                 />
-            ))}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2 mask-linear-fade">
+            <AnimatePresence>
+            {COLOR_KEYS.map(color => {
+                 const isSelected = selected === color;
+                 const theme = TEAM_COLORS[color];
+                 
+                 return (
+                     <motion.button
+                        key={color}
+                        onClick={() => onChange(color)}
+                        initial={false}
+                        animate={{ 
+                            scale: isSelected ? 1.1 : 1,
+                            opacity: isSelected ? 1 : 0.6
+                        }}
+                        whileHover={{ scale: 1.15, opacity: 1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className={`
+                            relative w-6 h-6 rounded-full transition-all flex items-center justify-center shrink-0
+                            ${theme.bg.replace('/10', '')}
+                            ${isSelected ? 'ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ring-slate-400 dark:ring-slate-500' : ''}
+                        `}
+                        title={color.charAt(0).toUpperCase() + color.slice(1)}
+                     >
+                        {isSelected && (
+                            <motion.div 
+                                layoutId="activeColorIndicator"
+                                className="w-2.5 h-2.5 bg-white rounded-full shadow-sm"
+                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                            />
+                        )}
+                     </motion.button>
+                 );
+            })}
+            </AnimatePresence>
         </div>
     );
 });
@@ -450,29 +473,29 @@ const TeamColumn = memo(({
 
   return (
     <div ref={setNodeRef} className={`flex flex-col w-full h-fit ${colorConfig.bg} p-3 rounded-2xl ${colorConfig.border} border transition-all duration-300 ${isOver && !isFull ? `ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ${colorConfig.ring}` : ''}`}>
-      <div className="flex flex-col mb-3 pb-2 border-b border-black/5 dark:border-white/5 gap-2">
-        <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col mb-2 gap-2">
+        <div className="flex items-start justify-between gap-2 border-b border-black/5 dark:border-white/5 pb-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className={`w-1.5 h-6 rounded-full flex-shrink-0 ${colorConfig.halo}`}></div>
+                <div className={`w-1.5 h-8 rounded-full flex-shrink-0 ${colorConfig.halo} shadow-[0_0_10px_currentColor] opacity-80`}></div>
                 <div className="flex flex-col min-w-0 flex-1">
                     <span className={`text-[9px] font-bold uppercase tracking-wider opacity-60 ${colorConfig.text}`}>{t('teamManager.teamLabel')}</span>
-                    <EditableTitle name={team.name} onSave={handleUpdateName} className={`font-black uppercase tracking-tight text-sm ${colorConfig.text}`} />
+                    <EditableTitle name={team.name} onSave={handleUpdateName} className={`font-black uppercase tracking-tight text-base ${colorConfig.text}`} />
                 </div>
             </div>
             
             <div className="flex flex-col items-end flex-shrink-0">
-                <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white dark:bg-black/20 ${colorConfig.text} flex items-center gap-1 shadow-sm border border-black/5 dark:border-white/5 mb-0.5`}>
+                <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-black/20 ${colorConfig.text} flex items-center gap-1 shadow-sm border border-black/5 dark:border-white/5 mb-0.5`}>
                     <Star size={10} className="fill-current" /> {teamStrength}
                 </div>
                 <span className={`${isFull ? 'text-rose-500 dark:text-rose-400' : 'text-slate-400'} text-[10px] font-bold`}>{team.players.length}/6</span>
             </div>
         </div>
         
-        {/* Color Picker inside the card header */}
+        {/* Color Picker integrated smoothly */}
         <ColorPicker selected={team.color || 'slate'} onChange={handleUpdateColor} />
       </div>
 
-      <div className="min-h-[60px] space-y-2">
+      <div className="min-h-[60px] space-y-2 mt-1">
         {team.players.length === 0 && <span className="text-xs text-slate-400 italic py-6 block text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">{t('teamManager.dragPlayersHere')}</span>}
         <SortableContextFixed items={team.players.map(p => p.id)} strategy={verticalListSortingStrategy}>
           {team.players.map(p => (

@@ -1,7 +1,7 @@
 
 
 import React, { memo, useState, useCallback } from 'react';
-import { Team, TeamId, SkillType, GameConfig } from '../types';
+import { Team, TeamId, SkillType, GameConfig, TeamColor } from '../types';
 import { Volleyball, Zap, Timer, Skull, TrendingUp, Trophy } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -29,7 +29,7 @@ interface ScoreCardNormalProps {
   inSuddenDeath?: boolean;
   reverseLayout?: boolean; 
   setsNeededToWin: number;
-  colorTheme?: any; // Deprecated but kept for type compatibility if needed upstream
+  colorTheme?: TeamColor; 
   isLocked?: boolean;
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
@@ -39,14 +39,27 @@ interface ScoreCardNormalProps {
 export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
   teamId, team, score, setsWon, isServing, onAdd, onSubtract, onSetServer, timeouts, onTimeout, 
   isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, reverseLayout, setsNeededToWin, 
-  isLocked = false, onInteractionStart, onInteractionEnd, config
+  isLocked = false, onInteractionStart, onInteractionEnd, config, colorTheme
 }) => {
   const { t } = useTranslation();
   const audio = useGameAudio(config);
+  
   const [showScout, setShowScout] = useState(false);
+  const [isInteractionLocked, setIsInteractionLocked] = useState(false);
+
+  // When modal closes, enforce a short cooldown to prevent "ghost clicks" or rapid double-taps
+  // from bypassing the modal logic for the next point.
+  const handleScoutClose = useCallback(() => {
+     setShowScout(false);
+     setIsInteractionLocked(true);
+     const t = setTimeout(() => setIsInteractionLocked(false), 300);
+     return () => clearTimeout(t);
+  }, []);
 
   // Audio Wrappers
   const handleAddWrapper = useCallback(() => {
+    if (isInteractionLocked) return;
+
     // If scout is enabled, sound plays on scout confirm or in App.tsx (we disable duplicate sound here)
     if (config.enablePlayerStats) {
         audio.playTap();
@@ -56,7 +69,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
         onAdd(teamId);
         // Sound is handled by App.tsx observing state or callback wrapper to avoid double triggers
     }
-  }, [config.enablePlayerStats, onAdd, teamId, audio]);
+  }, [config.enablePlayerStats, onAdd, teamId, audio, isInteractionLocked]);
 
   const handleScoutConfirm = useCallback((pid: string, skill: SkillType) => {
     onAdd(teamId, pid, skill);
@@ -71,11 +84,14 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
   const gestureHandlers = useScoreGestures({
     onAdd: handleAddWrapper, 
     onSubtract: handleSubtractWrapper, 
-    isLocked, onInteractionStart, onInteractionEnd
+    isLocked: isLocked || isInteractionLocked, // Pass lock down to prevent gestures during cooldown
+    onInteractionStart, 
+    onInteractionEnd
   });
 
-  // Resolve Dynamic Theme
-  const theme = TEAM_COLORS[team.color || 'slate'];
+  // Resolve Dynamic Theme - Prioritize prop, fallback to team property, then slate
+  const resolvedColor = colorTheme || team.color || 'slate';
+  const theme = TEAM_COLORS[resolvedColor];
 
   const orderClass = reverseLayout ? (teamId === 'A' ? 'order-last' : 'order-first') : (teamId === 'A' ? 'order-first' : 'order-last');
   const timeoutsExhausted = timeouts >= 2;
@@ -144,7 +160,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
     >
       <ScoutModal 
             isOpen={showScout} 
-            onClose={() => setShowScout(false)} 
+            onClose={handleScoutClose} 
             team={team} 
             onConfirm={handleScoutConfirm}
             colorTheme={team.color === 'rose' || team.color === 'amber' ? 'rose' : 'indigo'} // Fallback for modal theming
@@ -243,7 +259,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
         <div 
             className={`
                 relative order-3 flex items-center justify-center w-full flex-1 min-h-0 overflow-visible
-                ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}
+                ${(isLocked || isInteractionLocked) ? 'cursor-not-allowed' : 'cursor-pointer'}
             `}
             style={{ touchAction: 'none' }}
             {...gestureHandlers}

@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
-import { TeamId } from '../../types';
+import { Match } from '../../stores/historyStore';
+import { Player, TeamId } from '../../types';
 import { Trophy, Crown, Calendar, Zap, Activity } from 'lucide-react';
 
 interface ResultCardProps {

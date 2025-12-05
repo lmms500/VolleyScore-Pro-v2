@@ -10,9 +10,7 @@
   "common": {
     "done": "Done",
     "full": "Full",
-    "add": "Add",
-    "share": "Share Result",
-    "generating": "Generating..."
+    "add": "Add"
   },
   "controls": {
     "undo": "Undo",

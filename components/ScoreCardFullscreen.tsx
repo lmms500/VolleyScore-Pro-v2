@@ -8,6 +8,7 @@ import { pulseHeartbeat, layoutTransition } from '../utils/animations';
 import { useGameAudio } from '../hooks/useGameAudio';
 import { ScoutModal } from './modals/ScoutModal';
 import { resolveTheme } from '../utils/colors';
+import { useLayoutManager } from '../contexts/LayoutContext';
 
 interface ScoreCardFullscreenProps {
   teamId: TeamId;
@@ -39,17 +40,23 @@ const ScoreNumberDisplay = memo(({
     numberRef, 
     isCritical,
     isMatchPoint,
-    isServing
+    isServing,
+    scale,
+    mode
 }: any) => {
 
     // FIX: Use a stronger amber color for Match Point visibility
     const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : theme.halo;
+    
+    // Adjust Halo size/opacity based on Layout Mode to prevent visual clutter
+    const haloSize = mode === 'ultra' ? '1.1em' : '1.5em';
+    const haloOpacityBase = mode === 'ultra' ? 0.2 : 0.3;
 
     return (
         <div 
-            className="relative grid place-items-center w-full" 
+            className="relative grid place-items-center w-full transition-all duration-500 ease-out" 
             style={{ 
-                lineHeight: 1,
+                lineHeight: 0.85,
             }}
         >
             {/* Optimized Halo with Screen Blend Mode */}
@@ -60,11 +67,11 @@ const ScoreNumberDisplay = memo(({
                     ${haloColorClass}
                     justify-self-center self-center
                     mix-blend-multiply dark:mix-blend-screen
-                    blur-[80px] md:blur-[120px] will-change-[transform,opacity]
+                    blur-[60px] md:blur-[120px] will-change-[transform,opacity]
                 `}
                 style={{ 
-                    width: '1.5em', 
-                    height: '1.5em',
+                    width: haloSize, 
+                    height: haloSize,
                     transform: 'translate3d(0,0,0)' // Force GPU
                 }}
                 animate={
@@ -77,7 +84,7 @@ const ScoreNumberDisplay = memo(({
                         }
                         : { 
                             scale: 1, 
-                            opacity: isServing ? 0.3 : 0
+                            opacity: isServing ? haloOpacityBase : 0
                         }
                 }
                 transition={
@@ -121,6 +128,9 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
   
   const numberRef = useRef<HTMLDivElement>(null);
   const audio = useGameAudio(config);
+  
+  // Consume Layout Context for Dynamic Scaling
+  const { scale, mode, isLandscape } = useLayoutManager();
 
   const handleStart = useCallback(() => {
     setIsPressed(true);
@@ -183,6 +193,25 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
     ? 'landscape:left-0 landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-0 left-0 w-[100vw] h-[50dvh]' 
     : 'landscape:left-[50vw] landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-[50dvh] left-0 w-[100vw] h-[50dvh]';
 
+  // Dynamic Font Size Calculation
+  const fontSizeStyle = useMemo(() => {
+      // Use vmin for responsive baseline (viewport min dimension)
+      // Landscape: larger base. Portrait: slightly smaller base.
+      const baseVmin = isLandscape ? 32 : 38;
+      
+      // Reduce base size for compact/ultra modes
+      let modeModifier = 1;
+      if (mode === 'compact') modeModifier = 0.85;
+      if (mode === 'ultra') modeModifier = 0.7;
+
+      const finalScale = scale * modeModifier;
+
+      return {
+          fontSize: `clamp(4rem, ${baseVmin * finalScale}vmin, 24rem)`,
+      };
+  }, [isLandscape, scale, mode]);
+
+  // Dynamic Offset
   const offsetClass = alignment === 'left' 
       ? 'landscape:-translate-x-[6vw]' 
       : 'landscape:translate-x-[6vw]';
@@ -218,10 +247,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
                     ${isPressed ? 'scale-95' : 'scale-100'}
                     will-change-transform
                 `}
-                style={{ 
-                    fontSize: 'clamp(8rem, 28vmax, 22rem)',
-                    lineHeight: 0.8
-                }}
+                style={fontSizeStyle}
             >
                 <div className={`transform transition-transform duration-500 w-full flex justify-center ${offsetClass}`}>
                     <ScoreNumberDisplay 
@@ -234,6 +260,8 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
                         isCritical={isCritical}
                         isMatchPoint={isMatchPoint}
                         isServing={isServing}
+                        scale={scale}
+                        mode={mode}
                     />
                 </div>
             </div>

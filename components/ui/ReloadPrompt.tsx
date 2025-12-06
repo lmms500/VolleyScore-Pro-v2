@@ -2,10 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, WifiOff, RefreshCw } from 'lucide-react';
-import { useTranslation } from '../../contexts/LanguageContext';
 
 export const ReloadPrompt: React.FC = () => {
-  const { t } = useTranslation();
   const [needRefresh, setNeedRefresh] = useState(false);
   const [offlineReady, setOfflineReady] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
@@ -98,12 +96,12 @@ export const ReloadPrompt: React.FC = () => {
               </div>
               <div className="flex-1">
                 <h4 className="font-bold text-sm uppercase tracking-wide mb-1">
-                  {needRefresh ? t('reload.updateAvailable') : t('reload.offlineReady')}
+                  {needRefresh ? "Update Available" : "Offline Ready"}
                 </h4>
                 <p className="text-xs text-slate-300 leading-relaxed">
                   {needRefresh 
-                    ? t('reload.updateMessage')
-                    : t('reload.offlineMessage')}
+                    ? "New version available. Click reload to update."
+                    : "App is ready to work offline."}
                 </p>
               </div>
               <button onClick={close} className="text-slate-400 hover:text-white transition-colors">
@@ -116,7 +114,7 @@ export const ReloadPrompt: React.FC = () => {
                 onClick={updateServiceWorker}
                 className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
               >
-                <RefreshCw size={14} /> {t('reload.reloadButton')}
+                <RefreshCw size={14} /> Reload
               </button>
             )}
           </motion.div>

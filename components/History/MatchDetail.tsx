@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo } from 'react';
 import { Match } from '../../stores/historyStore';
 import { Player, SkillType, SetHistory, TeamColor } from '../../types';
@@ -55,7 +54,6 @@ const StatBar = ({ label, valueA, valueB, colorA, colorB, icon: Icon }: any) => 
 };
 
 const MomentumChart = ({ actionLog, sets, hexA, hexB }: { actionLog: any[], sets: SetHistory[], hexA: string, hexB: string }) => {
-    const { t } = useTranslation();
     // 1. Calculate the flow
     const dataPoints = useMemo(() => {
         let scoreA = 0;
@@ -83,16 +81,16 @@ const MomentumChart = ({ actionLog, sets, hexA, hexB }: { actionLog: any[], sets
             const pointsInSet = set.scoreA + set.scoreB;
             cumulativePoints += pointsInSet;
             return {
-                setLabel: t('historyList.set', { number: set.setNumber }),
+                setLabel: `S${set.setNumber}`,
                 xIndex: cumulativePoints,
                 winner: set.winner
             };
         });
-    }, [sets, t]);
+    }, [sets]);
 
     if (dataPoints.length < 2) return (
         <div className="w-full h-32 flex items-center justify-center text-xs text-slate-400 italic bg-slate-50 dark:bg-white/5 rounded-xl border border-dashed border-slate-200 dark:border-white/10 mt-4 mb-2">
-            {t('historyList.noChartData')}
+            Not enough data for chart
         </div>
     );
 
@@ -128,12 +126,12 @@ const MomentumChart = ({ actionLog, sets, hexA, hexB }: { actionLog: any[], sets
             {/* Floating Labels - Positioned absolutely but with Neo-Glass backing to sit ON TOP of chart safely */}
             <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/90 dark:bg-black/60 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-sm pointer-events-none">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ background: hexA }} />
-                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 leading-none">{t('historyList.lead')}</span>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 leading-none">Lead</span>
             </div>
             
             <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/90 dark:bg-black/60 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-sm pointer-events-none">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ background: hexB }} />
-                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 leading-none">{t('historyList.lead')}</span>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 leading-none">Lead</span>
             </div>
             
             <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
@@ -262,17 +260,7 @@ interface CalculatedStat {
     ace: number;
 }
 
-// FIX: Define props with an interface and type the component as React.FC to fix the 'key' prop issue.
-interface PlayerStatRowProps {
-    stats: CalculatedStat;
-    isMVP: boolean;
-    rank: number;
-    themeA: any;
-    themeB: any;
-}
-
-const PlayerStatRow: React.FC<PlayerStatRowProps> = ({ stats, isMVP, rank, themeA, themeB }) => {
-    const { t } = useTranslation();
+const PlayerStatRow = ({ stats, isMVP, rank, themeA, themeB }: { stats: CalculatedStat, isMVP: boolean, rank: number, themeA: any, themeB: any }) => {
     if (stats.total === 0) return null;
 
     const theme = stats.team === 'A' ? themeA : (stats.team === 'B' ? themeB : { text: 'text-slate-400', textDark: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/20' });
@@ -299,7 +287,7 @@ const PlayerStatRow: React.FC<PlayerStatRowProps> = ({ stats, isMVP, rank, theme
                         {stats.name}
                     </div>
                     <div className={`text-[10px] font-bold uppercase tracking-wider opacity-80 truncate ${teamColorClass}`}>
-                        {stats.team === 'Unknown' ? t('teamManager.guest') : t('teamManager.teamLetter', { letter: stats.team })}
+                        {stats.team === 'Unknown' ? 'Guest' : `Team ${stats.team}`}
                     </div>
                 </div>
             </div>
@@ -309,7 +297,7 @@ const PlayerStatRow: React.FC<PlayerStatRowProps> = ({ stats, isMVP, rank, theme
                 
                 {/* Attack Pill */}
                 {stats.attack > 0 && (
-                    <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg ${theme.bg} ${theme.text} ${theme.textDark} ${theme.border} border`} title={t('scout.attack')}>
+                    <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg ${theme.bg} ${theme.text} ${theme.textDark} ${theme.border} border`} title="Kills">
                         <Swords size={12} strokeWidth={2.5} />
                         <span className="text-xs font-bold tabular-nums">{stats.attack}</span>
                     </div>
@@ -317,7 +305,7 @@ const PlayerStatRow: React.FC<PlayerStatRowProps> = ({ stats, isMVP, rank, theme
 
                 {/* Block Pill */}
                 {stats.block > 0 && (
-                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title={t('scout.block')}>
+                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" title="Blocks">
                         <Shield size={12} strokeWidth={2.5} />
                         <span className="text-xs font-bold tabular-nums">{stats.block}</span>
                     </div>
@@ -325,7 +313,7 @@ const PlayerStatRow: React.FC<PlayerStatRowProps> = ({ stats, isMVP, rank, theme
 
                 {/* Ace Pill */}
                 {stats.ace > 0 && (
-                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20" title={t('scout.ace')}>
+                    <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20" title="Aces">
                         <Target size={12} strokeWidth={2.5} />
                         <span className="text-xs font-bold tabular-nums">{stats.ace}</span>
                     </div>
@@ -337,7 +325,7 @@ const PlayerStatRow: React.FC<PlayerStatRowProps> = ({ stats, isMVP, rank, theme
                     ${isMVP ? 'bg-amber-500/20 border-amber-500/30' : 'bg-slate-100 dark:bg-white/10 border-transparent'}
                 `}>
                     <span className={`text-lg font-black tabular-nums leading-none ${isMVP ? 'text-amber-700 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>{stats.total}</span>
-                    <span className="text-[8px] font-bold uppercase opacity-50">{t('historyList.pts')}</span>
+                    <span className="text-[8px] font-bold uppercase opacity-50">PTS</span>
                 </div>
             </div>
         </div>
@@ -398,7 +386,7 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                      const isUnknown = playerId === 'unknown';
                      pStats[playerId] = {
                          id: playerId,
-                         name: isUnknown ? t('scout.unknownPlayer') : t('scout.ghostPlayer'),
+                         name: isUnknown ? 'Unknown Player' : 'Ghost Player',
                          team: isUnknown ? 'Unknown' : team, 
                          skillLevel: 0,
                          total: 0, attack: 0, block: 0, ace: 0
@@ -416,7 +404,7 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
           playerStats: Object.values(pStats).sort((a, b) => b.total - a.total),
           teamStats: tStats 
       };
-  }, [match, t]);
+  }, [match]);
 
   // Replay Stats Logic
   const currentReplaySet = replayIndex >= 0 ? match.sets[replayIndex] : null;
@@ -435,7 +423,7 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
       {/* --- HEADER --- */}
       <div className="flex-none flex items-center justify-between p-4 bg-white/50 dark:bg-black/20 backdrop-blur-md border-b border-black/5 dark:border-white/5 z-20 sticky top-0">
         <button onClick={onBack} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors">
-            <ArrowLeft size={16} /> {t('historyList.back')}
+            <ArrowLeft size={16} /> Back
         </button>
         
         <div className="flex items-center gap-2 opacity-60">
@@ -480,7 +468,7 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                             ${replayIndex === -1 ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-500 dark:text-indigo-300 ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}
                         `}
                      >
-                        {t('historyList.summary')}
+                        Summary
                      </button>
                      {match.sets.map((set, idx) => (
                          <button 
@@ -491,7 +479,7 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                                 ${replayIndex === idx ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-500 dark:text-indigo-300 ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}
                             `}
                         >
-                            {t('historyList.set', { number: set.setNumber })}
+                            Set {set.setNumber}
                         </button>
                      ))}
                 </div>
@@ -514,7 +502,7 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                                         <div className="w-full bg-slate-50 dark:bg-white/5 rounded-2xl p-4 border border-black/5 dark:border-white/5">
                                             <div className="flex items-center gap-2 mb-2 text-slate-400">
                                                 <TrendingUp size={14} />
-                                                <span className="text-[10px] font-bold uppercase tracking-widest">{t('historyList.matchFlow')}</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-widest">Match Flow (Score Gap)</span>
                                             </div>
                                             <MomentumChart 
                                                 actionLog={(match as any).actionLog || []} 
@@ -533,7 +521,7 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                                                 onClick={() => setReplayIndex(idx)}
                                                 className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:border-indigo-500/30 transition-all group active:scale-95"
                                             >
-                                                <span className="text-[10px] font-bold text-slate-400 group-hover:text-indigo-500 mb-1 transition-colors">{t('historyList.set', { number: set.setNumber })}</span>
+                                                <span className="text-[10px] font-bold text-slate-400 group-hover:text-indigo-500 mb-1 transition-colors">SET {set.setNumber}</span>
                                                 <div className="text-xl sm:text-2xl font-black tabular-nums tracking-tight">
                                                     <span className={set.winner === 'A' ? `${themeA.text} ${themeA.textDark}` : 'text-slate-400 dark:text-slate-500'}>{set.scoreA}</span>
                                                     <span className="mx-0.5 opacity-20 text-slate-400">-</span>
@@ -551,7 +539,7 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                                                 {currentReplaySet.scoreA}
                                             </span>
                                             <div className="flex flex-col items-center">
-                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('historyList.set', { number: '' }).trim()}</span>
+                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">SET</span>
                                                 <span className="text-3xl font-black text-slate-800 dark:text-white">{currentReplaySet.setNumber}</span>
                                             </div>
                                             <span className={`text-6xl font-black tabular-nums ${currentReplaySet.winner === 'B' ? `${themeB.text} ${themeB.textDark}` : 'text-slate-300 dark:text-slate-700'}`}>
@@ -573,30 +561,30 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                     <div className="bg-white dark:bg-white/[0.03] rounded-3xl p-6 border border-black/5 dark:border-white/5 shadow-sm">
                         <div className="flex items-center gap-2 mb-6">
                             <BarChart2 size={18} className="text-emerald-500" />
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">{t('historyList.matchInsights')}</h3>
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Match Insights</h3>
                         </div>
                         
                         <div className="space-y-5">
                             <StatBar 
-                                label={t('historyList.totalKills')} 
+                                label="Total Kills" 
                                 valueA={teamStats.A.attack} valueB={teamStats.B.attack} 
                                 colorA={themeA} colorB={themeB} 
                                 icon={Swords}
                             />
                             <StatBar 
-                                label={t('historyList.blocks')} 
+                                label="Blocks" 
                                 valueA={teamStats.A.block} valueB={teamStats.B.block} 
                                 colorA={themeA} colorB={themeB} 
                                 icon={Shield}
                             />
                             <StatBar 
-                                label={t('historyList.serviceAces')} 
+                                label="Service Aces" 
                                 valueA={teamStats.A.ace} valueB={teamStats.B.ace} 
                                 colorA={themeA} colorB={themeB} 
                                 icon={Target}
                             />
                              <StatBar 
-                                label={t('historyList.opponentErrors')} 
+                                label="Opponent Errors" 
                                 valueA={teamStats.A.error_gain} valueB={teamStats.B.error_gain} 
                                 colorA={themeA} colorB={themeB} 
                                 icon={AlertTriangle}
@@ -609,14 +597,14 @@ export const MatchDetail: React.FC<MatchDetailProps> = ({ match, onBack }) => {
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
                                 <Activity size={18} className="text-cyan-500" />
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">{t('historyList.playerStats')}</h3>
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Player Stats</h3>
                             </div>
                         </div>
                         
                         <div className="flex-1 overflow-y-auto max-h-[400px] custom-scrollbar pr-1">
                             {playerStats.map((stat, idx) => (
                                 <PlayerStatRow 
-                                    key={stat.id}
+                                    key={stat.id} 
                                     stats={stat} 
                                     rank={idx + 1}
                                     isMVP={idx === 0 && stat.total > 0} 

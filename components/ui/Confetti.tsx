@@ -32,6 +32,7 @@ export const Confetti: React.FC<ConfettiProps> = ({ color }) => {
 
     let animationId: number;
     let particles: Particle[] = [];
+    let isRunning = true;
     
     // Extract raw colors from theme or defaults
     const primaryColor = theme.halo.replace('bg-[', '').replace(']', '').replace('bg-', ''); 
@@ -43,13 +44,15 @@ export const Confetti: React.FC<ConfettiProps> = ({ color }) => {
     ];
 
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      if (canvas && isRunning) {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+      }
     };
 
     const createParticle = (): Particle => {
       return {
-        x: Math.random() * canvas.width,
+        x: Math.random() * (canvas ? canvas.width : window.innerWidth),
         y: -20 - Math.random() * 100,
         vx: (Math.random() - 0.5) * 4,
         vy: Math.random() * 3 + 2,
@@ -67,6 +70,8 @@ export const Confetti: React.FC<ConfettiProps> = ({ color }) => {
     };
 
     const update = () => {
+      if (!isRunning || !ctx || !canvas) return;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       particles.forEach((p, i) => {
@@ -104,6 +109,7 @@ export const Confetti: React.FC<ConfettiProps> = ({ color }) => {
     update();
 
     return () => {
+      isRunning = false;
       window.removeEventListener('resize', resize);
       cancelAnimationFrame(animationId);
     };

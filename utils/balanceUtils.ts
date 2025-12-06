@@ -1,3 +1,4 @@
+
 import { Player, Team, RotationReport, TeamColor } from '../types';
 import { PLAYER_LIMIT_ON_COURT } from '../constants';
 import { v4 as uuidv4 } from 'uuid';
@@ -256,34 +257,43 @@ export const getStandardRotationResult = (
     const stolenPlayers: Player[] = [];
     const TARGET_SIZE = PLAYER_LIMIT_ON_COURT;
 
-    // 3. Fill Gaps in Incoming Team (The "Steal" Logic)
+    // 3. Fill Gaps in Incoming Team (STRICT NEXT-IN-LINE LOGIC)
     if (incomingTeam.players.length < TARGET_SIZE) {
-        logger.log(`Incoming team needs ${TARGET_SIZE - incomingTeam.players.length} more players.`);
+        const needed = TARGET_SIZE - incomingTeam.players.length;
+        logger.log(`Incoming team needs ${needed} more players.`);
         
-        // Iterate through queue teams to find donors
-        for (const donorTeam of queue) {
-            if (incomingTeam.players.length >= TARGET_SIZE) break;
-            if (donorTeam.players.length === 0) continue;
+        // Strict Rule: We only look at the *immediate* next team in the queue (the new queue[0]).
+        // We do NOT loop through the rest of the queue.
+        const donorTeam = queue[0];
 
-            const candidates = [];
-            // LIFO Stealing (Take from end)
-            for(let i = donorTeam.players.length - 1; i >= 0; i--) {
-                const p = donorTeam.players[i];
-                if (!p.isFixed) {
-                    candidates.push({ player: p, index: i });
-                } else {
-                    logger.log(`Skipped ${p.name} (Fixed) in donor team ${donorTeam.name}`);
+        if (donorTeam && donorTeam.players.length > 0) {
+            
+            const neededNow = TARGET_SIZE - incomingTeam.players.length;
+            const availableCandidates = donorTeam.players.filter(p => !p.isFixed);
+            
+            if (availableCandidates.length === 0) {
+                logger.log(`Donor ${donorTeam.name} has no non-fixed players. Cannot steal.`);
+            } else {
+                // --- STEAL FROM BOTTOM TO TOP ---
+                // "Steal using the last name from the list of the other team."
+                // E.g. If list is 1..6, we take 6, then 5.
+                // We reverse the candidates list to access the bottom elements first.
+                
+                const playersToSteal = availableCandidates.reverse().slice(0, neededNow);
+                
+                for (const stolenP of playersToSteal) {
+                    // Find index in original donor list to splice
+                    const idx = donorTeam.players.findIndex(p => p.id === stolenP.id);
+                    if (idx !== -1) {
+                        donorTeam.players.splice(idx, 1);
+                        incomingTeam.players.push(stolenP);
+                        stolenPlayers.push(stolenP);
+                        logger.log(`Stole ${stolenP.name} (Bottom-to-Top) from strictly next team: ${donorTeam.name}.`);
+                    }
                 }
             }
-
-            for (const candidate of candidates) {
-                if (incomingTeam.players.length >= TARGET_SIZE) break;
-
-                donorTeam.players.splice(candidate.index, 1);
-                incomingTeam.players.push(candidate.player);
-                stolenPlayers.push(candidate.player);
-                logger.log(`Stole ${candidate.player.name} from ${donorTeam.name}`);
-            }
+        } else {
+            logger.log("No team available in queue to steal from.");
         }
     } else {
         logger.log(`Incoming team is full.`);
@@ -294,7 +304,7 @@ export const getStandardRotationResult = (
     return {
         outgoingTeam: loserTeam,
         incomingTeam,
-        retainedPlayers: [], // In standard mode, we treat whole squads. Retained tracking is less relevant inside the logic unless partial.
+        retainedPlayers: [], // In standard mode, we treat whole squads.
         queueAfterRotation: finalQueue,
         stolenPlayers,
         logs: logger.get()
@@ -320,6 +330,7 @@ export const getBalancedRotationResult = (
     
     logger.log(`Loser ${loserTeam.name}: ${anchors.length} fixed (stay), ${leavers.length} leaving.`);
 
+    // Loser goes to END of queue immediately
     if (leavers.length > 0) {
         queue.push({ ...loserTeam, players: leavers, id: uuidv4() });
     }
@@ -348,6 +359,10 @@ export const getBalancedRotationResult = (
     }
     if (overflow.length > 0) {
         logger.log(`${overflow.length} players overflowed from incoming team.`);
+        // Try to return overflow to the queue start (to compensate the team we just broke) 
+        // or add to the end if logic dictates. 
+        // For VolleyScore V2 "Standard", overflow usually goes to the team that needs it or end of queue.
+        // Let's create a temp overflow team at the end for simplicity in this logic.
         if (queue.length > 0) queue[queue.length - 1].players.push(...overflow);
         else queue.push(createTeamContainer(uuidv4(), "Overflow", overflow));
     }
@@ -361,37 +376,60 @@ export const getBalancedRotationResult = (
     const targetAvg = getNumericStrength(winnerTeam.players);
     const stolenPlayers: Player[] = [];
 
-    // 4. Fill Gaps (Balanced Draft)
+    // 4. Fill Gaps (Balanced Draft - STRICT NEIGHBOR ONLY)
+    // CRITICAL FIX: Only look at queue[0]. Do not scan the entire queue.
     while (incomingTeam.players.length < PLAYER_LIMIT_ON_COURT) {
-        let bestCandidate: { player: Player, teamIndex: number, playerIndex: number, delta: number } | null = null;
+        
+        // If queue is empty, we can't steal.
+        if (queue.length === 0) {
+            logger.warn("Queue empty. Cannot fill team.");
+            break;
+        }
+
+        // --- STRICT RULE: ONLY STEAL FROM THE FIRST TEAM IN QUEUE ---
+        const donorTeam = queue[0];
+        
+        if (donorTeam.players.length === 0) {
+            // Should not happen as we filter empty teams, but safety check:
+            queue.shift();
+            continue;
+        }
+
+        let bestCandidate: { playerIndex: number, delta: number } | null = null;
         
         const currentSum = incomingTeam.players.reduce((sum, p) => sum + p.skillLevel, 0);
         const nextCount = incomingTeam.players.length + 1;
 
-        for (let tIdx = 0; tIdx < queue.length; tIdx++) {
-            const team = queue[tIdx];
-            for (let pIdx = 0; pIdx < team.players.length; pIdx++) {
-                const player = team.players[pIdx];
-                if (player.isFixed) continue;
+        // Scan only the donor team (Queue[0])
+        for (let pIdx = 0; pIdx < donorTeam.players.length; pIdx++) {
+            const player = donorTeam.players[pIdx];
+            if (player.isFixed) continue; // Respect locks inside queue too
 
-                const newAvg = (currentSum + player.skillLevel) / nextCount;
-                const delta = Math.abs(newAvg - targetAvg);
+            const newAvg = (currentSum + player.skillLevel) / nextCount;
+            const delta = Math.abs(newAvg - targetAvg);
 
-                if (!bestCandidate || delta < bestCandidate.delta) {
-                    bestCandidate = { player, teamIndex: tIdx, playerIndex: pIdx, delta };
-                }
+            if (!bestCandidate || delta < bestCandidate.delta) {
+                bestCandidate = { playerIndex: pIdx, delta };
             }
         }
 
         if (bestCandidate) {
-            const sourceTeam = queue[bestCandidate.teamIndex];
-            const [movedPlayer] = sourceTeam.players.splice(bestCandidate.playerIndex, 1);
+            const [movedPlayer] = donorTeam.players.splice(bestCandidate.playerIndex, 1);
             incomingTeam.players.push(movedPlayer);
             stolenPlayers.push(movedPlayer);
-            logger.log(`Drafted ${movedPlayer.name} (Level ${movedPlayer.skillLevel}) to balance skill.`);
+            logger.log(`Drafted ${movedPlayer.name} (Lvl ${movedPlayer.skillLevel}) from strictly next team: ${donorTeam.name}.`);
+            
+            // If donor team is now empty, remove it from queue so we can access the next one if still needed
+            if (donorTeam.players.length === 0) {
+                logger.log(`Donor Team ${donorTeam.name} depleted. Removing from queue.`);
+                queue.shift();
+            }
         } else {
-            logger.warn("Could not find candidate to fill gap.");
-            break; 
+            logger.warn(`No suitable non-fixed candidates found in ${donorTeam.name}. Checking next team...`);
+            // If we can't take anyone from queue[0] (e.g. all fixed), we shift it to find someone else? 
+            // Or do we abort? Sticking to "Order matters", we likely skip this team.
+            // But usually this means we are stuck. For safety, we shift.
+            queue.shift(); 
         }
     }
 

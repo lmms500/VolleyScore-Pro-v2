@@ -17,11 +17,22 @@ interface StorageEnvelope<T> {
 // Fallback constant
 const BYPASS_HASH = "INSECURE_CONTEXT_BYPASS";
 
+// Helper to check if we are in a secure context capable of crypto operations
+const isCryptoAvailable = (): boolean => {
+  return typeof window !== 'undefined' && 
+         !!window.crypto && 
+         !!window.crypto.subtle;
+};
+
 // Helper to generate SHA-256 Hash or bypass if unavailable
 const generateHash = async (content: string): Promise<string> => {
   // Graceful degradation for non-secure contexts (e.g., some previews, http://IP)
-  if (!window.crypto || !window.crypto.subtle) {
-    console.warn("SecureStorage: Crypto API unavailable (Insecure Context?). Integrity check disabled.");
+  if (!isCryptoAvailable()) {
+    // Only warn once per session to avoid console spam
+    if (!(window as any).__secure_storage_warned) {
+        console.warn("SecureStorage: Crypto API unavailable (Insecure Context?). Integrity check disabled for development/LAN.");
+        (window as any).__secure_storage_warned = true;
+    }
     return BYPASS_HASH;
   }
 
@@ -56,13 +67,14 @@ export const SecureStorage = {
       localStorage.setItem(APP_PREFIX + key, JSON.stringify(envelope));
     } catch (error) {
       console.error('SecureStorage Save Error:', error);
-      // Fail safe: don't crash app
+      // Fail safe: don't crash app, data just won't persist properly
     }
   },
 
   /**
    * Loads data and verifies integrity hash.
-   * If hash mismatch (tampering detected), returns null.
+   * If hash mismatch (tampering detected) or invalid JSON, returns null.
+   * Prevents app crashes on corrupted storage.
    */
   async load<T>(key: string): Promise<T | null> {
     try {
@@ -73,30 +85,36 @@ export const SecureStorage = {
       try {
           envelope = JSON.parse(raw);
       } catch (e) {
-          console.warn("SecureStorage: Malformed JSON in storage. Resetting.");
+          console.warn(`SecureStorage: Malformed JSON in storage for key ${key}. Clearing corrupted data.`);
+          // Optionally clear the corrupted key to allow fresh state next time
+          localStorage.removeItem(APP_PREFIX + key);
           return null;
       }
       
-      // 1. Verify Structure
+      // 1. Verify Structure - Weak Check
       if (!envelope || typeof envelope !== 'object' || !envelope.data) {
-        console.warn('SecureStorage: Invalid envelope structure. Discarding.');
+        // Handle legacy data or corrupted structure
+        console.warn(`SecureStorage: Invalid envelope structure for ${key}. Discarding.`);
         return null;
       }
 
-      // Legacy support or migration could go here. 
-      // For now, if no hash, we discard to enforce security unless explicitly bypassed logic needed.
-      if (!envelope.hash) return null;
+      // Legacy support: if hash is missing but data exists, logic decides.
+      // For V2 strictness, we return null to force state reset if structure is old.
+      if (!envelope.hash && isCryptoAvailable()) {
+          console.warn(`SecureStorage: Missing hash for ${key}. Legacy data discarded.`);
+          return null;
+      }
 
       // 2. Re-calculate Hash
       const jsonContent = JSON.stringify(envelope.data);
       const calculatedHash = await generateHash(jsonContent);
 
       // 3. Compare (Anti-Tampering Check)
-      // Allow bypass if environment is insecure
+      // Allow bypass if environment is insecure OR if the saved data was from an insecure session
       if (calculatedHash === BYPASS_HASH || envelope.hash === BYPASS_HASH) {
           // Proceed without verification
       } else if (calculatedHash !== envelope.hash) {
-        console.error('SecureStorage: Integrity Check Failed! Data was tampered with.');
+        console.error(`SecureStorage: Integrity Check Failed for ${key}! Data was tampered with or corrupted.`);
         return null; // Fail secure: Do not load corrupted data
       }
 

@@ -1,7 +1,6 @@
 
 import React, { useEffect, useRef, useState, memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { springSnappy } from '../../utils/animations';
+import { motion, AnimatePresence, Transition, Variants } from 'framer-motion';
 
 interface ScoreTickerProps {
   value: number;
@@ -9,14 +8,22 @@ interface ScoreTickerProps {
   style?: React.CSSProperties;
 }
 
+const tickerTransition: Transition = {
+  type: "spring",
+  stiffness: 400,
+  damping: 35, // High damping for no-bounce, precise stop
+  mass: 1
+};
+
 /**
- * ScoreTicker
- * Animates numbers sliding up/down like an odometer based on value change.
- * Memoized to prevent re-renders when parent re-renders but value is identical.
+ * ScoreTicker (AnimatedNumber)
+ * Implements a vertical slide animation based on value direction.
+ * Prev < Curr: Slide Up (New comes from bottom).
+ * Prev > Curr: Slide Down (New comes from top).
  */
 export const ScoreTicker: React.FC<ScoreTickerProps> = memo(({ value, className, style }) => {
   const prevValue = useRef(value);
-  const [direction, setDirection] = useState(0); // 1 = up (increase), -1 = down (decrease)
+  const [direction, setDirection] = useState(0); // 1 = Increase, -1 = Decrease
 
   useEffect(() => {
     if (value > prevValue.current) {
@@ -27,32 +34,34 @@ export const ScoreTicker: React.FC<ScoreTickerProps> = memo(({ value, className,
     prevValue.current = value;
   }, [value]);
 
-  const variants = {
+  const variants: Variants = {
     enter: (dir: number) => ({
-      y: dir > 0 ? "50%" : "-50%",
+      y: dir > 0 ? "70%" : "-70%",
       opacity: 0,
-      scale: 0.5,
-      filter: "blur(10px)"
+      scale: 0.8,
+      filter: "blur(8px)",
+      zIndex: 1
     }),
     center: {
       y: 0,
       opacity: 1,
       scale: 1,
       filter: "blur(0px)",
-      transition: springSnappy
+      zIndex: 2,
+      transition: tickerTransition
     },
     exit: (dir: number) => ({
-      y: dir > 0 ? "-50%" : "50%",
+      y: dir > 0 ? "-70%" : "70%",
       opacity: 0,
-      scale: 1.2,
-      filter: "blur(10px)",
-      transition: { duration: 0.15 } // Quick exit
+      scale: 0.8,
+      filter: "blur(8px)",
+      zIndex: 0,
+      transition: { duration: 0.2, ease: "easeIn" }
     })
   };
 
   return (
-    <div className={`relative inline-grid place-items-center overflow-visible ${className}`} style={style}>
-        {/* We use popLayout so elements don't push each other around, they overlap */}
+    <div className={`relative inline-grid place-items-center ${className}`} style={{ ...style, overflow: 'hidden' }}>
       <AnimatePresence mode="popLayout" custom={direction} initial={false}>
         <motion.span
           key={value}
@@ -62,7 +71,8 @@ export const ScoreTicker: React.FC<ScoreTickerProps> = memo(({ value, className,
           animate="center"
           exit="exit"
           className="block w-full text-center leading-none"
-          style={{ willChange: 'transform, opacity, filter' }}
+          // Force hardware acceleration for smoother text rendering during transform
+          style={{ willChange: "transform, opacity, filter" }} 
         >
           {value}
         </motion.span>

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useHistoryStore, Match } from '../../stores/historyStore';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -45,7 +46,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, i
                 className={`
                     w-full flex items-center justify-between
                     bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 
-                    rounded-xl pl-4 pr-3 py-2.5 
+                    rounded-2xl pl-4 pr-3 py-2.5 
                     text-xs font-bold uppercase tracking-wider 
                     text-slate-600 dark:text-slate-300 
                     hover:bg-slate-50 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/20
@@ -71,7 +72,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, i
                             min-w-full w-max max-w-[280px]
                             bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl 
                             border border-black/5 dark:border-white/10 
-                            rounded-xl shadow-2xl shadow-black/20 
+                            rounded-2xl shadow-2xl shadow-black/20 
                             overflow-hidden max-h-60 overflow-y-auto custom-scrollbar
                         `}
                     >
@@ -129,18 +130,18 @@ const HistoryCard: React.FC<{
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="group relative rounded-3xl bg-white dark:bg-slate-900/40 backdrop-blur-md border border-black/5 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-md transition-all"
+            className="group relative rounded-3xl bg-white dark:bg-white/[0.03] backdrop-blur-md border border-black/5 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-md transition-all"
         >
             {/* Subtle Gradient Wash for Winner */}
             {isWinnerA && (
                 <div 
-                    className="absolute inset-0 opacity-[0.05] pointer-events-none transition-colors duration-500"
+                    className="absolute inset-0 opacity-[0.03] pointer-events-none transition-colors duration-500"
                     style={{ background: `linear-gradient(90deg, ${hexA}, transparent)` }}
                 />
             )}
             {isWinnerB && (
                 <div 
-                    className="absolute inset-0 opacity-[0.05] pointer-events-none transition-colors duration-500"
+                    className="absolute inset-0 opacity-[0.03] pointer-events-none transition-colors duration-500"
                     style={{ background: `linear-gradient(-90deg, ${hexB}, transparent)` }}
                 />
             )}
@@ -378,23 +379,23 @@ export const HistoryList: React.FC = () => {
                     {/* Row 1: Search & Actions */}
                     <div className="flex gap-2 mb-2">
                         <div className="relative flex-1 group">
-                            <div className="absolute inset-0 bg-white dark:bg-white/5 rounded-xl transition-all group-focus-within:ring-2 group-focus-within:ring-indigo-500/30"></div>
+                            <div className="absolute inset-0 bg-white dark:bg-white/5 rounded-2xl transition-all group-focus-within:ring-2 group-focus-within:ring-indigo-500/30"></div>
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                             <input 
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder={t('historyList.searchPlaceholder')}
-                                className="relative w-full bg-transparent border border-black/5 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none placeholder:text-slate-400"
+                                className="relative w-full bg-transparent border border-black/5 dark:border-white/10 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none placeholder:text-slate-400"
                             />
                         </div>
                         
                         <div className="flex gap-1">
                             {/* Export: UP Arrow (Upload Icon) */}
-                            <button onClick={handleExport} className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors" title={t('historyList.export')}>
+                            <button onClick={handleExport} className="p-2.5 rounded-2xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors" title={t('historyList.export')}>
                                 <Upload size={18} /> 
                             </button>
                             {/* Import: DOWN Arrow (Download Icon) */}
-                            <button onClick={handleImportClick} className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors" title={t('historyList.import')}>
+                            <button onClick={handleImportClick} className="p-2.5 rounded-2xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors" title={t('historyList.import')}>
                                 <Download size={18} />
                             </button>
                         </div>

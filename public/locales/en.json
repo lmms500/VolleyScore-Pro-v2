@@ -1,12 +1,7 @@
 
 {
   "app": {
-    "loading": "Loading...",
-    "switchSides": {
-      "title": "Switch Sides",
-      "reason": "Sum of points is multiple of {number}",
-      "action": "Tap to Swap"
-    }
+    "loading": "Loading..."
   },
   "languages": {
     "en": "English",
@@ -26,8 +21,7 @@
     "history": "History",
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit Fullscreen",
-    "reset": "Reset Match",
-    "minimize": "Minimize Controls"
+    "reset": "Reset Match"
   },
   "history": {
     "gameStart": "Game Start",
@@ -50,9 +44,7 @@
     "golden_point": "GOLDEN POINT",
     "match_point": "MATCH POINT",
     "set_point": "SET POINT",
-    "tie_break": "TIE BREAK",
-    "deuce": "DEUCE",
-    "setNumber": "SET {number}"
+    "tie_break": "TIE BREAK"
   },
   "settings": {
     "title": "Configuration",
@@ -74,17 +66,7 @@
       "tieBreakTo25": "to 25 pts",
       "deuceLogic": "Deuce Logic",
       "deuceStandard": "Advantage of 2",
-      "deuceSuddenDeath": "Sudden Death (3pts)",
-      "gameMode": "Game Mode",
-      "modeIndoor": "Indoor",
-      "modeBeach": "Beach",
-      "tieBreakTarget": "Target:"
-    },
-    "extras": {
-      "title": "Extras",
-      "playerStats": "Player Stats (Scout)",
-      "playerStatsDesc": "Track skills & scorers",
-      "soundEffects": "Sound Effects"
+      "deuceSuddenDeath": "Sudden Death (3pts)"
     },
     "applyChanges": "Apply Changes",
     "applyAndReset": "Apply & Restart Match",
@@ -183,6 +165,7 @@
     "dragPlayersHere": "Drag players here",
     "addPlayer": "Add Player",
     "addPlayerPlaceholder": "New player name...",
+    "searchProfiles": "Search profiles...",
     "rosterFull": "Roster Full",
     "lockPlayer": "Lock Player",
     "unlockPlayer": "Unlock Player",
@@ -220,10 +203,7 @@
       "courtB": "Court B",
       "queue": "In Queue"
     },
-    "emptyProfiles": "No profiles saved yet. Sync players in the Roster tab to create profiles.",
-    "colorTaken": "Color taken",
-    "guest": "Guest",
-    "teamLetter": "Team {letter}"
+    "emptyProfiles": "No profiles saved yet. Sync players in the Roster tab to create profiles."
   },
   "historyList": {
     "title": "Match History",
@@ -248,45 +228,11 @@
     "importError": "Invalid file format.",
     "delete": "Delete",
     "duration": "Duration",
-    "date": "Date",
-    "analysis": "Analysis",
-    "back": "Back",
-    "summary": "Summary",
-    "set": "Set {number}",
-    "matchFlow": "Match Flow (Score Gap)",
-    "totalKills": "Total Kills",
-    "blocks": "Blocks",
-    "serviceAces": "Service Aces",
-    "opponentErrors": "Opponent Errors",
-    "matchInsights": "Match Insights",
-    "playerStats": "Player Stats",
-    "pts": "PTS",
-    "noChartData": "Not enough data for chart",
-    "lead": "Lead"
+    "date": "Date"
   },
   "errors": {
     "genericTitle": "Something went wrong",
     "genericMessage": "The application encountered an unexpected error. We apologize for the inconvenience.",
     "reload": "Reload App"
-  },
-  "scout": {
-    "attack": "Kill / Attack",
-    "block": "Block",
-    "ace": "Ace",
-    "opponentError": "Opp. Error",
-    "step1": "Step 1 of 2",
-    "step2": "Step 2 of 2",
-    "selectAction": "Select Action",
-    "whoScored": "Who Scored?",
-    "unknownPlayer": "Unknown / Guest Player",
-    "changePlayer": "Change Player",
-    "ghostPlayer": "Ghost Player"
-  },
-  "reload": {
-    "updateAvailable": "Update Available",
-    "offlineReady": "Offline Ready",
-    "updateMessage": "New version available. Click reload to update.",
-    "offlineMessage": "App is ready to work offline.",
-    "reloadButton": "Reload"
   }
 }

@@ -29,23 +29,14 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
     registerElement('controls', width, height);
   }, [width, height, registerElement]);
 
-  // Auto-minimize Logic
   useEffect(() => {
-    // If already minimized or user is interacting (hovering), do nothing
     if (isMinimized || isHovering) return;
-
-    const AUTO_HIDE_DELAY = 4000; // 4 seconds
-
-    const timer = setTimeout(() => {
-      setIsMinimized(true);
-    }, AUTO_HIDE_DELAY);
-
+    const timer = setTimeout(() => setIsMinimized(true), 4000);
     return () => clearTimeout(timer);
   }, [isMinimized, isHovering]);
 
-  // System Look Styles
-  const glassContainer = "bg-slate-900/50 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/40";
-  const buttonBase = "rounded-full transition-all duration-300 active:scale-90 flex items-center justify-center text-slate-200 hover:text-white bg-white/5 hover:bg-white/20 border border-white/5 hover:border-white/20 backdrop-blur-md";
+  const glassContainer = "bg-white/80 dark:bg-black/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl shadow-black/20 ring-1 ring-black/5 dark:ring-white/5";
+  const buttonBase = "rounded-full transition-all duration-300 active:scale-90 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-transparent hover:bg-black/5 dark:hover:bg-white/10";
   const pClass = 'p-3';
   const iconSize = 20;
 
@@ -65,39 +56,37 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 40, opacity: 0, scale: 0.9 }}
             transition={springSnappy}
-            className={`flex items-center gap-3 p-2 rounded-full ${glassContainer}`}
+            className={`flex items-center gap-2 p-1.5 rounded-[2rem] ${glassContainer}`}
           >
-            {/* Action Buttons */}
             <button 
               onClick={onUndo} 
               disabled={!canUndo}
               className={`${buttonBase} ${pClass} disabled:opacity-30 disabled:cursor-not-allowed`}
               title={t('controls.undo')}
             >
-              <Undo2 size={iconSize} />
+              <Undo2 size={iconSize} strokeWidth={1.5} />
             </button>
 
             <button onClick={onSwap} className={`${buttonBase} ${pClass}`} title={t('controls.swap')}>
-              <ArrowLeftRight size={iconSize} />
+              <ArrowLeftRight size={iconSize} strokeWidth={1.5} />
             </button>
 
-            <div className="w-px h-6 bg-white/10 mx-0.5"></div>
+            <div className="w-px h-5 bg-black/10 dark:bg-white/10 mx-0.5"></div>
 
-            <button onClick={onReset} className={`${buttonBase} ${pClass} text-rose-500 saturate-150 hover:text-rose-200 hover:bg-rose-500/20 hover:border-rose-500/30`} title={t('controls.reset')}>
-              <RotateCcw size={iconSize} />
+            <button onClick={onReset} className={`${buttonBase} ${pClass} text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10`} title={t('controls.reset')}>
+              <RotateCcw size={iconSize} strokeWidth={1.5} />
             </button>
 
-            <button onClick={onMenu} className={`${buttonBase} ${pClass} text-indigo-400 hover:text-indigo-200 hover:bg-indigo-500/20 hover:border-indigo-500/30`} title={t('game.menu')}>
-                <Menu size={iconSize} />
+            <button onClick={onMenu} className={`${buttonBase} ${pClass} bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400`} title={t('game.menu')}>
+                <Menu size={iconSize} strokeWidth={1.5} />
             </button>
 
-            {/* Minimize Handle */}
-            <div className="w-px h-6 bg-white/10 mx-0.5"></div>
+            <div className="w-px h-5 bg-black/10 dark:bg-white/10 mx-0.5"></div>
 
             <button 
               onClick={() => setIsMinimized(true)}
-              className={`${buttonBase} p-2 w-10 h-10 text-slate-400 hover:text-white`}
-              title={t('controls.minimize')}
+              className={`${buttonBase} p-2 w-10 h-10`}
+              title="Minimize"
             >
               <ChevronDown size={18} />
             </button>
@@ -113,11 +102,11 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
             transition={springSnappy}
             className={`
                h-10 px-6 rounded-full flex items-center justify-center gap-2
-               ${glassContainer} hover:bg-slate-800/60 transition-colors
-               text-slate-400 hover:text-white group
+               ${glassContainer} hover:bg-white dark:hover:bg-black transition-colors
+               text-slate-400 hover:text-indigo-500 group
             `}
           >
-            <div className="w-8 h-1 rounded-full bg-white/20 group-hover:bg-white/40 transition-colors"></div>
+            <div className="w-8 h-1 rounded-full bg-slate-300 dark:bg-white/20 group-hover:bg-indigo-400 transition-colors"></div>
             <ChevronUp size={16} className="absolute -top-6 opacity-0 group-hover:opacity-100 group-hover:-top-3 transition-all duration-300" />
           </motion.button>
         )}

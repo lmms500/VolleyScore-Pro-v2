@@ -13,8 +13,7 @@ interface ScoreCardFullscreenProps {
   teamId: TeamId;
   team: Team; 
   score: number;
-  // FIX: Changed onAdd signature to match usage in App.tsx. It no longer needs teamId.
-  onAdd: (playerId?: string, skill?: SkillType) => void;
+  onAdd: (teamId: TeamId, playerId?: string, skill?: SkillType) => void;
   onSubtract: () => void;
   isMatchPoint: boolean;
   isSetPoint: boolean;
@@ -43,59 +42,53 @@ const ScoreNumberDisplay = memo(({
     isServing
 }: any) => {
 
-    const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : theme.halo;
+    const haloColorClass = isMatchPoint ? 'bg-amber-50 saturate-150' : theme.halo;
 
     return (
         <div 
-            className="relative grid place-items-center" 
+            className="relative grid place-items-center w-full" 
             style={{ 
                 lineHeight: 1,
-                gridTemplateAreas: '"stack"' 
             }}
         >
-            {/* The Halo - Fix for "Square" issue: 
-                1. Removed mix-blend-screen from base class (applied conditionally for dark mode via CSS or explicit style)
-                2. Use opacity layering for Light Mode compatibility
-                3. Ensure transform-3d to use GPU composition properly
-            */}
+            {/* Optimized Halo with Screen Blend Mode */}
             <motion.div
                 className={`
+                    col-start-1 row-start-1
                     rounded-full aspect-square pointer-events-none z-0
                     ${haloColorClass}
                     justify-self-center self-center
                     mix-blend-multiply dark:mix-blend-screen
-                    blur-[80px] md:blur-[120px]
+                    blur-[100px] md:blur-[150px]
                 `}
                 style={{ 
-                    gridArea: 'stack',
-                    width: '1.2em', 
-                    height: '1.2em',
-                    transform: 'translate3d(0,0,0)' // Force GPU to prevent clipping
+                    width: '1.5em', 
+                    height: '1.5em',
+                    transform: 'translate3d(0,0,0)' // Force GPU
                 }}
                 animate={
                     isPressed 
-                    ? { scale: 1.1, opacity: 0.6 } 
+                    ? { scale: 1.1, opacity: 0.5 } 
                     : isCritical 
                         ? { 
-                            scale: [1, 1.25, 1],
-                            opacity: isMatchPoint ? [0.4, 0.7, 0.4] : [0.3, 0.6, 0.3],
+                            scale: [1, 1.2, 1],
+                            opacity: isMatchPoint ? [0.3, 0.6, 0.3] : [0.2, 0.5, 0.2],
                         }
                         : { 
                             scale: 1, 
-                            opacity: isServing ? 0.4 : 0 // Show brilliance if serving/scored
+                            opacity: isServing ? 0.3 : 0
                         }
                 }
                 transition={
                     isCritical 
-                    ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
-                    : { duration: 0.3, ease: "easeOut" }
+                    ? { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                    : { duration: 0.4, ease: "easeOut" }
                 }
             />
 
             <motion.div 
                 ref={numberRef} 
-                className="relative z-10 flex items-center justify-center will-change-transform"
-                style={{ gridArea: 'stack' }}
+                className="col-start-1 row-start-1 relative z-10 flex items-center justify-center will-change-transform"
                 variants={pulseHeartbeat}
                 animate={isCritical ? "pulse" : "idle"}
             >
@@ -106,9 +99,8 @@ const ScoreNumberDisplay = memo(({
                             font-black leading-none tracking-tighter transition-all duration-300
                             text-slate-900 dark:text-white
                             ${textEffectClass}
-                            ${isPressed ? 'brightness-110 scale-95' : ''}
+                            ${isPressed ? 'scale-95 opacity-90' : ''}
                         `}
-                        // Removed massive textShadow to prevent box artifact
                     />
                 </div>
             </motion.div>
@@ -139,7 +131,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
     onInteractionEnd?.();
   }, [onInteractionEnd]);
 
-  // When modal closes, enforce cooldown
   const handleScoutClose = useCallback(() => {
     setShowScout(false);
     setIsInteractionLocked(true);
@@ -147,7 +138,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
     return () => clearTimeout(t);
   }, []);
 
-  // Audio & Scout Logic Wrappers
   const handleAddWrapper = useCallback(() => {
       if (isInteractionLocked) return;
 
@@ -155,21 +145,17 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
           audio.playTap();
           setShowScout(true);
       } else {
-          // FIX: Call onAdd without teamId, as it's already scoped in App.tsx
-          onAdd();
-          // Audio handled in App.tsx
+          onAdd(teamId);
       }
-  }, [config.enablePlayerStats, onAdd, audio, isInteractionLocked]);
+  }, [config.enablePlayerStats, onAdd, teamId, audio, isInteractionLocked]);
 
   const handleScoutConfirm = useCallback((pid: string, skill: SkillType) => {
-      // FIX: Call onAdd with only player/skill info.
-      onAdd(pid, skill);
+      onAdd(teamId, pid, skill);
       audio.playScore();
-  }, [onAdd, audio]);
+  }, [onAdd, teamId, audio]);
 
   const handleSubtractWrapper = useCallback(() => {
       onSubtract();
-      // Audio handled in App.tsx
   }, [onSubtract]);
   
   const gestureHandlers = useScoreGestures({
@@ -180,14 +166,13 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
     onInteractionEnd: handleEnd
   });
 
-  // Resolve Theme
   const resolvedColor = colorTheme || team.color || 'slate';
   const theme = resolveTheme(resolvedColor);
 
   const isCritical = isMatchPoint || isSetPoint;
   
   const textEffectClass = useMemo(() => {
-    if (isMatchPoint) return 'drop-shadow-lg'; 
+    if (isMatchPoint) return 'drop-shadow-2xl'; 
     return ''; 
   }, [isMatchPoint]);
 
@@ -203,7 +188,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
 
   return (
     <>
-        {/* Render ScoutModal outside the gesture container to isolate events */}
         <ScoutModal 
             isOpen={showScout}
             onClose={handleScoutClose}
@@ -216,10 +200,14 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
             layout
             transition={layoutTransition}
             className={`
-                fixed z-10 flex flex-col justify-center items-center select-none overflow-visible
+                fixed z-10 flex flex-col justify-center items-center select-none overflow-hidden
                 ${positionClasses}
             `}
-            style={{ touchAction: 'none' }}
+            style={{ 
+                touchAction: 'none', // Crucial for preventing browser gestures like zoom/scroll
+                WebkitUserSelect: 'none',
+                userSelect: 'none'
+            }}
             {...gestureHandlers}
         >
             <div 
@@ -234,7 +222,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
                     lineHeight: 0.8
                 }}
             >
-                <div className={`transform transition-transform duration-500 ${offsetClass}`}>
+                <div className={`transform transition-transform duration-500 w-full flex justify-center ${offsetClass}`}>
                     <ScoreNumberDisplay 
                         score={score} 
                         theme={theme} 

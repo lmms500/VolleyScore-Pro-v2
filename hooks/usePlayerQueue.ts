@@ -1,5 +1,3 @@
-
-
 import { useState, useCallback, useEffect } from 'react';
 import { Player, Team, TeamId, RotationReport, RotationMode, PlayerProfile, TeamColor } from '../types';
 import { PLAYER_LIMIT_ON_COURT, PLAYERS_PER_TEAM } from '../constants';
@@ -77,7 +75,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
 
 
   // --- FACTORIES ---
-  const createPlayer = (name: string, index: number, existingProfile?: PlayerProfile): Player => {
+  const createPlayer = (name: string, index: number, existingProfile?: PlayerProfile, number?: string, skillLevel?: number): Player => {
       const safeName = sanitizeInput(name);
       const profile = existingProfile || findProfileByName(safeName);
 
@@ -85,8 +83,8 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
           id: uuidv4(),
           profileId: profile?.id,
           name: profile ? profile.name : safeName,
-          number: undefined, 
-          skillLevel: profile ? profile.skillLevel : 3, // Default 3 stars
+          number: number || undefined, 
+          skillLevel: skillLevel !== undefined ? skillLevel : (profile ? profile.skillLevel : 3), // Default 3 stars
           isFixed: false,
           fixedSide: null,
           originalIndex: index // Critical for Restore Order
@@ -314,7 +312,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     });
   }, [getRotationPreview]);
 
-  const addPlayer = useCallback((name: string, target: 'A' | 'B' | 'Queue') => {
+  const addPlayer = useCallback((name: string, target: 'A' | 'B' | 'Queue', number?: string, skill?: number) => {
       const getMaxIndex = (s: QueueState) => {
           const all = [...s.courtA.players, ...s.courtB.players, ...s.queue.flatMap(t => t.players)];
           return all.reduce((max, p) => Math.max(max, p.originalIndex), -1);
@@ -324,7 +322,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
           const safeName = sanitizeInput(name);
           const profile = findProfileByName(safeName);
           
-          const newPlayer = createPlayer(safeName, getMaxIndex(prev) + 1, profile);
+          const newPlayer = createPlayer(safeName, getMaxIndex(prev) + 1, profile, number, skill);
           
           if (target === 'A' && prev.courtA.players.length < PLAYER_LIMIT_ON_COURT) {
               return { ...prev, courtA: { ...prev.courtA, players: [...prev.courtA.players, newPlayer] } };
@@ -459,6 +457,35 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
           };
       });
   }, []);
+
+  const sortTeam = useCallback((teamId: string, criteria: 'name' | 'number' | 'skill') => {
+      setQueueState(prev => {
+          const sortFn = (a: Player, b: Player) => {
+              if (criteria === 'name') return a.name.localeCompare(b.name);
+              if (criteria === 'number') {
+                  const nA = parseInt(a.number || '999');
+                  const nB = parseInt(b.number || '999');
+                  return nA - nB;
+              }
+              if (criteria === 'skill') return b.skillLevel - a.skillLevel; // Descending
+              return 0;
+          };
+
+          const doSort = (list: Player[]) => [...list].sort(sortFn);
+
+          let newA = prev.courtA;
+          let newB = prev.courtB;
+          let newQ = prev.queue;
+
+          if (teamId === 'A' || teamId === prev.courtA.id) newA = { ...newA, players: doSort(newA.players) };
+          else if (teamId === 'B' || teamId === prev.courtB.id) newB = { ...newB, players: doSort(newB.players) };
+          else {
+              newQ = newQ.map(t => t.id === teamId ? { ...t, players: doSort(t.players) } : t);
+          }
+
+          return { ...prev, courtA: newA, courtB: newB, queue: newQ };
+      });
+  }, []);
   
 
   return {
@@ -482,6 +509,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     deletedCount: deletedHistory.length,
     setRotationMode,
     balanceTeams,
+    sortTeam,
     savePlayerToProfile,
     revertPlayerChanges,
     deleteProfile,

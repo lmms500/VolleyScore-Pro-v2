@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -72,7 +71,8 @@ function App() {
     savePlayerToProfile,
     revertPlayerChanges,
     upsertProfile,
-    deleteProfile
+    deleteProfile,
+    sortTeam
   } = game;
 
   const { t } = useTranslation();
@@ -98,7 +98,7 @@ function App() {
   const savedMatchIdRef = useRef<string | null>(null);
   
   // Audio for App-level events (Match Over, Set Over)
-  const audio = useGameAudio({ enableSound: state.config.enableSound });
+  const audio = useGameAudio(state.config);
 
   // Track sets to detect Set Changes for Audio
   const prevSetsRef = useRef({ a: 0, b: 0 });
@@ -108,10 +108,6 @@ function App() {
       setPointA: false, matchPointA: false, 
       setPointB: false, matchPointB: false 
   });
-
-  // Create a ref to hold the latest state to stabilize callbacks
-  const stateRef = useRef(state);
-  stateRef.current = state;
 
   useEffect(() => {
     // 1. Detect Set Win (Audio Only)
@@ -150,18 +146,18 @@ function App() {
     if (!state.isMatchOver) {
         savedMatchIdRef.current = null;
     }
-  }, [state.isMatchOver, state.matchWinner, state.setsA, state.setsB, historyStore, audio, state.config, state.history, state.matchDurationSeconds, state.teamAName, state.teamBName, state.teamARoster, state.teamBRoster, state.matchLog]);
+  }, [state.isMatchOver, state.matchWinner, state.setsA, state.setsB, historyStore, audio]);
 
   // Wrapper for Undo
   const handleUndo = useCallback(() => {
-    if (stateRef.current.isMatchOver && savedMatchIdRef.current) {
+    if (state.isMatchOver && savedMatchIdRef.current) {
         historyStore.deleteMatch(savedMatchIdRef.current);
         savedMatchIdRef.current = null;
     }
     game.undo();
     audio.playUndo();
     vibrate(30); // Medium haptic for undo
-  }, [game, historyStore, audio]);
+  }, [state.isMatchOver, game.undo, historyStore, audio]);
 
   // Handle Beach Switch Alert
   useEffect(() => {
@@ -279,32 +275,32 @@ function App() {
   const handleInteractionStartB = useCallback(() => setInteractingTeam('B'), []);
   const handleInteractionEnd = useCallback(() => setInteractingTeam(null), []);
   
-  // --- STABLE HANDLERS FOR SCOUT MODE & AUDIO & HAPTICS ---
-  const handleAddA = useCallback((playerId?: string, skill?: SkillType) => {
-    const metadata = playerId ? { playerId, skill } : undefined;
+  // --- UPDATED HANDLERS FOR SCOUT MODE & AUDIO & HAPTICS ---
+  const handleAddA = useCallback((teamId: TeamId, playerId?: string, skill?: any) => {
+    const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
     
-    if (!playerId && !stateRef.current.config.enablePlayerStats) {
+    if (!playerId && !state.config.enablePlayerStats) {
          audio.playScore(); 
-         vibrate(15);
+         vibrate(15); // Light tap for adding point
     }
     
     addPoint('A', metadata);
-  }, [addPoint, audio]);
+  }, [addPoint, state.config.enablePlayerStats, audio]);
 
   const handleSubA = useCallback(() => {
     audio.playUndo();
-    vibrate(30);
+    vibrate(30); // Heavier tap for subtract
     subtractPoint('A');
   }, [subtractPoint, audio]);
 
-  const handleAddB = useCallback((playerId?: string, skill?: SkillType) => {
-    const metadata = playerId ? { playerId, skill } : undefined;
-    if (!playerId && !stateRef.current.config.enablePlayerStats) {
+  const handleAddB = useCallback((teamId: TeamId, playerId?: string, skill?: any) => {
+    const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
+    if (!playerId && !state.config.enablePlayerStats) {
          audio.playScore(); 
          vibrate(15);
     }
     addPoint('B', metadata);
-  }, [addPoint, audio]);
+  }, [addPoint, state.config.enablePlayerStats, audio]);
   
   const handleSubB = useCallback(() => {
     audio.playUndo();
@@ -317,17 +313,13 @@ function App() {
   
   const handleTimeoutA = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('A'); }, [useTimeout, audio]);
   const handleTimeoutB = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('B'); }, [useTimeout, audio]);
-  
-  const handleScoutOpen = useCallback(() => {
-      audio.playTap();
-  }, [audio]);
 
   // Modal Open Wrappers with Sound & Haptic
-  const openSettings = useCallback(() => { audio.playTap(); vibrate(10); setShowSettings(true); }, [audio]);
-  const openManager = useCallback(() => { audio.playTap(); vibrate(10); setShowManager(true); }, [audio]);
-  const openHistory = useCallback(() => { audio.playTap(); vibrate(10); setShowHistory(true); }, [audio]);
-  const openReset = useCallback(() => { audio.playTap(); vibrate(10); setShowResetConfirm(true); }, [audio]);
-  const toggleSwap = useCallback(() => { audio.playTap(); vibrate(20); toggleSides(); }, [audio, toggleSides]);
+  const openSettings = () => { audio.playTap(); vibrate(10); setShowSettings(true); };
+  const openManager = () => { audio.playTap(); vibrate(10); setShowManager(true); };
+  const openHistory = () => { audio.playTap(); vibrate(10); setShowHistory(true); };
+  const openReset = () => { audio.playTap(); vibrate(10); setShowResetConfirm(true); };
+  const toggleSwap = () => { audio.playTap(); vibrate(20); toggleSides(); };
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
@@ -378,11 +370,11 @@ function App() {
                      <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl border border-indigo-500 text-center flex flex-col items-center gap-4 animate-bounce-subtle">
                          <RefreshCw size={48} className="text-indigo-500 animate-spin-slow" />
                          <div>
-                             <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white">{t('app.switchSides.title')}</h2>
-                             <p className="text-sm font-bold text-slate-500">{t('app.switchSides.reason', { number: state.config.hasTieBreak && state.currentSet === state.config.maxSets ? 5 : 7 })}</p>
+                             <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white">Switch Sides</h2>
+                             <p className="text-sm font-bold text-slate-500">Sum of points is multiple of {state.config.hasTieBreak && state.currentSet === state.config.maxSets ? 5 : 7}</p>
                          </div>
                          <button className="px-6 py-2 bg-indigo-500 text-white rounded-full font-bold uppercase tracking-widest hover:bg-indigo-600 transition-colors">
-                             {t('app.switchSides.action')}
+                             Tap to Swap
                          </button>
                      </div>
                  </motion.div>
@@ -393,7 +385,7 @@ function App() {
               z-30 transition-all duration-500 flex-none
               ${isFullscreen 
                 ? '-translate-y-24 opacity-0 pointer-events-none absolute w-full' 
-                : 'relative pt-[env(safe-area-inset-top)] pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] pb-4 mt-2'}
+                : 'relative pt-[env(safe-area-inset-top)] pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] pb-2 mt-1'}
           `}>
             <HistoryBar 
               history={state.history} 
@@ -443,12 +435,12 @@ function App() {
               </>
           )}
 
-          <main className="relative flex-1 z-10 flex flex-col justify-center items-center min-h-0 p-4">
+          <main className="relative flex-1 z-10 flex flex-col justify-center items-center min-h-0 p-2 overflow-hidden">
               <div className={`
-                  transition-all duration-500 overflow-visible w-full
+                  transition-all duration-500 overflow-visible w-full h-full
                   ${isFullscreen 
                      ? 'fixed inset-0 z-10 p-0 border-none m-0 block' 
-                     : 'flex flex-col landscape:flex-row md:flex-row gap-4'
+                     : 'flex flex-col landscape:flex-row md:flex-row gap-2 md:gap-4'
                   }
               `}>
                  
@@ -458,6 +450,7 @@ function App() {
                           teamId="A"
                           team={state.teamARoster} 
                           score={state.scoreA}
+                          isServing={state.servingTeam === 'A'}
                           onAdd={handleAddA}
                           onSubtract={handleSubA} 
                           isMatchPoint={game.isMatchPointA}
@@ -469,7 +462,6 @@ function App() {
                           onInteractionEnd={handleInteractionEnd}
                           reverseLayout={state.swappedSides}
                           scoreRefCallback={setScoreElA}
-                          isServing={state.servingTeam === 'A'}
                           alignment={state.swappedSides ? 'right' : 'left'}
                           config={state.config}
                           colorTheme={colorA} 
@@ -478,6 +470,7 @@ function App() {
                           teamId="B"
                           team={state.teamBRoster} 
                           score={state.scoreB}
+                          isServing={state.servingTeam === 'B'}
                           onAdd={handleAddB}
                           onSubtract={handleSubB} 
                           isMatchPoint={game.isMatchPointB}
@@ -489,7 +482,6 @@ function App() {
                           onInteractionEnd={handleInteractionEnd}
                           reverseLayout={state.swappedSides}
                           scoreRefCallback={setScoreElB}
-                          isServing={state.servingTeam === 'B'}
                           alignment={state.swappedSides ? 'left' : 'right'}
                           config={state.config} 
                           colorTheme={colorB}
@@ -500,7 +492,7 @@ function App() {
                       <motion.div 
                         layout 
                         key="card-wrapper-A"
-                        className={`flex-1 w-full h-full flex flex-col ${state.swappedSides ? 'order-last' : 'order-first'}`}
+                        className={`flex-1 w-full h-auto flex flex-col ${state.swappedSides ? 'order-last' : 'order-first'}`}
                         transition={{ type: "spring", stiffness: 250, damping: 25 }}
                       >
                         <ScoreCardNormal
@@ -530,7 +522,7 @@ function App() {
                       <motion.div 
                         layout 
                         key="card-wrapper-B"
-                        className={`flex-1 w-full h-full flex flex-col ${state.swappedSides ? 'order-first' : 'order-last'}`}
+                        className={`flex-1 w-full h-auto flex flex-col ${state.swappedSides ? 'order-first' : 'order-last'}`}
                         transition={{ type: "spring", stiffness: 250, damping: 25 }}
                       >
                         <ScoreCardNormal
@@ -553,7 +545,7 @@ function App() {
                             isLocked={interactingTeam !== null && interactingTeam !== 'B'}
                             onInteractionStart={handleInteractionStartB}
                             onInteractionEnd={handleInteractionEnd}
-                            config={state.config}
+                            config={state.config} 
                         />
                       </motion.div>
                     </LayoutGroup>
@@ -572,7 +564,7 @@ function App() {
 
           <div 
             className={`
-                flex-none w-full z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4
+                flex-none w-full z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-2
                 transition-all duration-500 overflow-hidden
                 ${isFullscreen ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-40 opacity-100 pointer-events-auto'}
                 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
@@ -663,7 +655,8 @@ function App() {
                 deletedCount={game.deletedCount}
                 profiles={game.profiles}
                 upsertProfile={upsertProfile} 
-                deleteProfile={deleteProfile} 
+                deleteProfile={deleteProfile}
+                onSortTeam={sortTeam}
               />
             )}
 
@@ -689,8 +682,8 @@ function App() {
                 isOpen={showResetConfirm}
                 onClose={() => setShowResetConfirm(false)}
                 onConfirm={resetMatch}
-                title={t('confirm.reset.title')}
-                message={t('confirm.reset.message')}
+                title="Reset Match?"
+                message="Are you sure you want to reset the match? All scores and history will be lost."
               />
             )}
           </Suspense>

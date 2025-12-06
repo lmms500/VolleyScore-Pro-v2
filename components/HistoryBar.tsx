@@ -2,7 +2,6 @@
 import React, { memo } from 'react';
 import { SetHistory, TeamColor } from '../types';
 import { Clock } from 'lucide-react';
-import { useTranslation } from '../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { listItemVariants } from '../utils/animations';
 import { resolveTheme } from '../utils/colors';
@@ -16,7 +15,6 @@ interface HistoryBarProps {
   colorB: TeamColor;
 }
 
-// Subcomponente isolado para o tempo, evitando re-render da lista pesada
 const GameTimer = memo(({ duration }: { duration: number }) => {
   const h = Math.floor(duration / 3600);
   const m = Math.floor((duration % 3600) / 60);
@@ -27,59 +25,39 @@ const GameTimer = memo(({ duration }: { duration: number }) => {
     : `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 
   return (
-    <span className="text-sm font-mono font-medium text-slate-700 dark:text-slate-300 tabular-nums tracking-wide transition-colors duration-700">
+    <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 tabular-nums tracking-wider">
       {formattedTime}
     </span>
   );
-}, (prev, next) => prev.duration === next.duration);
+});
 
-// Fully memoized list that ignores parent re-renders unless history or colors actually change
 const SetHistoryList = memo(({ history, colorA, colorB }: { history: SetHistory[], colorA: TeamColor, colorB: TeamColor }) => {
-    const { t } = useTranslation();
-    
-    // Resolve themes once or per render (lightweight operation)
     const themeA = resolveTheme(colorA);
     const themeB = resolveTheme(colorB);
 
     return (
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mask-linear-fade">
-            {history.length === 0 && (
-              <motion.span 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                className="text-slate-500 dark:text-slate-500 text-xs font-medium uppercase tracking-wider pl-2"
-              >
-                {t('history.gameStart')}
-              </motion.span>
-            )}
-            
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar mask-linear-fade pr-2">
             <AnimatePresence mode="popLayout">
               {history.map((set, idx) => {
                  const isA = set.winner === 'A';
-                 const activeTheme = isA ? themeA : themeB;
                  
                  return (
                     <motion.div 
-                    key={`${set.setNumber}-${idx}`} // Unique key for motion
-                    variants={listItemVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    layout
-                    className="flex flex-col items-center justify-center min-w-[2.5rem]"
+                        key={`${set.setNumber}-${idx}`}
+                        variants={listItemVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        layout
+                        className={`
+                            flex items-center justify-center h-6 px-2 rounded-lg
+                            bg-white/50 dark:bg-white/5 border border-black/5 dark:border-white/5
+                        `}
                     >
-                        <span className={`text-[9px] font-bold uppercase tracking-widest mb-0.5 transition-colors duration-500 ${isA ? themeA.text : themeB.text}`}>
-                            {t('history.setLabel', {setNumber: set.setNumber})}
-                        </span>
-                        
-                        <div className={`text-sm font-bold px-2 py-0.5 rounded-md border transition-all duration-500 ${
-                            isA 
-                            ? `${themeA.bg} ${themeA.text} ${themeA.border}` 
-                            : `${themeB.bg} ${themeB.text} ${themeB.border}`
-                        }`}>
-                            <span className={isA ? themeA.textDark : 'text-slate-400 opacity-70'}>{set.scoreA}</span>
-                            <span className='opacity-30 mx-0.5 text-slate-500'>-</span>
-                            <span className={!isA ? themeB.textDark : 'text-slate-400 opacity-70'}>{set.scoreB}</span>
+                        <div className="flex items-center text-[10px] font-bold leading-none gap-1">
+                            <span className={isA ? `${themeA.text} ${themeA.textDark}` : 'text-slate-400 opacity-60'}>{set.scoreA}</span>
+                            <span className='opacity-20 text-slate-500'>:</span>
+                            <span className={!isA ? `${themeB.text} ${themeB.textDark}` : 'text-slate-400 opacity-60'}>{set.scoreB}</span>
                         </div>
                     </motion.div>
                 );
@@ -87,27 +65,20 @@ const SetHistoryList = memo(({ history, colorA, colorB }: { history: SetHistory[
             </AnimatePresence>
         </div>
     );
-}, (prev, next) => {
-    return (
-        prev.history === next.history && 
-        prev.colorA === next.colorA && 
-        prev.colorB === next.colorB
-    );
-});
+}, (prev, next) => prev.history === next.history && prev.colorA === next.colorA && prev.colorB === next.colorB);
 
-// Simple ticker for the set count in history bar
 const ScoreTickerSimple = memo(({ value, color }: { value: number, color: TeamColor }) => {
   const theme = resolveTheme(color);
   return (
     <AnimatePresence mode="popLayout" initial={false}>
         <motion.span 
-        key={value}
-        initial={{ y: 10, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: -10, opacity: 0 }}
-        className={`${theme.text} ${theme.textDark} transition-colors duration-500`}
+            key={value}
+            initial={{ y: 5, opacity: 0, filter: 'blur(2px)' }}
+            animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+            exit={{ y: -5, opacity: 0, filter: 'blur(2px)' }}
+            className={`${theme.text} ${theme.textDark} transition-colors duration-300`}
         >
-        {value}
+            {value}
         </motion.span>
     </AnimatePresence>
   );
@@ -116,28 +87,29 @@ const ScoreTickerSimple = memo(({ value, color }: { value: number, color: TeamCo
 export const HistoryBar: React.FC<HistoryBarProps> = memo(({ history, duration, setsA, setsB, colorA, colorB }) => {
   return (
     <motion.div 
-      initial={{ y: -50, opacity: 0 }}
+      initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="max-w-4xl mx-auto h-16 bg-white/50 dark:bg-slate-900/40 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-full flex items-center justify-between px-6 shadow-lg transition-colors duration-700"
+      transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 30 }}
+      className="max-w-3xl mx-auto h-10 flex items-center justify-between px-3"
     >
-      
-      {/* Set Scores - Memoized & Isolated with Dynamic Colors */}
-      <SetHistoryList history={history} colorA={colorA} colorB={colorB} />
+      {/* Placar Sets - Super Minimal */}
+      <div className="flex items-center gap-2 px-3 h-8 rounded-full bg-white/60 dark:bg-white/5 border border-white/40 dark:border-white/5 backdrop-blur-md shadow-sm shadow-black/5">
+         <div className="flex items-center gap-1.5 text-sm font-black tracking-tight leading-none">
+             <ScoreTickerSimple value={setsA} color={colorA} />
+             <span className="text-slate-300 dark:text-slate-600 text-[10px] font-medium">-</span>
+             <ScoreTickerSimple value={setsB} color={colorB} />
+         </div>
+      </div>
 
-      {/* Timer & Global Score */}
-      <div className="flex items-center gap-4 pl-4 border-l border-black/10 dark:border-white/10 transition-colors duration-700">
-        <div className="hidden md:flex items-center gap-1.5 text-xl font-black tracking-tight">
-           <ScoreTickerSimple value={setsA} color={colorA} />
-           <span className="text-slate-400 dark:text-slate-600 text-sm transition-colors duration-700">:</span>
-           <ScoreTickerSimple value={setsB} color={colorB} />
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Clock size={14} className="text-slate-500 dark:text-slate-400 transition-colors duration-700" />
-          {/* Timer isolado */}
-          <GameTimer duration={duration} />
-        </div>
+      {/* Lista de Sets */}
+      <div className="flex-1 mx-3 overflow-hidden h-full flex items-center justify-center">
+          <SetHistoryList history={history} colorA={colorA} colorB={colorB} />
+      </div>
+
+      {/* Timer Pill */}
+      <div className="flex items-center gap-1.5 px-3 h-8 rounded-full bg-slate-100/50 dark:bg-black/20 border border-black/5 dark:border-white/5 backdrop-blur-md">
+        <Clock size={10} className="text-slate-400" strokeWidth={2.5} />
+        <GameTimer duration={duration} />
       </div>
     </motion.div>
   );

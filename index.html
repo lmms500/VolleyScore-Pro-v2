@@ -69,7 +69,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous">
     
     <style>
       /* PWA & Mobile Optimizations - True Fullscreen Reset */
@@ -87,7 +87,7 @@
       body {
         transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
         transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 700ms;
+        transition-duration: 500ms;
       }
 
       /* Force color-scheme to match class for scrollbars/native UI */
@@ -103,7 +103,7 @@
         font-family: 'Inter', sans-serif;
       }
       
-      /* Noise Texture */
+      /* Noise Texture - More subtle (0.02) */
       .bg-noise {
         position: fixed;
         top: 0;
@@ -112,7 +112,7 @@
         height: 100vh;
         pointer-events: none;
         z-index: 50;
-        opacity: 0.03;
+        opacity: 0.02;
         background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
       }
 
@@ -125,29 +125,29 @@
         scrollbar-width: none;
       }
     </style>
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://aistudiocdn.com/react@^19.2.0",
-        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-        "react/": "https://aistudiocdn.com/react@^19.2.0/",
-        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-        "vite": "https://aistudiocdn.com/vite@^7.2.4",
-        "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
-        "vite-plugin-pwa": "https://aistudiocdn.com/vite-plugin-pwa@^1.1.0",
-        "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
-        "@dnd-kit/sortable": "https://aistudiocdn.com/@dnd-kit/sortable@^10.0.0",
-        "@dnd-kit/utilities": "https://aistudiocdn.com/@dnd-kit/utilities@^3.2.2",
-        "@dnd-kit/core": "https://aistudiocdn.com/@dnd-kit/core@^6.3.1",
-        "framer-motion": "https://aistudiocdn.com/framer-motion@^11.0.0",
-        "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
-        "zustand/": "https://aistudiocdn.com/zustand@^5.0.9/",
-        "zustand": "https://aistudiocdn.com/zustand@^5.0.9",
-        "html-to-image": "https://aistudiocdn.com/html-to-image@^1.11.13"
-      }
-    }
-    </script>
-  </head>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "vite": "https://aistudiocdn.com/vite@^7.2.6",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "zustand/": "https://aistudiocdn.com/zustand@^5.0.9/",
+    "zustand": "https://aistudiocdn.com/zustand@^5.0.9",
+    "framer-motion": "https://aistudiocdn.com/framer-motion@^12.23.25",
+    "html-to-image": "https://aistudiocdn.com/html-to-image@^1.11.13",
+    "@dnd-kit/sortable": "https://aistudiocdn.com/@dnd-kit/sortable@^10.0.0",
+    "vite-plugin-pwa": "https://aistudiocdn.com/vite-plugin-pwa@^1.2.0",
+    "@dnd-kit/core": "https://aistudiocdn.com/@dnd-kit/core@^6.3.1",
+    "@dnd-kit/utilities": "https://aistudiocdn.com/@dnd-kit/utilities@^3.2.2"
+  }
+}
+</script>
+</head>
   <body class="bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 antialiased h-screen overflow-hidden selection:bg-indigo-500 selection:text-white transition-colors duration-700">
     <div class="bg-noise"></div>
     <div id="root" class="h-full w-full flex flex-col relative z-10"></div>

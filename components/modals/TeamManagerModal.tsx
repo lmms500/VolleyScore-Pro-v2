@@ -4,7 +4,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Team, Player, RotationMode, PlayerProfile, TeamColor } from '../../types';
 import { calculateTeamStrength } from '../../utils/balanceUtils';
-import { Pin, Trash2, Shuffle, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List, Lock, Hash } from 'lucide-react';
+import { Pin, Trash2, Shuffle, Edit2, GripVertical, Plus, Undo2, Ban, Star, Save, RefreshCw, AlertCircle, CheckCircle2, User, Upload, List, Lock, Hash, Users, Layers, Search, X, ListFilter, SortAsc, SortDesc, ArrowDownAZ, ArrowDown01, ArrowUpWideNarrow } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -15,7 +15,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  TouchSensor,
   KeyboardSensor,
 } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -49,7 +48,7 @@ interface TeamManagerModalProps {
   onUpdatePlayerSkill: (playerId: string, skill: number) => void;
   onSaveProfile: (playerId: string) => void;
   onRevertProfile: (playerId: string) => void;
-  onAddPlayer: (name: string, target: 'A' | 'B' | 'Queue') => void;
+  onAddPlayer: (name: string, target: 'A' | 'B' | 'Queue', number?: string, skill?: number) => void;
   onUndoRemove: () => void;
   canUndoRemove: boolean;
   onCommitDeletions: () => void;
@@ -57,13 +56,14 @@ interface TeamManagerModalProps {
   profiles: Map<string, PlayerProfile>;
   deleteProfile?: (id: string) => void;
   upsertProfile?: (name: string, skill: number, id?: string) => PlayerProfile;
+  onSortTeam: (teamId: string, criteria: 'name' | 'number' | 'skill') => void;
 }
 
 type PlayerLocationStatus = 'A' | 'B' | 'Queue' | null;
 
 // --- OPTIMIZED SUB-COMPONENTS ---
 
-const SkillSelector = memo(({ level, onChange }: { level: number, onChange: (l: number) => void }) => {
+const SkillSelector = memo(({ level, onChange, size = 10 }: { level: number, onChange: (l: number) => void, size?: number }) => {
     return (
         <div className="flex gap-0.5 relative z-20" onPointerDown={(e) => e.stopPropagation()}>
             {[1, 2, 3, 4, 5].map(i => (
@@ -73,8 +73,8 @@ const SkillSelector = memo(({ level, onChange }: { level: number, onChange: (l: 
                    className="focus:outline-none p-0.5 hover:scale-125 transition-transform touch-manipulation cursor-pointer"
                 >
                     <Star 
-                        size={12} 
-                        className={i <= level ? "fill-amber-400 text-amber-400" : "text-slate-300 dark:text-slate-700"} 
+                        size={size} 
+                        className={i <= level ? "fill-amber-400 text-amber-400" : "text-slate-200 dark:text-slate-700"} 
                     />
                 </button>
             ))}
@@ -82,7 +82,7 @@ const SkillSelector = memo(({ level, onChange }: { level: number, onChange: (l: 
     );
 });
 
-// PREMIUM COLOR PICKER - Simplified, No RGB, Locked Colors
+// PREMIUM COLOR PICKER - Flex Wrap Layout for preventing clips
 const ColorPicker = memo(({ 
     selected, 
     onChange, 
@@ -95,15 +95,13 @@ const ColorPicker = memo(({
     
     return (
         <div 
-            className="flex flex-col gap-2 relative z-20 touch-pan-x" 
-            onPointerDown={(e) => e.stopPropagation()} // Prevents DND drag activation
+            className="w-full relative z-20" 
+            onPointerDown={(e) => e.stopPropagation()} 
         >
-            <div className="flex items-center gap-2 overflow-x-auto py-3 px-2 no-scrollbar mask-linear-fade-right">
+            <div className="flex flex-wrap items-center justify-center gap-2 py-2">
                 {COLOR_KEYS.map(color => {
                      const isSelected = selected === color;
-                     // Disable if used by ANOTHER team (not the current one)
                      const isTaken = usedColors.has(color) && !isSelected;
-                     
                      const theme = TEAM_COLORS[color];
                      
                      return (
@@ -126,12 +124,9 @@ const ColorPicker = memo(({
                             {isSelected && (
                                 <motion.div 
                                     layoutId="selected-color-check"
-                                    className="w-2.5 h-2.5 bg-white rounded-full shadow-sm"
+                                    className="w-2 h-2 bg-white rounded-full shadow-sm"
                                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                                 />
-                            )}
-                            {isTaken && !isSelected && (
-                                <div className="w-[120%] h-[1px] bg-slate-500 absolute rotate-45" />
                             )}
                          </button>
                      );
@@ -157,7 +152,7 @@ const SyncIndicator = memo(({ player, hasProfile, profileMatch, onSave, onRevert
 
     return (
         <div className="flex items-center gap-1">
-            <div className={`w-1.5 h-1.5 rounded-full ${config.color} shadow-[0_0_5px_currentColor]`} title={config.text} />
+            <div className={`w-1.5 h-1.5 rounded-full ${config.color} shadow-[0_0_3px_currentColor]`} title={config.text} />
             
             {status !== 'synced' && (
                 <div className="flex gap-0.5 animate-in fade-in zoom-in duration-200">
@@ -206,7 +201,7 @@ const EditableTitle = memo(({ name, onSave, className, isPlayer }: { name: strin
     return (
         <input 
             ref={inputRef} type="text"
-            className={`bg-black/5 dark:bg-black/40 text-slate-900 dark:text-white border-b border-indigo-500 outline-none w-full px-1 py-0.5 font-bold ${isPlayer ? 'text-sm' : 'text-xs uppercase tracking-widest'}`}
+            className={`bg-transparent text-slate-900 dark:text-white border-b border-indigo-500 outline-none w-full px-0 py-0 font-bold ${isPlayer ? 'text-sm' : 'text-xs uppercase tracking-widest'}`}
             value={val} onChange={e => setVal(e.target.value)} onBlur={save}
             onKeyDown={e => { if(e.key === 'Enter') save(); if(e.key === 'Escape') cancel(); }}
             onPointerDown={e => e.stopPropagation()} 
@@ -216,7 +211,7 @@ const EditableTitle = memo(({ name, onSave, className, isPlayer }: { name: strin
   return (
       <div className={`flex items-center gap-2 group cursor-pointer min-w-0 ${className}`} onClick={() => setIsEditing(true)}>
           <span className="truncate">{name}</span>
-          <Edit2 size={10} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 flex-shrink-0" />
+          <Edit2 size={8} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 flex-shrink-0" />
       </div>
   );
 });
@@ -240,7 +235,7 @@ const EditableNumber = memo(({ number, onSave }: { number?: string; onSave: (val
                 ref={inputRef} 
                 type="text" 
                 maxLength={3}
-                className="w-8 h-8 bg-white dark:bg-black/50 text-center rounded-lg border border-indigo-500 outline-none text-xs font-bold text-slate-800 dark:text-white shadow-sm"
+                className="w-7 h-7 bg-white dark:bg-black/50 text-center rounded-lg border border-indigo-500 outline-none text-xs font-bold text-slate-800 dark:text-white shadow-sm"
                 value={val} 
                 onChange={e => setVal(e.target.value)} 
                 onBlur={save}
@@ -255,13 +250,13 @@ const EditableNumber = memo(({ number, onSave }: { number?: string; onSave: (val
             onClick={() => setIsEditing(true)} 
             onPointerDown={e => e.stopPropagation()}
             className={`
-                w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border transition-all
+                w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold border transition-all
                 ${number 
-                    ? 'bg-white dark:bg-white/10 text-slate-800 dark:text-white border-slate-200 dark:border-white/10 shadow-sm' 
-                    : 'bg-transparent text-slate-300 dark:text-slate-600 border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 hover:text-slate-400'}
+                    ? 'bg-white/80 dark:bg-white/5 text-slate-800 dark:text-white border-transparent shadow-sm' 
+                    : 'bg-transparent text-slate-300 dark:text-slate-600 border-transparent hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-400'}
             `}
         >
-            {number || <Hash size={12} />}
+            {number || <Hash size={10} />}
         </button>
     );
 });
@@ -285,9 +280,9 @@ const ProfileCard = memo(({
     
     // Configuração Visual baseada no Status
     const statusConfig = {
-        A: { bg: 'bg-indigo-500/10 border-indigo-500/20', text: 'text-indigo-600 dark:text-indigo-400', label: t('teamManager.location.courtA') },
-        B: { bg: 'bg-rose-500/10 border-rose-500/20', text: 'text-rose-600 dark:text-rose-400', label: t('teamManager.location.courtB') },
-        Queue: { bg: 'bg-slate-500/10 border-slate-500/20', text: 'text-slate-600 dark:text-slate-400', label: t('teamManager.location.queue') },
+        A: { bg: 'bg-indigo-500/5 border-indigo-500/10', text: 'text-indigo-600 dark:text-indigo-400', label: t('teamManager.location.courtA') },
+        B: { bg: 'bg-rose-500/5 border-rose-500/10', text: 'text-rose-600 dark:text-rose-400', label: t('teamManager.location.courtB') },
+        Queue: { bg: 'bg-slate-500/5 border-slate-500/10', text: 'text-slate-600 dark:text-slate-400', label: t('teamManager.location.queue') },
         null: { bg: 'bg-transparent', text: '', label: '' }
     }[status || 'null'];
 
@@ -299,10 +294,10 @@ const ProfileCard = memo(({
 
     return (
         <div className={`
-            group flex items-center justify-between p-3 rounded-xl 
-            bg-white/60 dark:bg-white/5 border 
+            group flex items-center justify-between p-3 rounded-2xl
+            bg-white/40 dark:bg-white/[0.02] border backdrop-blur-sm
             transition-all shadow-sm
-            ${status ? statusConfig.bg : 'border-black/5 dark:border-white/5 hover:border-indigo-500/30'}
+            ${status ? statusConfig.bg : 'border-white/40 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10'}
         `}>
              <div className="flex flex-col min-w-0 flex-1 pr-3">
                  <EditableTitle 
@@ -326,19 +321,19 @@ const ProfileCard = memo(({
                      </span>
                  ) : (
                      <div className="flex gap-1">
-                         <Button size="sm" onClick={handleAddA} className="h-7 px-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border-indigo-500/20" title={t('teamManager.actions.addToA')}>
+                         <Button size="sm" onClick={handleAddA} className="h-7 px-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white border-transparent" title={t('teamManager.actions.addToA')}>
                              A
                          </Button>
-                         <Button size="sm" onClick={handleAddB} className="h-7 px-2 bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white border-rose-500/20" title={t('teamManager.actions.addToB')}>
+                         <Button size="sm" onClick={handleAddB} className="h-7 px-2 bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white border-transparent" title={t('teamManager.actions.addToB')}>
                              B
                          </Button>
-                         <Button size="sm" onClick={handleAddQ} className="h-7 px-2 bg-slate-500/10 text-slate-600 hover:bg-slate-500 hover:text-white border-slate-500/20" title={t('teamManager.actions.addToQueue')}>
+                         <Button size="sm" onClick={handleAddQ} className="h-7 px-2 bg-slate-500/10 text-slate-600 hover:bg-slate-500 hover:text-white border-transparent" title={t('teamManager.actions.addToQueue')}>
                              Q
                          </Button>
                      </div>
                  )}
                  
-                 <div className="w-px h-6 bg-black/10 dark:bg-white/10 mx-0.5"></div>
+                 <div className="w-px h-6 bg-black/5 dark:bg-white/5 mx-0.5"></div>
                  
                  <button 
                     onClick={onDelete} 
@@ -384,8 +379,7 @@ const PlayerCard = memo(({
     disabled: player.isFixed,
   });
 
-  // REMOVED touchAction: 'none' to allow vertical scrolling on the card body
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 50 : 'auto' };
   const isFixed = player.isFixed;
   
   const profile = player.profileId ? profiles.get(player.profileId) : undefined;
@@ -403,31 +397,30 @@ const PlayerCard = memo(({
   return (
     <div ref={setNodeRef} style={style} className={`
         group relative flex items-center justify-between rounded-xl border transition-all duration-300
-        ${isCompact ? 'p-1.5 min-h-[40px]' : 'p-2 min-h-[56px]'}
+        ${isCompact ? 'p-1.5 min-h-[44px]' : 'p-1.5 min-h-[50px]'}
         ${isFixed 
-            ? 'bg-amber-500/10 border-amber-500/40 shadow-sm shadow-amber-500/10 ring-1 ring-amber-500/20' 
-            : 'bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/20 shadow-sm'
+            ? 'bg-amber-500/5 border-amber-500/20 shadow-sm shadow-amber-500/5' 
+            : 'bg-white/40 dark:bg-white/[0.03] border-transparent hover:border-black/5 dark:hover:border-white/10 hover:bg-white/60 dark:hover:bg-white/[0.06]'
         }
     `}>
       
       {/* Left Section: Grip + Number + Name/Stars (Responsive flex-1) */}
       <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
         {/* Grip Handle - Retains touch-none to claim pointer events for drag */}
-        <div {...attributes} {...listeners} className={`cursor-grab active:cursor-grabbing p-1 -ml-0.5 touch-none flex-shrink-0 ${isFixed ? 'cursor-not-allowed opacity-50' : 'text-slate-400 dark:text-slate-600'}`}>
-          <GripVertical size={16} />
+        <div {...attributes} {...listeners} className={`cursor-grab active:cursor-grabbing p-1 -ml-0.5 touch-none flex-shrink-0 ${isFixed ? 'cursor-not-allowed opacity-30' : 'text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400'}`}>
+          <GripVertical size={14} />
         </div>
         
         {/* Editable Number */}
         {!isCompact && <EditableNumber number={player.number} onSave={handleSaveNumber} />}
-        {isCompact && player.number && <span className="text-xs font-bold text-slate-500">#{player.number}</span>}
+        {isCompact && player.number && <span className="text-[10px] font-bold text-slate-400">#{player.number}</span>}
 
-        <div className="flex flex-col min-w-0 flex-1 pr-0.5 relative">
+        <div className="flex flex-col min-w-0 flex-1 pr-0.5 relative justify-center">
           <EditableTitle name={player.name} onSave={handleSaveName} isPlayer={true} className={`font-bold ${isCompact ? 'text-xs' : 'text-sm'} text-slate-800 dark:text-slate-200`} />
-          {!isCompact && (
-              <div className="mt-0.5 relative z-20">
-                <SkillSelector level={player.skillLevel} onChange={handleUpdateSkill} />
-              </div>
-          )}
+          {/* Always show skill selector, but adjust size if compact */}
+          <div className="relative z-20 -mt-0.5">
+            <SkillSelector level={player.skillLevel} onChange={handleUpdateSkill} size={isCompact ? 9 : 10} />
+          </div>
         </div>
       </div>
       
@@ -441,19 +434,17 @@ const PlayerCard = memo(({
             onRevert={handleRevertProfile}
         />
         
-        <div className="w-px h-5 bg-black/10 dark:bg-white/10 mx-0.5"></div>
-
         <button onClick={handleToggleFixed} onPointerDown={e => e.stopPropagation()} 
             className={`
                 p-1 rounded-lg transition-all relative
-                ${isFixed ? 'bg-amber-500 text-amber-900 shadow-md shadow-amber-500/20' : 'bg-transparent text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}
+                ${isFixed ? 'bg-amber-500 text-white shadow-sm' : 'bg-transparent text-slate-300 hover:text-slate-600 dark:hover:text-slate-300'}
             `} 
             title={isFixed ? t('teamManager.unlockPlayer') : t('teamManager.lockPlayer')}
         >
-            {isFixed ? <Lock size={14} fill="currentColor" /> : <Pin size={14} />}
+            {isFixed ? <Lock size={12} fill="currentColor" /> : <Pin size={12} />}
         </button>
-        <button onClick={handleRemove} onPointerDown={e => e.stopPropagation()} className="text-slate-400 hover:text-rose-500 p-1 rounded-lg hover:bg-rose-500/10 transition-colors">
-          <Trash2 size={14} />
+        <button onClick={handleRemove} onPointerDown={e => e.stopPropagation()} className="text-slate-300 hover:text-rose-500 p-1 rounded-lg hover:bg-rose-500/10 transition-colors">
+          <Trash2 size={12} />
         </button>
       </div>
     </div>
@@ -467,43 +458,64 @@ const PlayerCard = memo(({
     );
 });
 
-const AddPlayerInput = memo(({ onAdd, disabled }: { onAdd: (name: string) => void; disabled?: boolean }) => {
+const AddPlayerInput = memo(({ onAdd, disabled }: { onAdd: (name: string, number?: string, skill?: number) => void; disabled?: boolean }) => {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [name, setName] = useState('');
+    const [number, setNumber] = useState('');
+    const [skill, setSkill] = useState(3);
     const inputRef = React.useRef<HTMLInputElement>(null);
 
     useEffect(() => { if(isOpen) inputRef.current?.focus(); }, [isOpen]);
 
     const submit = () => {
-        if(name.trim()) { onAdd(name.trim()); setName(''); }
+        if(name.trim()) { 
+            onAdd(name.trim(), number.trim() || undefined, skill); 
+            setName('');
+            setNumber('');
+            setSkill(3);
+        }
         inputRef.current?.focus();
     };
 
     if (isOpen && !disabled) {
         return (
-            <div className="flex flex-col mt-2 px-1 animate-in fade-in slide-in-from-top-1 bg-white dark:bg-slate-900 p-2 rounded-xl border border-black/5 dark:border-white/10 shadow-lg ring-1 ring-black/5">
+            <div className="flex flex-col mt-2 animate-in fade-in slide-in-from-top-1 bg-white/60 dark:bg-white/[0.04] p-2 rounded-xl border border-black/5 dark:border-white/5 shadow-sm ring-1 ring-black/5">
+                {/* Row 1: Name */}
+                <input ref={inputRef}
+                    className="w-full bg-transparent border-b border-black/10 dark:border-white/10 px-1 py-1.5 text-sm text-slate-800 dark:text-white focus:outline-none font-medium placeholder:text-slate-400 mb-2"
+                    placeholder={t('teamManager.addPlayerPlaceholder')} value={name} onChange={e => setName(e.target.value)}
+                    onKeyDown={e => { if(e.key === 'Enter') submit(); if(e.key === 'Escape') setIsOpen(false); }}
+                />
+                
+                {/* Row 2: Details */}
                 <div className="flex items-center gap-2">
-                    <input ref={inputRef}
-                        className="flex-1 bg-transparent border-b border-black/10 dark:border-white/10 px-1 py-1 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-indigo-500 font-medium placeholder:text-slate-400 min-w-0"
-                        placeholder={t('teamManager.addPlayerPlaceholder')} value={name} onChange={e => setName(e.target.value)}
-                        onKeyDown={e => { if(e.key === 'Enter') submit(); if(e.key === 'Escape') setIsOpen(false); }}
+                    <input 
+                        className="w-12 text-center bg-white/50 dark:bg-black/20 rounded-lg border border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-black/40 px-1 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none"
+                        placeholder="#"
+                        value={number}
+                        onChange={e => setNumber(e.target.value)}
+                        maxLength={3}
                     />
-                    <button onClick={submit} className="p-1.5 bg-indigo-500 rounded-lg hover:bg-indigo-400 text-white shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform"><Plus size={16} /></button>
+                    
+                    <div className="flex-1 flex items-center justify-center bg-white/30 dark:bg-white/5 rounded-lg px-2 py-1">
+                        <SkillSelector level={skill} onChange={setSkill} size={12} />
+                    </div>
+
+                    <button onClick={submit} className="p-1.5 bg-indigo-500 rounded-lg hover:bg-indigo-400 text-white shadow-md active:scale-95 transition-transform"><Plus size={16} /></button>
                 </div>
-                <button onClick={() => setIsOpen(false)} className="text-[10px] text-slate-400 mt-2 hover:text-slate-600 text-center uppercase font-bold tracking-wider">{t('common.done')}</button>
             </div>
         );
     }
     return (
         <button onClick={() => !disabled && setIsOpen(true)} disabled={disabled}
-            className={`mt-2 w-full py-2 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest rounded-xl border border-dashed transition-all ${disabled ? 'border-slate-200 dark:border-slate-800 text-slate-400 cursor-not-allowed' : 'border-slate-300 dark:border-slate-700 text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'}`} >
-            {disabled ? (<><Ban size={14} /> {t('common.full')}</>) : (<><Plus size={14} /> {t('common.add')}</>)}
+            className={`mt-2 w-full py-2.5 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest rounded-xl border border-dashed transition-all ${disabled ? 'border-slate-200 dark:border-slate-800 text-slate-400 cursor-not-allowed' : 'border-slate-300 dark:border-slate-700 text-slate-400 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'}`} >
+            {disabled ? (<><Ban size={12} /> {t('common.full')}</>) : (<><Plus size={12} /> {t('common.add')}</>)}
         </button>
     );
 });
 
-// Optimized TeamColumn with React.memo
+// Optimized TeamColumn with Chameleon Effect
 const TeamColumn = memo(({ 
     id, 
     team, 
@@ -519,7 +531,8 @@ const TeamColumn = memo(({
     onToggleFixed, 
     onRemove,
     usedColors,
-    isQueue = false
+    isQueue = false,
+    onSortTeam
 }: { 
     id: string; 
     team: Team; 
@@ -531,13 +544,15 @@ const TeamColumn = memo(({
     onUpdateSkill: (pid: string, s: number) => void;
     onSaveProfile: (pid: string) => void;
     onRevertProfile: (pid: string) => void;
-    onAddPlayer: (name: string) => void; 
+    onAddPlayer: (name: string, number?: string, skill?: number) => void; 
     onToggleFixed: (playerId: string) => void; 
     onRemove: (id: string) => void; 
     usedColors: Set<string>;
     isQueue?: boolean;
+    onSortTeam: (teamId: string, criteria: 'name' | 'number' | 'skill') => void;
 }) => {
   const { t } = useTranslation();
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const isFull = team.players.length >= 6;
   const { setNodeRef, isOver } = useSortable({ id: id, data: { type: 'container' } });
   
@@ -549,28 +564,74 @@ const TeamColumn = memo(({
   const handleUpdateName = useCallback((n: string) => onUpdateTeamName(id, n), [onUpdateTeamName, id]);
   const handleUpdateColor = useCallback((c: TeamColor) => onUpdateTeamColor(id, c), [onUpdateTeamColor, id]);
 
-  // Visual Adjustment for Queue Teams (Faded, Smaller)
-  const fadeClass = isQueue 
-    ? 'opacity-70 hover:opacity-100 bg-opacity-50 dark:bg-opacity-30 border-dashed hover:border-solid scale-95 hover:scale-100 origin-top' 
-    : '';
-
   return (
-    <div ref={setNodeRef} className={`flex flex-col w-full h-full ${colorConfig.bg} p-3 rounded-2xl ${colorConfig.border} border transition-all duration-300 ${isOver && !isFull ? `ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ${colorConfig.ring}` : ''} ${fadeClass}`}>
-      <div className="flex flex-col mb-2 gap-2">
-        <div className="flex items-start justify-between gap-2 border-b border-black/5 dark:border-white/5 pb-2">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className={`w-1.5 h-8 rounded-full flex-shrink-0 ${colorConfig.halo} shadow-[0_0_10px_currentColor] opacity-80`}></div>
-                <div className="flex flex-col min-w-0 flex-1">
-                    <span className={`text-[9px] font-bold uppercase tracking-wider opacity-60 ${colorConfig.text}`}>{t('teamManager.teamLabel')}</span>
-                    <EditableTitle name={team.name} onSave={handleUpdateName} className={`font-black uppercase tracking-tight ${isQueue ? 'text-sm' : 'text-base'} ${colorConfig.text}`} />
-                </div>
+    <div ref={setNodeRef} 
+         className={`
+            flex flex-col w-full h-full p-4 rounded-[2rem] border backdrop-blur-2xl transition-all duration-500
+            bg-white/40 dark:bg-[#0f172a]/60 
+            bg-gradient-to-b ${colorConfig.gradient}
+            ${colorConfig.border}
+            ${isQueue ? 'opacity-80 scale-[0.98] grayscale-[0.3] hover:opacity-100 hover:scale-100 hover:grayscale-0' : 'shadow-xl shadow-black/5'}
+            ${isOver ? `ring-2 ${colorConfig.ring} ring-offset-2 ring-offset-slate-100 dark:ring-offset-black` : ''}
+         `}
+    >
+      <div className="flex flex-col mb-4">
+        <div className="flex items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-3 mb-2">
+            {/* Indicator Pill */}
+            <div className={`w-1.5 self-stretch rounded-full ${colorConfig.halo} shadow-[0_0_10px_currentColor] opacity-90`} />
+            
+            <div className="flex-1 min-w-0">
+                <span className={`text-[10px] font-bold uppercase tracking-widest opacity-70 ${colorConfig.text}`}>{t('teamManager.teamLabel')}</span>
+                <EditableTitle name={team.name} onSave={handleUpdateName} className={`text-lg font-black uppercase tracking-tight ${colorConfig.text} ${colorConfig.textDark}`} />
             </div>
             
-            <div className="flex flex-col items-end flex-shrink-0">
-                <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-black/20 ${colorConfig.text} flex items-center gap-1 shadow-sm border border-black/5 dark:border-white/5 mb-0.5`}>
-                    <Star size={10} className="fill-current" /> {teamStrength}
+            {/* Sort & Strength Group */}
+            <div className="flex items-center gap-2">
+                {/* Sort Button */}
+                <div className="relative">
+                    <button 
+                        onClick={() => setShowSortMenu(!showSortMenu)}
+                        className={`p-1.5 rounded-lg border border-transparent hover:border-black/5 dark:hover:border-white/5 hover:bg-black/5 dark:hover:bg-white/10 ${showSortMenu ? 'bg-black/5 dark:bg-white/10' : ''}`}
+                    >
+                        <ListFilter size={14} className={`${colorConfig.text}`} />
+                    </button>
+                    <AnimatePresence>
+                        {showSortMenu && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                                className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-black/5 dark:border-white/10 p-1 flex flex-col min-w-[120px]"
+                            >
+                                <button onClick={() => { onSortTeam(id, 'name'); setShowSortMenu(false); }} className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-left">
+                                    <ArrowDownAZ size={14} /> Name
+                                </button>
+                                <button onClick={() => { onSortTeam(id, 'number'); setShowSortMenu(false); }} className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-left">
+                                    <ArrowDown01 size={14} /> Number
+                                </button>
+                                <button onClick={() => { onSortTeam(id, 'skill'); setShowSortMenu(false); }} className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-left">
+                                    <ArrowUpWideNarrow size={14} /> Skill
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
-                <span className={`${isFull ? 'text-rose-500 dark:text-rose-400' : 'text-slate-400'} text-[10px] font-bold`}>{team.players.length}/6</span>
+
+                {/* Player Count Badge */}
+                <div className={`
+                    px-2 py-1 rounded-lg text-[10px] font-bold border flex items-center gap-1 shadow-sm
+                    ${colorConfig.bg} ${colorConfig.border} ${colorConfig.text}
+                `}>
+                    <Users size={10} strokeWidth={2.5} /> {team.players.length}
+                </div>
+
+                {/* Strength Badge */}
+                <div className={`
+                    px-2 py-1 rounded-lg text-[10px] font-bold border flex items-center gap-1 shadow-sm
+                    ${colorConfig.bg} ${colorConfig.border} ${colorConfig.text}
+                `}>
+                    <Star size={10} fill="currentColor" /> {teamStrength}
+                </div>
             </div>
         </div>
         
@@ -582,8 +643,8 @@ const TeamColumn = memo(({
         />
       </div>
 
-      <div className={`flex-1 space-y-1.5 mt-1 ${isQueue ? 'min-h-[40px]' : 'min-h-[60px]'}`}>
-        {team.players.length === 0 && <span className="text-xs text-slate-400 italic py-6 block text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">{t('teamManager.dragPlayersHere')}</span>}
+      <div className={`flex-1 space-y-1 mt-1 ${isQueue ? 'min-h-[40px]' : 'min-h-[60px]'}`}>
+        {team.players.length === 0 && <span className="text-[10px] text-slate-400 italic py-6 block text-center border-2 border-dashed border-slate-200 dark:border-white/5 rounded-xl bg-slate-50/50 dark:bg-white/[0.01]">{t('teamManager.dragPlayersHere')}</span>}
         <SortableContextFixed items={team.players.map(p => p.id)} strategy={verticalListSortingStrategy}>
           {team.players.map(p => (
             <PlayerCard 
@@ -604,6 +665,8 @@ const TeamColumn = memo(({
         </SortableContextFixed>
       </div>
       {!isQueue && <AddPlayerInput onAdd={onAddPlayer} disabled={isFull} />}
+      {/* For queue teams, allow adding as long as not full, it effectively adds to the end of the queue list logic-wise */}
+      {isQueue && <AddPlayerInput onAdd={onAddPlayer} disabled={isFull} />}
     </div>
   );
 });
@@ -623,7 +686,7 @@ const BatchInputSection = memo(({ onGenerate }: { onGenerate: (names: string[]) 
 
     return (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 px-1 pb-10"> 
-            <textarea className="w-full h-64 bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-4 text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono text-sm resize-none custom-scrollbar"
+            <textarea className="w-full h-64 bg-white/50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono text-sm resize-none custom-scrollbar"
                placeholder={t('teamManager.batchInputPlaceholder')} value={rawNames} onChange={e => setRawNames(e.target.value)} />
             <Button onClick={handleGenerate} className="w-full" size="lg"><Shuffle size={18} /> {t('teamManager.generateTeams')}</Button>
         </div>
@@ -638,8 +701,18 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'roster' | 'profiles' | 'input'>('roster');
   const [activePlayer, setActivePlayer] = useState<Player | null>(null);
   const [undoVisible, setUndoVisible] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 10 } }), useSensor(KeyboardSensor));
+  // SENSOR FIX: Use only PointerSensor with constraints to allow scrolling but enable drag on deliberate moves
+  // Also KeyboardSensor for accessibility
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Requires 8px movement to start drag, allowing tap/scroll otherwise
+      },
+    }),
+    useSensor(KeyboardSensor)
+  );
   
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -656,10 +729,13 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   }, [props.deletedCount, props.onCommitDeletions]);
 
   // Drag Logic
-  const findContainer = (id: string): string | null => {
+  const findContainer = (id: string) => {
     if (id === 'A' || props.courtA.players.some(p => p.id === id)) return 'A';
     if (id === 'B' || props.courtB.players.some(p => p.id === id)) return 'B';
+    
+    // Check main Queue teams
     for (const team of props.queue) { if (team.id === id || team.players.some(p => p.id === id)) return team.id; }
+    
     return null;
   };
 
@@ -678,6 +754,12 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
       return set;
   }, [props.courtA.color, props.courtB.color, props.queue]);
 
+  const filteredProfiles = useMemo(() => {
+      return Array.from(props.profiles.values())
+          .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+          .sort((a, b) => a.name.localeCompare(b.name));
+  }, [props.profiles, searchTerm]);
+
   const handleDragStart = (event: DragStartEvent) => {
     const player = playersById.get(event.active.id as string);
     if (player) setActivePlayer(player);
@@ -686,22 +768,20 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    // FIX: Add explicit types to potentially help with type inference issues in some environments.
-    const fromContainerId: string | null = findContainer(active.id as string);
-    const toContainerId: string | null = findContainer(over.id as string);
-    if (fromContainerId && toContainerId && fromContainerId !== toContainerId) {
-      props.onMove(active.id as string, fromContainerId, toContainerId);
+    const from = findContainer(active.id as string);
+    const to = findContainer(over.id as string);
+    if (from && to && from !== to) {
+        props.onMove(active.id as string, from, to);
     }
   };
   
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-        // FIX: Add explicit types to potentially help with type inference issues in some environments.
-        const fromContainerId: string | null = findContainer(active.id as string);
-        const toContainerId: string | null = findContainer(over.id as string);
-        if (fromContainerId && toContainerId && fromContainerId !== toContainerId) {
-          props.onMove(active.id as string, fromContainerId, toContainerId);
+        const from = findContainer(active.id as string);
+        const to = findContainer(over.id as string);
+        if (from && to && from !== to) {
+             props.onMove(active.id as string, from, to);
         }
     }
     setActivePlayer(null);
@@ -722,54 +802,104 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   };
 
   // Stabilize handlers for TeamColumn
-  const handleAddA = useCallback((n: string) => props.onAddPlayer(n, 'A'), [props.onAddPlayer]);
-  const handleAddB = useCallback((n: string) => props.onAddPlayer(n, 'B'), [props.onAddPlayer]);
-  const handleAddQueue = useCallback((n: string) => props.onAddPlayer(n, 'Queue'), [props.onAddPlayer]);
+  const handleAddA = useCallback((n: string, num?: string, s?: number) => props.onAddPlayer(n, 'A', num, s), [props.onAddPlayer]);
+  const handleAddB = useCallback((n: string, num?: string, s?: number) => props.onAddPlayer(n, 'B', num, s), [props.onAddPlayer]);
+  const handleAddQueue = useCallback((n: string, num?: string, s?: number) => props.onAddPlayer(n, 'Queue', num, s), [props.onAddPlayer]);
+
+  // Tab Button Helper
+  const TabButton = ({ id, label, icon: Icon }: any) => (
+      <button 
+        onClick={() => setActiveTab(id)} 
+        className={`
+            relative px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 transition-all
+            ${activeTab === id 
+                ? 'bg-white dark:bg-white/10 text-indigo-600 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' 
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5'}
+        `}
+      >
+          <Icon size={14} strokeWidth={2.5} />
+          {label}
+      </button>
+  );
 
   return (
     <Modal isOpen={props.isOpen} onClose={props.onClose} title={t('teamManager.title')} maxWidth="max-w-[95vw] md:max-w-7xl">
       
-      <div className="sticky -top-6 z-[100] bg-slate-100 dark:bg-[#0a0a0a] border-b border-black/5 dark:border-white/5 -mx-6 px-6 py-4 shadow-sm mb-4">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      {/* --- HEADER CONTROL DECK --- */}
+      <div className="sticky top-0 z-[100] mb-6 -mx-1 px-1">
+          <div className="bg-slate-100/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl p-2 shadow-lg shadow-black/5 dark:shadow-black/20 flex flex-col md:flex-row gap-3">
               
-              <div className="flex flex-wrap p-1 bg-slate-200/50 dark:bg-white/5 rounded-xl gap-1">
-                <button onClick={() => setActiveTab('roster')} className={`px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'roster' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
-                    <List size={14} /> {t('teamManager.tabs.roster')}
-                </button>
-                <button onClick={() => setActiveTab('profiles')} className={`px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'profiles' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
-                    <User size={14} /> {t('teamManager.tabs.profiles')}
-                </button>
-                <button onClick={() => setActiveTab('input')} className={`px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'input' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
-                    <Upload size={14} /> {t('teamManager.tabs.batch')}
-                </button>
+              {/* TABS (Segmented Control) */}
+              <div className="flex bg-slate-200/50 dark:bg-black/20 p-1 rounded-2xl gap-1 flex-1">
+                  <TabButton id="roster" label={t('teamManager.tabs.roster')} icon={List} />
+                  <TabButton id="profiles" label={t('teamManager.tabs.profiles')} icon={Users} />
+                  <TabButton id="input" label={t('teamManager.tabs.batch')} icon={Upload} />
               </div>
 
+              {/* ACTIONS (Right Side) */}
               {activeTab === 'roster' && (
-                  <div className="flex flex-wrap items-center justify-end gap-2 w-full md:w-auto">
-                      <div className="flex items-center bg-slate-200/50 dark:bg-white/5 rounded-lg p-1">
+                  <div className="flex items-center gap-4 p-1 rounded-2xl overflow-x-auto no-scrollbar">
+                      
+                      {/* Rotation Mode Switch (Distinct Group) */}
+                      <div className="flex items-center bg-slate-200/50 dark:bg-black/20 p-1 rounded-xl">
                           <button 
                              onClick={() => props.onSetRotationMode('standard')}
-                             className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${props.rotationMode === 'standard' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500'}`}
+                             className={`
+                                px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2
+                                ${props.rotationMode === 'standard' ? 'bg-white dark:bg-white/10 text-indigo-600 dark:text-indigo-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300'}
+                             `}
                              title={t('teamManager.modes.standardTooltip')}
                           >
-                              {t('teamManager.modes.standard')}
+                              <Layers size={14} /> 
+                              <span className="hidden sm:inline">{t('teamManager.modes.standard')}</span>
                           </button>
                           <button 
                              onClick={() => props.onSetRotationMode('balanced')}
-                             className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${props.rotationMode === 'balanced' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500'}`}
+                             className={`
+                                px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2
+                                ${props.rotationMode === 'balanced' ? 'bg-white dark:bg-white/10 text-emerald-600 dark:text-emerald-300 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300'}
+                             `}
                              title={t('teamManager.modes.balancedTooltip')}
                           >
-                              {t('teamManager.modes.balanced')}
+                              <Shuffle size={14} />
+                              <span className="hidden sm:inline">{t('teamManager.modes.balanced')}</span>
                           </button>
                       </div>
 
-                      <Button 
-                        size="sm" 
+                      {/* Main Action Button (Standalone) */}
+                      <button 
                         onClick={props.onBalanceTeams}
-                        className={`whitespace-nowrap ${props.rotationMode === 'balanced' ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'}`}
+                        className={`
+                            px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider text-white shadow-lg flex items-center gap-2 whitespace-nowrap transition-transform active:scale-95 border-t border-white/20
+                            ${props.rotationMode === 'balanced' ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'}
+                        `}
                       >
-                         {props.rotationMode === 'balanced' ? <><Shuffle size={14} /> {t('teamManager.actions.globalBalance')}</> : <><RefreshCw size={14} /> {t('teamManager.actions.restoreOrder')}</>}
-                      </Button>
+                         {props.rotationMode === 'balanced' ? <><Shuffle size={16} /> {t('teamManager.actions.globalBalance')}</> : <><RefreshCw size={16} /> {t('teamManager.actions.restoreOrder')}</>}
+                      </button>
+                  </div>
+              )}
+
+              {/* SEARCH (Profiles Tab) */}
+              {activeTab === 'profiles' && (
+                  <div className="flex-1 w-full md:w-auto md:max-w-xs">
+                      <div className="relative group">
+                          <div className="absolute inset-0 bg-slate-200/50 dark:bg-black/20 rounded-xl transition-all group-focus-within:ring-2 group-focus-within:ring-indigo-500/30" />
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                          <input 
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              placeholder={t('teamManager.searchProfiles') || "Search profiles..."}
+                              className="relative w-full bg-transparent border-none rounded-xl pl-10 pr-9 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 focus:outline-none placeholder:text-slate-400 placeholder:font-medium"
+                          />
+                          {searchTerm && (
+                              <button 
+                                  onClick={() => setSearchTerm('')}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                              >
+                                  <X size={14} />
+                              </button>
+                          )}
+                      </div>
                   </div>
               )}
           </div>
@@ -781,23 +911,27 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
 
       {activeTab === 'profiles' && (
           <div className="pb-12 animate-in fade-in slide-in-from-bottom-2">
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {Array.from(props.profiles.values())
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map(profile => (
-                       <ProfileCard 
-                          key={profile.id}
-                          profile={profile}
-                          onUpdate={(n, s) => props.upsertProfile && props.upsertProfile(n, s, profile.id)}
-                          onDelete={() => props.deleteProfile && props.deleteProfile(profile.id)}
-                          onAddToGame={(target) => props.onAddPlayer(profile.name, target)}
-                          status={getProfileStatus(profile.id)}
-                       />
-                  ))}
-               </div>
-               {props.profiles.size === 0 && (
+               {props.profiles.size === 0 ? (
                    <div className="text-center py-20 text-slate-400 italic">
                        {t('teamManager.emptyProfiles')}
+                   </div>
+               ) : filteredProfiles.length === 0 ? (
+                   <div className="text-center py-20 text-slate-400 italic flex flex-col items-center gap-2">
+                       <Search size={24} className="opacity-50" />
+                       <span>No profiles found matching "{searchTerm}"</span>
+                   </div>
+               ) : (
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {filteredProfiles.map(profile => (
+                           <ProfileCard 
+                              key={profile.id}
+                              profile={profile}
+                              onUpdate={(n, s) => props.upsertProfile && props.upsertProfile(n, s, profile.id)}
+                              onDelete={() => props.deleteProfile && props.deleteProfile(profile.id)}
+                              onAddToGame={(target) => props.onAddPlayer(profile.name, target)}
+                              status={getProfileStatus(profile.id)}
+                           />
+                      ))}
                    </div>
                )}
           </div>
@@ -806,7 +940,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
       {activeTab === 'roster' && (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
           
-          <div className="flex flex-col md:grid md:grid-cols-2 xl:grid-cols-3 gap-6 items-start pb-24 px-1 min-h-[60vh]">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start pb-24 px-1 min-h-[60vh]">
             
             <TeamColumn 
                 id="A" team={props.courtA}
@@ -824,39 +958,28 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                 usedColors={usedColors}
             />
             
-            {/* Optimized Queue Column Layout */}
-            <div className="w-full md:col-span-2 xl:col-span-1 bg-slate-100 dark:bg-white/[0.02] p-2 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col h-fit">
-                <h3 className="font-bold text-slate-500 dark:text-slate-400 mb-4 px-2 pt-2 text-xs uppercase tracking-widest flex items-center gap-2 flex-none"><div className="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-600"></div>{t('teamManager.queue')}</h3>
-                <div className="flex flex-col gap-4">
-                  {props.queue.length === 0 && <div className="text-center py-8 text-slate-400 italic text-sm border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl col-span-full">{t('teamManager.queueEmpty')}</div>}
-                  {props.queue.map(team => (
-                    <TeamColumn 
-                        key={team.id} id={team.id} team={team}
-                        {...props}
-                        onUpdateSkill={props.onUpdatePlayerSkill} 
-                        onAddPlayer={_ => {}} // Queue teams don't add via input here
-                        usedColors={usedColors}
-                        isQueue={true}
-                    />
-                  ))}
+            {/* Queue Teams - Displayed Individually */}
+            {props.queue.map((team) => (
+                <TeamColumn 
+                    key={team.id}
+                    id={team.id} 
+                    team={team}
+                    {...props}
+                    onUpdateSkill={props.onUpdatePlayerSkill} 
+                    onAddPlayer={handleAddQueue} 
+                    usedColors={usedColors}
+                    isQueue={true}
+                />
+            ))}
+            
+            {props.queue.length === 0 && (
+                <div className="hidden md:flex items-center justify-center h-40 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[2rem] text-slate-400 font-bold text-xs uppercase tracking-widest">
+                    {t('teamManager.queueEmpty')}
                 </div>
-                <div className="pt-4 border-t border-slate-200 dark:border-white/5 mt-4"><AddPlayerInput onAdd={handleAddQueue} /></div>
-            </div>
+            )}
+            
           </div>
-
-          {createPortal(
-            <DragOverlayFixed>
-              {activePlayer ? (
-                <div className="scale-105 shadow-2xl opacity-90 cursor-grabbing w-[300px]">
-                    <PlayerCard 
-                        player={activePlayer} locationId="" profiles={props.profiles}
-                        onToggleFixed={() => {}} onRemove={() => {}} onUpdateName={() => {}} onUpdateNumber={()=>{}} onUpdateSkill={()=>{}} onSaveProfile={()=>{}} onRevertProfile={()=>{}}
-                    />
-                </div>
-              ) : null}
-            </DragOverlayFixed>,
-            document.body
-          )}
+          
         </DndContext>
       )}
 
@@ -875,6 +998,20 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
             </button>
          </div>
        </div>
+       
+       {createPortal(
+            <DragOverlayFixed>
+              {activePlayer ? (
+                <div className="scale-105 shadow-2xl opacity-90 cursor-grabbing w-[280px]">
+                    <PlayerCard 
+                        player={activePlayer} locationId="" profiles={props.profiles}
+                        onToggleFixed={() => {}} onRemove={() => {}} onUpdateName={() => {}} onUpdateNumber={()=>{}} onUpdateSkill={()=>{}} onSaveProfile={()=>{}} onRevertProfile={()=>{}}
+                    />
+                </div>
+              ) : null}
+            </DragOverlayFixed>,
+            document.body
+       )}
     </Modal>
   );
 };

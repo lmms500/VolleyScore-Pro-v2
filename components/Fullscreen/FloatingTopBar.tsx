@@ -100,7 +100,6 @@ const TeamInfoSmart = memo<{
   
   const isCritical = isMatchPoint || isSetPoint;
   
-  // Badge styling
   const badgeClass = isMatchPoint 
     ? 'bg-amber-500 text-white shadow-amber-500/30' 
     : `${theme.bg.replace('/10', '')} text-white shadow-${color}-500/30`;
@@ -118,7 +117,6 @@ const TeamInfoSmart = memo<{
                 {name}
             </span>
             
-            {/* Status Badge (Set/Match Point) - Small Pill underneath or next to name */}
             <AnimatePresence>
                 {isCritical && (
                     <motion.div
@@ -134,9 +132,8 @@ const TeamInfoSmart = memo<{
             </AnimatePresence>
         </div>
 
-        {/* Serving Indicator - Animated alongside name */}
+        {/* Serving Indicator */}
         <div className="relative w-6 h-6 flex items-center justify-center flex-shrink-0">
-             {/* Placeholder circle to keep layout stable */}
              <div className={`w-1 h-1 rounded-full opacity-20 ${theme.halo}`} />
              
              <AnimatePresence>
@@ -149,8 +146,7 @@ const TeamInfoSmart = memo<{
                         transition={{ type: "spring", stiffness: 300, damping: 20 }}
                         className={`absolute inset-0 flex items-center justify-center ${theme.text}`}
                     >
-                        <Volleyball size={20} className="drop-shadow-sm" fill="currentColor" fillOpacity={0.1} />
-                        {/* Pulse Ring */}
+                        <Volleyball size={18} className="drop-shadow-sm" fill="currentColor" fillOpacity={0.1} />
                         <motion.div 
                             className={`absolute inset-0 rounded-full border-2 ${theme.border} opacity-50`}
                             animate={{ scale: [1, 1.4], opacity: [0.5, 0] }}
@@ -202,7 +198,7 @@ const CenterDisplayStealth = memo<{
     key = 'deuce';
     content = <StatusPill 
         icon={TrendingUp} 
-        text={t('status.deuce')} 
+        text="DEUCE" 
         colorClass="text-cyan-600 dark:text-cyan-200" 
         borderClass="border-cyan-500/30" 
         bgClass="bg-cyan-100 dark:bg-cyan-900/40" 
@@ -224,7 +220,7 @@ const CenterDisplayStealth = memo<{
             layout
             className={`text-[9px] font-bold uppercase tracking-[0.1em] flex items-center gap-1 ${isTieBreak ? 'text-amber-500' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`}
         >
-            {isTieBreak ? t('status.tie_break') : t('status.setNumber', { number: currentSet })}
+            {isTieBreak ? 'TIE BREAK' : `SET ${currentSet}`}
         </motion.span>
       </button>
     );
@@ -238,7 +234,7 @@ const CenterDisplayStealth = memo<{
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.8 }}
-          transition={{ duration: 0.3, ease: "circOut" }}
+          transition={{ duration: 0.25, ease: "backOut" }}
           className="w-full flex justify-center h-full"
         >
           {content}
@@ -251,8 +247,8 @@ const CenterDisplayStealth = memo<{
 // --- MAIN COMPONENT ---
 
 export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
-  // Light Mode: bg-white/90, Dark Mode: bg-slate-950/80
-  const glassContainer = "bg-white/90 dark:bg-slate-950/80 backdrop-blur-2xl border border-black/5 dark:border-white/10 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] ring-1 ring-black/5 dark:ring-white/5";
+  // Ultra Glassy
+  const glassContainer = "bg-white/80 dark:bg-[#020617]/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.1)] ring-1 ring-black/5 dark:ring-white/5";
 
   return (
     <div className="fixed top-4 left-0 w-full z-[55] flex justify-center pointer-events-none px-4">
@@ -263,7 +259,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
                     pointer-events-auto
                     w-full max-w-xl
                     ${glassContainer}
-                    rounded-3xl
+                    rounded-[2rem]
                     px-2 py-2
                     flex items-stretch justify-between gap-1
                     min-h-[64px]
@@ -271,7 +267,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
                     overflow-visible
                 `}
             >
-                {/* Left Side (Name + Serving + Badge) */}
+                {/* Left Side */}
                 <TeamInfoSmart 
                     name={props.teamNameA} 
                     color={props.colorA} 
@@ -282,7 +278,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
                     isSetPoint={props.isSetPointA}
                 />
                 
-                {/* Divider & Timeout A */}
+                {/* Divider */}
                 <div className="flex items-center gap-1 shrink-0 border-l border-black/5 dark:border-white/10 pl-1">
                     <TimeoutButton 
                         timeouts={props.timeoutsA} 
@@ -291,9 +287,9 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
                     />
                 </div>
 
-                {/* Center Dynamic Display */}
+                {/* Center */}
                 <div className="shrink-0 z-10 mx-1 flex items-center">
-                    <div className="bg-slate-100/50 dark:bg-black/40 rounded-2xl border border-black/5 dark:border-white/5 w-[80px] h-full flex justify-center items-center">
+                    <div className="bg-slate-100/50 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/5 w-[80px] h-full flex justify-center items-center">
                         <CenterDisplayStealth 
                             time={props.time}
                             isTimerRunning={props.isTimerRunning}
@@ -306,7 +302,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
                     </div>
                 </div>
 
-                {/* Timeout B & Divider */}
+                {/* Divider */}
                 <div className="flex items-center gap-1 shrink-0 border-r border-black/5 dark:border-white/10 pr-1">
                     <TimeoutButton 
                         timeouts={props.timeoutsB} 
@@ -315,7 +311,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
                     />
                 </div>
 
-                {/* Right Side (Name + Serving + Badge) */}
+                {/* Right Side */}
                 <TeamInfoSmart 
                     name={props.teamNameB} 
                     color={props.colorB} 

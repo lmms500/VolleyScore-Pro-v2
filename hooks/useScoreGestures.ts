@@ -10,15 +10,9 @@ interface UseScoreGesturesProps {
 }
 
 // Constants for gesture detection
-const SWIPE_THRESHOLD = 50; 
+const SWIPE_THRESHOLD = 40; // Increased responsiveness for intended swipes
 const TAP_MAX_DURATION_MS = 800;
-const TAP_MAX_MOVE = 40;
-
-const vibrate = (pattern: number | number[]) => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate(pattern);
-    }
-};
+const TAP_MAX_MOVE = 10; // Tight tolerance for taps to distinguish from scrolls
 
 export const useScoreGestures = ({ 
   onAdd, 
@@ -33,14 +27,10 @@ export const useScoreGestures = ({
   const startTime = useRef<number | null>(null);
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (isLocked) return; 
+    if (isLocked) return;
+    // Only track primary pointer to avoid multi-touch chaos
+    if (!e.isPrimary) return;
     
-    try {
-        (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    } catch (error) {
-        console.warn("Failed to capture pointer:", error);
-    }
-
     if (onInteractionStart) onInteractionStart();
     
     startX.current = e.clientX;
@@ -50,14 +40,9 @@ export const useScoreGestures = ({
 
   const handlePointerUp = (e: React.PointerEvent) => {
     if (onInteractionEnd) onInteractionEnd();
+    if (!e.isPrimary) return;
     if (startX.current === null || startY.current === null || startTime.current === null) return;
     
-    try {
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch (error) {
-        // Ignore
-    }
-
     const endX = e.clientX;
     const endY = e.clientY;
     const deltaTime = Date.now() - startTime.current;
@@ -68,15 +53,16 @@ export const useScoreGestures = ({
     const absDeltaX = Math.abs(deltaX);
     const absDeltaY = Math.abs(deltaY);
 
-    // Rule 1: TAP (Relaxed logic)
+    // Rule 1: TAP (Very strict movement check)
+    // Must be short duration and very little movement
     if (deltaTime < TAP_MAX_DURATION_MS && absDeltaX < TAP_MAX_MOVE && absDeltaY < TAP_MAX_MOVE) {
-      if (e.cancelable) e.preventDefault();
-      // Haptics handled in callback usually, but we can double ensure responsiveness here if needed
-      // However, App.tsx handles the specific type (Add vs Sub)
+      if (e.cancelable) e.preventDefault(); // Prevent ghost clicks
       onAdd();
     } 
-    // Rule 2: Swipes (Significant Vertical Movement)
-    else if (absDeltaY > SWIPE_THRESHOLD && absDeltaY > absDeltaX) {
+    // Rule 2: Vertical Swipes (Must be dominant axis AND significantly more vertical than horizontal)
+    // We increase sensitivity but enforce stricter angle check
+    else if (absDeltaY > SWIPE_THRESHOLD && absDeltaY > (absDeltaX * 1.5)) {
+        // If it's a clear vertical swipe, prevent default (scrolling)
         if (e.cancelable) e.preventDefault();
         
         if (deltaY < 0) {
@@ -101,8 +87,9 @@ export const useScoreGestures = ({
   };
 
   const handleClick = (e: React.MouseEvent) => {
+      // Prevent double firing if pointer events handled it, but don't block
+      // legitimate button clicks that might bubble up if not handled by pointer
       e.stopPropagation();
-      e.preventDefault();
   };
 
   return {

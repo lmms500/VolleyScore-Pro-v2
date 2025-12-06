@@ -1,12 +1,7 @@
 
 {
   "app": {
-    "loading": "Carregando...",
-    "switchSides": {
-      "title": "Trocar Lados",
-      "reason": "Soma dos pontos é múltiplo de {number}",
-      "action": "Toque para Trocar"
-    }
+    "loading": "Carregando..."
   },
   "languages": {
     "en": "English",
@@ -26,8 +21,7 @@
     "history": "Histórico",
     "fullscreen": "Tela Cheia",
     "exitFullscreen": "Sair Tela Cheia",
-    "reset": "Zerar Partida",
-    "minimize": "Minimizar Controles"
+    "reset": "Zerar Partida"
   },
   "history": {
     "gameStart": "Início do Jogo",
@@ -50,9 +44,7 @@
     "golden_point": "GOLDEN POINT",
     "match_point": "MATCH POINT",
     "set_point": "SET POINT",
-    "tie_break": "TIE BREAK",
-    "deuce": "IGUAIS",
-    "setNumber": "SET {number}"
+    "tie_break": "TIE BREAK"
   },
   "settings": {
     "title": "Configuração",
@@ -74,17 +66,7 @@
       "tieBreakTo25": "até 25 pts",
       "deuceLogic": "Lógica do Deuce",
       "deuceStandard": "Vantagem de 2",
-      "deuceSuddenDeath": "Morte Súbita (3pts)",
-      "gameMode": "Modo de Jogo",
-      "modeIndoor": "Quadra",
-      "modeBeach": "Areia",
-      "tieBreakTarget": "Alvo:"
-    },
-    "extras": {
-      "title": "Extras",
-      "playerStats": "Estatísticas (Scout)",
-      "playerStatsDesc": "Acompanhe skills e pontuadores",
-      "soundEffects": "Efeitos Sonoros"
+      "deuceSuddenDeath": "Morte Súbita (3pts)"
     },
     "applyChanges": "Aplicar Alterações",
     "applyAndReset": "Aplicar e Reiniciar Jogo",
@@ -183,6 +165,7 @@
     "dragPlayersHere": "Arraste jogadores aqui",
     "addPlayer": "Adicionar Jogador",
     "addPlayerPlaceholder": "Nome do novo jogador...",
+    "searchProfiles": "Buscar perfis...",
     "rosterFull": "Elenco Cheio",
     "lockPlayer": "Fixar Jogador",
     "unlockPlayer": "Liberar Jogador",
@@ -220,10 +203,7 @@
       "courtB": "Quadra B",
       "queue": "Na Fila"
     },
-    "emptyProfiles": "Nenhum perfil salvo ainda. Sincronize jogadores na aba Elenco para criar perfis.",
-    "colorTaken": "Cor em uso",
-    "guest": "Convidado",
-    "teamLetter": "Time {letter}"
+    "emptyProfiles": "Nenhum perfil salvo ainda. Sincronize jogadores na aba Elenco para criar perfis."
   },
   "historyList": {
     "title": "Histórico de Partidas",
@@ -248,45 +228,11 @@
     "importError": "Formato de arquivo inválido.",
     "delete": "Excluir",
     "duration": "Duração",
-    "date": "Data",
-    "analysis": "Análise",
-    "back": "Voltar",
-    "summary": "Resumo",
-    "set": "Set {number}",
-    "matchFlow": "Fluxo da Partida (Vantagem)",
-    "totalKills": "Total de Ataques",
-    "blocks": "Bloqueios",
-    "serviceAces": "Aces de Saque",
-    "opponentErrors": "Erros do Oponente",
-    "matchInsights": "Análise da Partida",
-    "playerStats": "Estatísticas dos Jogadores",
-    "pts": "PTS",
-    "noChartData": "Dados insuficientes para o gráfico",
-    "lead": "Vantagem"
+    "date": "Data"
   },
   "errors": {
     "genericTitle": "Algo deu errado",
     "genericMessage": "A aplicação encontrou um erro inesperado. Pedimos desculpas pelo inconveniente.",
     "reload": "Recarregar App"
-  },
-  "scout": {
-    "attack": "Ataque / Ponto",
-    "block": "Bloqueio",
-    "ace": "Ace",
-    "opponentError": "Erro Adv.",
-    "step1": "Passo 1 de 2",
-    "step2": "Passo 2 de 2",
-    "selectAction": "Selecione a Ação",
-    "whoScored": "Quem Pontuou?",
-    "unknownPlayer": "Jogador Desconhecido / Convidado",
-    "changePlayer": "Trocar Jogador",
-    "ghostPlayer": "Jogador Fantasma"
-  },
-  "reload": {
-    "updateAvailable": "Atualização Disponível",
-    "offlineReady": "Pronto para Offline",
-    "updateMessage": "Nova versão disponível. Clique para recarregar.",
-    "offlineMessage": "O app está pronto para funcionar offline.",
-    "reloadButton": "Recarregar"
   }
 }

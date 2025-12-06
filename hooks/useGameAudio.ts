@@ -1,5 +1,6 @@
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
+import { GameConfig } from '../types';
 
 /**
  * Advanced VolleyScore Pro Sound Engine
@@ -11,7 +12,7 @@ import { useCallback, useRef } from 'react';
  * - Polyphonic Chords for Victory
  * - Noise generators for ambient tension
  */
-export const useGameAudio = ({ enableSound }: { enableSound: boolean }) => {
+export const useGameAudio = (config: GameConfig) => {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
 
@@ -34,19 +35,49 @@ export const useGameAudio = ({ enableSound }: { enableSound: boolean }) => {
           masterGainRef.current.connect(compressor);
       }
     }
+    
+    // Always attempt resume if suspended (common in iOS/Safari)
     if (audioCtxRef.current?.state === 'suspended') {
-      audioCtxRef.current.resume().catch(() => {});
+      audioCtxRef.current.resume().catch(e => console.debug("Audio resume failed (expected until user interaction):", e));
     }
     return audioCtxRef.current;
   }, []);
+
+  // Unlock Audio Logic for iOS - Ensures context is resumed on first interaction
+  useEffect(() => {
+      const unlockAudio = () => {
+          if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+              audioCtxRef.current.resume().then(() => {
+                  // Remove listeners once unlocked
+                  document.removeEventListener('touchstart', unlockAudio);
+                  document.removeEventListener('click', unlockAudio);
+                  console.debug("AudioContext unlocked");
+              }).catch((e) => console.warn("Failed to unlock AudioContext", e));
+          } else if (!audioCtxRef.current) {
+              // Initialize context on first interaction if not present
+              getContext();
+          }
+      };
+
+      document.addEventListener('touchstart', unlockAudio, { passive: true });
+      document.addEventListener('click', unlockAudio, { passive: true });
+
+      return () => {
+          document.removeEventListener('touchstart', unlockAudio);
+          document.removeEventListener('click', unlockAudio);
+      };
+  }, [getContext]);
 
   // --- SOUND GENERATORS ---
 
   // 1. UI Click (Clean, Glassy)
   const playTap = useCallback(() => {
-    if (!enableSound) return;
+    if (!config.enableSound) return;
     const ctx = getContext();
     if (!ctx || !masterGainRef.current) return;
+
+    // Check state again
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
     const t = ctx.currentTime;
     const osc = ctx.createOscillator();
@@ -69,11 +100,11 @@ export const useGameAudio = ({ enableSound }: { enableSound: boolean }) => {
 
     osc.start(t);
     osc.stop(t + 0.06);
-  }, [enableSound, getContext]);
+  }, [config.enableSound, getContext]);
 
   // 2. Point Score (Impact + Success Tone)
   const playScore = useCallback(() => {
-    if (!enableSound) return;
+    if (!config.enableSound) return;
     const ctx = getContext();
     if (!ctx || !masterGainRef.current) return;
 
@@ -104,16 +135,18 @@ export const useGameAudio = ({ enableSound }: { enableSound: boolean }) => {
     pingOsc.start(t);
     thudOsc.stop(t + 0.2);
     pingOsc.stop(t + 0.3);
-  }, [enableSound, getContext]);
+  }, [config.enableSound, getContext]);
 
   // 3. Undo / Subtract (Updated: Clearer, higher pitch for mobile)
   const playUndo = useCallback(() => {
-    if (!enableSound) return;
+    if (!config.enableSound) return;
     const ctx = getContext();
     if (!ctx || !masterGainRef.current) return;
 
     const t = ctx.currentTime;
     
+    // Use Sine + Triangle mix for visibility on small speakers
+    // Pitch drops from 600Hz to 300Hz (Middle frequencies cut through better than 100Hz)
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -121,6 +154,7 @@ export const useGameAudio = ({ enableSound }: { enableSound: boolean }) => {
     osc.frequency.setValueAtTime(600, t);
     osc.frequency.exponentialRampToValueAtTime(300, t + 0.15);
 
+    // Snappy envelope
     gain.gain.setValueAtTime(0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
 
@@ -129,19 +163,21 @@ export const useGameAudio = ({ enableSound }: { enableSound: boolean }) => {
 
     osc.start(t);
     osc.stop(t + 0.2);
-  }, [enableSound, getContext]);
+  }, [config.enableSound, getContext]);
 
   // 4. Whistle (FM Synthesis for realism)
   const playWhistle = useCallback(() => {
-    if (!enableSound) return;
+    if (!config.enableSound) return;
     const ctx = getContext();
     if (!ctx || !masterGainRef.current) return;
 
     const t = ctx.currentTime;
     
+    // Carrier
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     
+    // Modulator (The pea inside the whistle)
     const mod = ctx.createOscillator();
     const modGain = ctx.createGain();
 
@@ -166,16 +202,17 @@ export const useGameAudio = ({ enableSound }: { enableSound: boolean }) => {
     osc.start(t);
     mod.stop(t + 0.5);
     osc.stop(t + 0.5);
-  }, [enableSound, getContext]);
+  }, [config.enableSound, getContext]);
 
   // 5. Set Point Alert (Warning Bell)
   const playSetPointAlert = useCallback(() => {
-    if (!enableSound) return;
+    if (!config.enableSound) return;
     const ctx = getContext();
     if (!ctx || !masterGainRef.current) return;
 
     const t = ctx.currentTime;
     
+    // FM Bell Tone
     const carrier = ctx.createOscillator();
     const modulator = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -199,16 +236,17 @@ export const useGameAudio = ({ enableSound }: { enableSound: boolean }) => {
     modulator.start(t);
     carrier.stop(t + 1.0);
     modulator.stop(t + 1.0);
-  }, [enableSound, getContext]);
+  }, [config.enableSound, getContext]);
 
   // 6. Match Point Alert (Intense Pulse)
   const playMatchPointAlert = useCallback(() => {
-    if (!enableSound) return;
+    if (!config.enableSound) return;
     const ctx = getContext();
     if (!ctx || !masterGainRef.current) return;
 
     const t = ctx.currentTime;
     
+    // Two rapid pulses
     const times = [t, t + 0.2];
     
     times.forEach(start => {
@@ -217,8 +255,10 @@ export const useGameAudio = ({ enableSound }: { enableSound: boolean }) => {
         
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(440, start); // A4
+        // Pitch bend up slightly for tension
         osc.frequency.linearRampToValueAtTime(450, start + 0.15); 
 
+        // Filter to take edge off
         const filter = ctx.createBiquadFilter();
         filter.type = 'lowpass';
         filter.frequency.setValueAtTime(800, start);
@@ -233,15 +273,16 @@ export const useGameAudio = ({ enableSound }: { enableSound: boolean }) => {
         osc.start(start);
         osc.stop(start + 0.2);
     });
-  }, [enableSound, getContext]);
+  }, [config.enableSound, getContext]);
 
   // 7. Set Win (Ascending Chord)
   const playSetWin = useCallback(() => {
-    if (!enableSound) return;
+    if (!config.enableSound) return;
     const ctx = getContext();
     if (!ctx || !masterGainRef.current) return;
 
     const t = ctx.currentTime;
+    // C Major Arpeggio
     const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
     
     notes.forEach((freq, i) => {
@@ -261,19 +302,21 @@ export const useGameAudio = ({ enableSound }: { enableSound: boolean }) => {
         osc.start(start);
         osc.stop(start + 0.7);
     });
-  }, [enableSound, getContext]);
+  }, [config.enableSound, getContext]);
 
   // 8. Match Win (Grand Fanfare)
   const playMatchWin = useCallback(() => {
-    if (!enableSound) return;
+    if (!config.enableSound) return;
     const ctx = getContext();
     if (!ctx || !masterGainRef.current) return;
 
     const t = ctx.currentTime;
     
+    // Power Chord Fanfare
     const chord1 = [392.00, 523.25, 783.99]; // G Major
     const chord2 = [523.25, 659.25, 783.99, 1046.50]; // C Major with high C
 
+    // Play Chord 1
     chord1.forEach((freq) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -287,24 +330,25 @@ export const useGameAudio = ({ enableSound }: { enableSound: boolean }) => {
         osc.stop(t + 0.3);
     });
 
+    // Play Chord 2 (Main) slightly later
     chord2.forEach((freq, i) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        const start = t + 0.35 + (i * 0.02);
+        const start = t + 0.35 + (i * 0.02); // Slight strum
         
-        osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+        osc.type = i % 2 === 0 ? 'sine' : 'triangle'; // Richer texture
         osc.frequency.value = freq;
 
         gain.gain.setValueAtTime(0, start);
         gain.gain.linearRampToValueAtTime(0.2, start + 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.001, start + 3.0);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 3.0); // Long sustain
 
         osc.connect(gain);
         gain.connect(masterGainRef.current!);
         osc.start(start);
         osc.stop(start + 3.0);
     });
-  }, [enableSound, getContext]);
+  }, [config.enableSound, getContext]);
 
   return {
     playTap,

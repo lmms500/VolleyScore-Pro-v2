@@ -27,28 +27,24 @@ const flipVariants: Variants = {
 const SetNumber = memo(({ value, color }: { value: number, color: TeamColor }) => {
     const theme = resolveTheme(color);
     const textColor = color === 'rose' || color === 'amber' || color === 'fuchsia'
-        ? `${theme.text} drop-shadow-[0_0_20px_currentColor] brightness-125 saturate-150`
-        : `${theme.text} drop-shadow-[0_0_20px_currentColor]`;
+        ? `${theme.text} drop-shadow-[0_0_15px_currentColor] brightness-110 saturate-150`
+        : `${theme.text} drop-shadow-[0_0_15px_currentColor]`;
 
     return (
         <div className="w-[60px] flex flex-col justify-center items-center relative">
             <motion.span
                 key={value} // Triggers animation on change
-                initial={{ scale: 0.5, opacity: 0, filter: 'blur(10px)' }}
+                initial={{ scale: 0.8, opacity: 0, filter: 'blur(8px)' }}
                 animate={{ 
-                    scale: [1.5, 1], 
+                    scale: [1.2, 1], 
                     opacity: 1, 
                     filter: 'blur(0px)',
-                    textShadow: [
-                        `0 0 50px currentColor`, 
-                        `0 4px 12px rgba(0,0,0,0.5)`
-                    ]
                 }} 
                 transition={{ 
-                    duration: 0.6, 
+                    duration: 0.5, 
                     ease: [0.16, 1, 0.3, 1] // Ultra snappy spring-like bezier
                 }}
-                className={`font-black text-5xl leading-none tabular-nums ${textColor}`}
+                className={`font-black text-5xl leading-none tabular-nums tracking-tighter ${textColor}`}
                 style={{ 
                     display: 'inline-block'
                 }}
@@ -95,31 +91,24 @@ export const MeasuredFullscreenHUD: React.FC<MeasuredFullscreenHUDProps> = memo(
                 style={{ transformStyle: 'preserve-3d' }}
                 className="relative"
             >
-                {/* Neo-Glass Container */}
+                {/* Neo-Glass Container - More translucent V2 */}
                 <div className={`
                     relative flex items-center justify-center gap-0 
-                    px-6 py-3 rounded-[1.5rem]
-                    bg-white/20 dark:bg-black/20 
-                    backdrop-blur-2xl border border-white/20 dark:border-white/10 
-                    shadow-[0_0_40px_rgba(0,0,0,0.2)] dark:shadow-[0_0_40px_rgba(0,0,0,0.6)]
+                    px-6 py-2 rounded-full
+                    bg-white/10 dark:bg-black/30 
+                    backdrop-blur-md border border-white/20 dark:border-white/5 
+                    shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]
                     overflow-hidden
-                    min-w-[200px] min-h-[80px]
+                    min-w-[180px] min-h-[70px]
                     flex-shrink-0
+                    ring-1 ring-white/5
                 `}>
-                    {/* Fixed Internal Glow */}
-                    <div 
-                        className="absolute inset-0 z-0 pointer-events-none mix-blend-overlay opacity-50"
-                        style={{
-                            background: 'radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 70%)'
-                        }}
-                    />
-
                     {/* Content Layer */}
-                    <div className="relative z-10 flex items-center justify-center gap-1">
+                    <div className="relative z-10 flex items-center justify-center gap-2">
                         <SetNumber value={setsLeft} color={colorLeft} />
 
-                        {/* Divider */}
-                        <div className="h-10 w-[1px] bg-gradient-to-b from-transparent via-black/20 dark:via-white/20 to-transparent mx-1" />
+                        {/* Divider - Smaller Dot */}
+                        <div className="w-1.5 h-1.5 rounded-full bg-white/20 dark:bg-white/10 mx-1" />
 
                         <SetNumber value={setsRight} color={colorRight} />
                     </div>

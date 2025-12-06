@@ -123,6 +123,9 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
       badgeConfig = { icon: TrendingUp, text: t('status.deuce_advantage'), className: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border-indigo-500/20' };
   }
 
+  // FIX: Match Point should use strong amber/gold
+  const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : theme.halo;
+
   return (
     <GlassSurface 
         intensity="transparent" // 100% Transparent
@@ -208,12 +211,13 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             <GestureHint isVisible={isTouching} />
 
             <div className="grid place-items-center w-full h-full relative z-10">
-                {/* HALO */}
+                {/* HALO - FIXED BUG: Static Blur applied via class, not animation */}
                 <motion.div 
                     className={`
                         col-start-1 row-start-1
                         rounded-full pointer-events-none z-0 aspect-square
-                        ${isMatchPoint ? 'bg-amber-500' : theme.halo}
+                        blur-[60px] md:blur-[80px] will-change-[transform,opacity]
+                        ${haloColorClass}
                     `}
                     style={{ 
                         mixBlendMode: 'screen',
@@ -222,10 +226,11 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                         minHeight: '100px',
                         maxHeight: '280px'
                     }}
+                    initial={false}
                     animate={{ 
-                        opacity: isCritical ? [0.4, 0.7, 0.4] : (isServing ? 0.35 : 0),
+                        opacity: isCritical ? [0.4, 0.8, 0.4] : (isServing ? 0.35 : 0),
                         scale: isCritical ? [1, 1.15, 1] : 1,
-                        filter: isServing ? 'blur(50px)' : 'blur(0px)'
+                        // Removed dynamic filter animation to prevent "solid circle" glitch on re-mount
                     }}
                     transition={{ 
                         duration: isCritical ? 2 : 0.5, 
@@ -242,7 +247,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                             font-black tracking-tighter outline-none select-none
                             text-8xl md:text-9xl lg:text-[10rem] leading-none
                             text-slate-900 dark:text-white
-                            ${isMatchPoint ? 'drop-shadow-[0_0_30px_rgba(251,191,36,0.3)]' : ''}
+                            ${isMatchPoint ? 'drop-shadow-[0_0_30px_rgba(251,191,36,0.5)]' : ''}
                         `}
                     />
                 </div>

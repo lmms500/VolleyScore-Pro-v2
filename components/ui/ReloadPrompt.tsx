@@ -1,82 +1,11 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, WifiOff, RefreshCw } from 'lucide-react';
+import { useServiceWorker } from '../../hooks/useServiceWorker';
 
 export const ReloadPrompt: React.FC = () => {
-  const [needRefresh, setNeedRefresh] = useState(false);
-  const [offlineReady, setOfflineReady] = useState(false);
-  const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      // Registrar SW manualmente para ter controle total dos eventos
-      navigator.serviceWorker.register('/sw.js')
-        .then((reg) => {
-          setRegistration(reg);
-
-          // Se já existe um worker esperando (atualização baixada em background)
-          if (reg.waiting) {
-              setNeedRefresh(true);
-          }
-
-          // Monitorar novas atualizações
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed') {
-                  if (navigator.serviceWorker.controller) {
-                    // Nova versão disponível (já havia um SW ativo antes)
-                    setNeedRefresh(true);
-                  } else {
-                    // Conteúdo cacheado para offline (primeira vez)
-                    setOfflineReady(true);
-                  }
-                }
-              });
-            }
-          });
-        })
-        .catch(err => {
-            // Silence specific origin errors common in preview environments
-            if (err.message && (err.message.includes('origin') || err.message.includes('scriptURL'))) {
-                console.warn('Service Worker registration skipped: Origin mismatch in preview environment.');
-            } else {
-                console.error('SW Register Error:', err);
-            }
-        });
-
-      // Recarregar a página quando o novo SW assumir o controle
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
-      });
-    }
-  }, []);
-
-  const close = () => {
-    setOfflineReady(false);
-    setNeedRefresh(false);
-  };
-
-  const updateServiceWorker = () => {
-    if (registration && registration.waiting) {
-      // Envia mensagem para o SW pular a espera e ativar a nova versão
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-    }
-  };
-
-  // Auto-fechar o aviso de "Offline Ready" após 4 segundos
-  useEffect(() => {
-    if (offlineReady) {
-      const timer = setTimeout(() => setOfflineReady(false), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [offlineReady]);
+  const { needRefresh, offlineReady, updateServiceWorker, closePrompt } = useServiceWorker();
 
   if (!offlineReady && !needRefresh) return null;
 
@@ -104,7 +33,7 @@ export const ReloadPrompt: React.FC = () => {
                     : "App is ready to work offline."}
                 </p>
               </div>
-              <button onClick={close} className="text-slate-400 hover:text-white transition-colors">
+              <button onClick={closePrompt} className="text-slate-400 hover:text-white transition-colors">
                 <X size={16} />
               </button>
             </div>

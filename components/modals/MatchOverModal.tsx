@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom'; // Import createPortal
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -36,16 +36,6 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   
   const winnerColorKey = isA ? colorA : colorB;
   const winnerTheme = resolveTheme(winnerColorKey);
-  
-  // Defer rendering of heavy ResultCard to avoid freezing main thread during modal open animation
-  useEffect(() => {
-      if (isOpen) {
-          const timer = setTimeout(() => setRenderShareCard(true), 800);
-          return () => clearTimeout(timer);
-      } else {
-          setRenderShareCard(false);
-      }
-  }, [isOpen]);
   
   // Mapping for background blur
   const getBgColor = (c: string) => {
@@ -89,23 +79,25 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   }, [state.matchLog, state.teamARoster, state.teamBRoster]);
 
   const handleShare = () => {
-      // Force render if sharing clicked before timeout
-      if (!renderShareCard) {
-          setRenderShareCard(true);
-          // Wait briefly for render
-          setTimeout(() => {
-              const dateStr = new Date().toISOString().split('T')[0];
-              shareResult('social-share-card', `volleyscore_result_${dateStr}.png`);
-          }, 200);
-          return;
-      }
-      const dateStr = new Date().toISOString().split('T')[0];
-      shareResult('social-share-card', `volleyscore_result_${dateStr}.png`);
+      // 1. Trigger render of the heavy ResultCard
+      setRenderShareCard(true);
+      
+      // 2. Wait briefly for React to mount it and layout to stabilize, then capture
+      setTimeout(() => {
+          const dateStr = new Date().toISOString().split('T')[0];
+          shareResult('social-share-card', `volleyscore_result_${dateStr}.png`);
+      }, 500);
   };
+
+  // Reset share card state when modal closes to save resources
+  if (!isOpen && renderShareCard) {
+      setRenderShareCard(false);
+  }
 
   return (
     <>
       {/* HIDDEN RENDER TARGET FOR SHARING - PORTALED TO BODY TO AVOID CSS TRANSFORMS */}
+      {/* Performance Fix: Strictly ensuring this is not in DOM until requested */}
       {renderShareCard && createPortal(
           <ResultCard 
              teamAName={state.teamAName}
@@ -130,15 +122,15 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
         showCloseButton={false}
         persistent={true}
       >
-        {/* Confetti Overlay inside the modal content area but positioned absolute to fill it */}
-        <div className="absolute inset-0 overflow-hidden rounded-[2rem] pointer-events-none z-0 opacity-50">
+        {/* Confetti Overlay - Use will-change to hint compositor */}
+        <div className="absolute inset-0 overflow-hidden rounded-[2rem] pointer-events-none z-0 opacity-50" style={{ willChange: 'transform, opacity' }}>
             <Confetti color={winnerColorKey} />
         </div>
 
         <div className="flex flex-col items-center text-center space-y-6 relative z-10">
           
           <div className="relative group mt-2">
-              <div className={`absolute inset-0 blur-[60px] rounded-full opacity-60 ${winnerBgColor}`}></div>
+              <div className={`absolute inset-0 blur-[60px] rounded-full opacity-60 ${winnerBgColor}`} style={{ willChange: 'opacity' }}></div>
               <div className="relative flex flex-col items-center">
                   <Trophy size={72} className={`${winnerTheme.text} ${winnerTheme.textDark} drop-shadow-[0_0_30px_currentColor] animate-bounce`} />
                   <h2 className="text-3xl font-black text-slate-900 dark:text-white mt-4 uppercase tracking-tighter drop-shadow-sm">{winnerName}</h2>
@@ -251,7 +243,7 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
                       className="flex-shrink-0 bg-white/50 dark:bg-indigo-500/10 hover:bg-white dark:hover:bg-indigo-500/20 text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 border-indigo-500/20 shadow-sm"
                       title={t('matchOver.share')}
                   >
-                      {isSharing ? <Loader2 size={20} className="animate-spin" /> : <Share2 size={20} />}
+                      {isSharing || renderShareCard ? <Loader2 size={20} className="animate-spin" /> : <Share2 size={20} />}
                   </Button>
                   
                   <Button onClick={onRotate} size="lg" className="w-full shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-500 border-t border-white/20 text-white font-black tracking-wide">

@@ -1,16 +1,19 @@
+
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameConfig } from '../../types';
-import { Check, Trophy, Sun, Zap, Download, Smartphone, Menu, Moon, AlertTriangle, Volume2, Umbrella, Activity, Globe, Scale, ToggleLeft, ToggleRight, Share, MoreVertical } from 'lucide-react';
+import { Check, Trophy, Sun, Zap, Download, Moon, AlertTriangle, Volume2, Umbrella, Activity, Globe, Scale, ToggleLeft, ToggleRight, RefreshCw } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useServiceWorker } from '../../hooks/useServiceWorker';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   config: GameConfig;
   onSave: (config: GameConfig, reset: boolean) => void;
+  // Deprecated props are handled internally by hook now, but kept for signature compat if needed
   onInstall?: () => void;
   canInstall?: boolean;
   isIOS?: boolean;
@@ -19,12 +22,17 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
-    isOpen, onClose, config, onSave, 
-    onInstall, canInstall, isIOS, isStandalone, isMatchActive
+    isOpen, onClose, config, onSave, isMatchActive
 }) => {
   const [localConfig, setLocalConfig] = useState<GameConfig>(config);
   const { t, language, setLanguage } = useTranslation();
   const { theme, setTheme } = useTheme();
+  
+  // Use new SW hook
+  const { 
+      needRefresh, updateServiceWorker, checkForUpdates, isChecking,
+      isInstallable, promptInstall, isStandalone
+  } = useServiceWorker();
 
   useEffect(() => {
     if (isOpen) {
@@ -71,58 +79,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title={t('settings.title')}>
       <div className="space-y-6 pb-2">
         
-        {/* --- INSTALL PROMPT (Top Priority if not installed) --- */}
-        {isStandalone === false && (
-             <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex flex-col gap-3">
-                 <div className="flex items-center justify-between">
-                     <div className="flex items-center gap-2">
-                        <div className="p-2 bg-indigo-500 rounded-lg text-white shadow-lg shadow-indigo-500/20">
-                            <Smartphone size={18} />
-                        </div>
-                        <div>
-                            <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300 leading-tight block">
-                                {t('install.title')}
-                            </span>
-                            <span className="text-[10px] text-indigo-600/70 dark:text-indigo-400/70 font-medium">
-                                {t('install.description')}
-                            </span>
-                        </div>
-                     </div>
-                 </div>
-                 
-                 {canInstall ? (
-                    <Button onClick={onInstall} size="md" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20">
+        {/* --- SYSTEM & UPDATES SECTION (New) --- */}
+        <div className={sectionClass}>
+            <label className={labelClass}>System</label>
+            <div className="space-y-3">
+                {/* Install Button (Only if installable) */}
+                {isInstallable && !isStandalone && (
+                    <Button 
+                        onClick={promptInstall} 
+                        size="md" 
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 mb-3"
+                    >
                         <Download size={16} /> {t('install.installNow')}
                     </Button>
-                 ) : (
-                    <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-indigo-500/10">
-                        {isIOS ? (
-                            <div className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded">1</span>
-                                    <span>{t('install.ios.tap')} <Share size={12} className="inline text-blue-500" /></span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded">2</span>
-                                    <span>{t('install.ios.then')} <span className="font-bold">{t('install.ios.addToHome')}</span></span>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col gap-2 text-xs text-slate-600 dark:text-slate-300">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded">1</span>
-                                    <span>{t('install.android.tap')} <MoreVertical size={12} className="inline" /> (Menu)</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded">2</span>
-                                    <span>{t('install.android.then')} <span className="font-bold">"{t('install.android.installApp')}"</span></span>
-                                </div>
-                            </div>
-                        )}
+                )}
+
+                {/* Update Checker */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                        <RefreshCw size={16} className={`text-emerald-500 ${isChecking ? 'animate-spin' : ''}`} />
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold">App Version</span>
+                            <span className="text-[10px] text-slate-400">
+                                {needRefresh ? "Update Available" : "v2.0.0 (Latest)"}
+                            </span>
+                        </div>
                     </div>
-                 )}
-             </div>
-        )}
+                    {needRefresh ? (
+                        <Button onClick={updateServiceWorker} size="sm" className="bg-emerald-500 text-white">
+                            Update
+                        </Button>
+                    ) : (
+                        <button 
+                            onClick={checkForUpdates}
+                            disabled={isChecking}
+                            className="px-3 py-1.5 rounded-lg bg-black/5 dark:bg-white/10 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-50"
+                        >
+                            {isChecking ? "Checking..." : "Check Update"}
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
 
         {/* --- PRESETS --- */}
         <div>

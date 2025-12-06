@@ -42,7 +42,8 @@ const ScoreNumberDisplay = memo(({
     isServing
 }: any) => {
 
-    const haloColorClass = isMatchPoint ? 'bg-amber-50 saturate-150' : theme.halo;
+    // FIX: Use a stronger amber color for Match Point visibility
+    const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : theme.halo;
 
     return (
         <div 
@@ -59,7 +60,7 @@ const ScoreNumberDisplay = memo(({
                     ${haloColorClass}
                     justify-self-center self-center
                     mix-blend-multiply dark:mix-blend-screen
-                    blur-[100px] md:blur-[150px]
+                    blur-[80px] md:blur-[120px] will-change-[transform,opacity]
                 `}
                 style={{ 
                     width: '1.5em', 
@@ -72,7 +73,7 @@ const ScoreNumberDisplay = memo(({
                     : isCritical 
                         ? { 
                             scale: [1, 1.2, 1],
-                            opacity: isMatchPoint ? [0.3, 0.6, 0.3] : [0.2, 0.5, 0.2],
+                            opacity: isMatchPoint ? [0.4, 0.7, 0.4] : [0.2, 0.5, 0.2],
                         }
                         : { 
                             scale: 1, 

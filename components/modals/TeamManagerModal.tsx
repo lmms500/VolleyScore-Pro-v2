@@ -11,7 +11,7 @@ import {
   DragOverEvent,
   DragStartEvent,
   DragOverlay,
-  closestCenter, // Changed from closestCorners for better list accuracy
+  closestCenter,
   PointerSensor,
   useSensor,
   useSensors,
@@ -61,7 +61,7 @@ interface TeamManagerModalProps {
 
 type PlayerLocationStatus = 'A' | 'B' | 'Queue' | null;
 
-// --- OPTIMIZED SUB-COMPONENTS ---
+// --- SUB-COMPONENTS ---
 
 const SkillSelector = memo(({ level, onChange, size = 10 }: { level: number, onChange: (l: number) => void, size?: number }) => {
     return (
@@ -82,7 +82,7 @@ const SkillSelector = memo(({ level, onChange, size = 10 }: { level: number, onC
     );
 });
 
-// PREMIUM COLOR PICKER - Flex Wrap Layout for preventing clips
+// PREMIUM COLOR PICKER
 const ColorPicker = memo(({ 
     selected, 
     onChange, 
@@ -358,7 +358,8 @@ const PlayerCard = memo(({
     onUpdateSkill,
     onSaveProfile,
     onRevertProfile,
-    isCompact = false
+    isCompact = false,
+    forceDragStyle = false
 }: { 
     player: Player; 
     locationId: string; 
@@ -371,6 +372,7 @@ const PlayerCard = memo(({
     onSaveProfile: (id: string) => void;
     onRevertProfile: (id: string) => void;
     isCompact?: boolean;
+    forceDragStyle?: boolean;
 }) => {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -379,9 +381,14 @@ const PlayerCard = memo(({
     disabled: player.isFixed,
   });
 
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 50 : 'auto' };
-  const isFixed = player.isFixed;
+  const style = { 
+      transform: CSS.Transform.toString(transform), 
+      transition, 
+      opacity: isDragging ? 0 : 1, // Hide original when dragging (overlay is used)
+      zIndex: isDragging ? 50 : 'auto',
+  };
   
+  const isFixed = player.isFixed;
   const profile = player.profileId ? profiles.get(player.profileId) : undefined;
   const hasProfile = !!profile;
   const profileMatch = hasProfile && profile!.name === player.name && profile!.skillLevel === player.skillLevel;
@@ -394,14 +401,22 @@ const PlayerCard = memo(({
   const handleToggleFixed = useCallback(() => onToggleFixed(player.id), [onToggleFixed, player.id]);
   const handleRemove = useCallback(() => onRemove(player.id), [onRemove, player.id]);
 
+  // Performance Optimization for Dragging:
+  // Using opaque colors (bg-slate-100) instead of blurs (backdrop-blur) for the drag overlay
+  // reduces GPU load significantly, eliminating lag.
+  const containerClass = forceDragStyle
+    ? `bg-slate-100 dark:bg-slate-800 border-2 border-indigo-500 shadow-2xl scale-105 z-50`
+    : `bg-white/40 dark:bg-white/[0.03] hover:bg-white/60 dark:hover:bg-white/[0.06] border-transparent hover:border-black/5 dark:hover:border-white/10 transition-all duration-300`;
+
+  const fixedClass = isFixed 
+    ? 'bg-amber-500/5 border-amber-500/20 shadow-sm shadow-amber-500/5' 
+    : '';
+
   return (
     <div ref={setNodeRef} style={style} className={`
-        group relative flex items-center justify-between rounded-xl border transition-all duration-300
+        group relative flex items-center justify-between rounded-xl border
         ${isCompact ? 'p-1.5 min-h-[44px]' : 'p-1.5 min-h-[50px]'}
-        ${isFixed 
-            ? 'bg-amber-500/5 border-amber-500/20 shadow-sm shadow-amber-500/5' 
-            : 'bg-white/40 dark:bg-white/[0.03] border-transparent hover:border-black/5 dark:hover:border-white/10 hover:bg-white/60 dark:hover:bg-white/[0.06]'
-        }
+        ${forceDragStyle ? containerClass : (isFixed ? fixedClass : containerClass)}
     `}>
       
       {/* Left Section: Grip + Number + Name/Stars (Responsive flex-1) */}
@@ -454,7 +469,8 @@ const PlayerCard = memo(({
         prev.player === next.player && 
         prev.locationId === next.locationId &&
         prev.profiles === next.profiles &&
-        prev.isCompact === next.isCompact
+        prev.isCompact === next.isCompact &&
+        prev.forceDragStyle === next.forceDragStyle
     );
 });
 
@@ -1042,13 +1058,15 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
        </div>
        
        {createPortal(
-            <DragOverlayFixed>
+            <DragOverlayFixed dropAnimation={{ duration: 150, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
               {activePlayer ? (
-                // Force fixed width on drag preview to prevent layout shift during pickup
-                <div className="scale-105 shadow-2xl opacity-90 cursor-grabbing w-[300px]">
+                // USES forceDragStyle to render a cleaner, OPAQUE version of the card
+                // This removes blurring/transparency effects during the drag, vastly improving FPS.
+                <div className="w-[300px]">
                     <PlayerCard 
                         player={activePlayer} locationId="" profiles={props.profiles}
                         onToggleFixed={() => {}} onRemove={() => {}} onUpdateName={() => {}} onUpdateNumber={()=>{}} onUpdateSkill={()=>{}} onSaveProfile={()=>{}} onRevertProfile={()=>{}}
+                        forceDragStyle={true}
                     />
                 </div>
               ) : null}

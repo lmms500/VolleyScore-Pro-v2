@@ -1,8 +1,7 @@
-
 import React, { memo } from 'react';
 import { TeamId, TeamColor } from '../../types';
-import { Trophy, Calendar, Zap, Crown, BarChart2 } from 'lucide-react';
-import { resolveTheme, getHexFromColor } from '../../utils/colors';
+import { Calendar, Zap, Crown, BarChart2, Clock, Trophy } from 'lucide-react';
+import { getHexFromColor } from '../../utils/colors';
 
 interface ResultCardProps {
   teamAName: string;
@@ -19,20 +18,18 @@ interface ResultCardProps {
 }
 
 const SetsSummaryStrip: React.FC<{ sets: ResultCardProps['setsHistory'], hexA: string, hexB: string }> = ({ sets, hexA, hexB }) => (
-    <div className="flex items-center justify-center gap-4 mt-12 flex-wrap px-8">
+    <div className="flex items-center justify-center gap-3 flex-wrap w-full px-8">
         {sets.map((set, i) => {
-            const winnerColor = set.winner === 'A' ? hexA : hexB;
             return (
                 <div 
                     key={i} 
-                    className="flex flex-col items-center justify-center w-24 h-24 rounded-2xl border-2 shadow-xl backdrop-blur-md bg-white/10"
-                    style={{ borderColor: `${winnerColor}80` }}
+                    className="flex flex-col items-center justify-center w-20 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-lg"
                 >
-                    <span className="text-xs font-bold uppercase tracking-widest opacity-60 mb-1">Set {set.setNumber}</span>
-                    <div className="text-2xl font-black">
-                        <span style={{ color: set.winner === 'A' ? hexA : '#9ca3af' }}>{set.scoreA}</span>
-                        <span className="mx-1 text-white/20">-</span>
-                        <span style={{ color: set.winner === 'B' ? hexB : '#9ca3af' }}>{set.scoreB}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1.5">Set {set.setNumber}</span>
+                    <div className="text-xl font-black flex flex-col leading-none gap-1 w-full text-center">
+                        <span style={{ color: set.winner === 'A' ? hexA : '#fff', opacity: set.winner === 'A' ? 1 : 0.4 }}>{set.scoreA}</span>
+                        <div className="h-px w-6 bg-white/10 mx-auto"></div>
+                        <span style={{ color: set.winner === 'B' ? hexB : '#fff', opacity: set.winner === 'B' ? 1 : 0.4 }}>{set.scoreB}</span>
                     </div>
                 </div>
             );
@@ -53,27 +50,8 @@ export const ResultCard: React.FC<ResultCardProps> = memo(({
   const hexA = getHexFromColor(colorA || 'indigo');
   const hexB = getHexFromColor(colorB || 'rose');
 
-  // Logic: Abbreviate if too long to maintain layout integrity
-  const formatName = (name: string) => {
-    const trimmed = name.trim();
-    if (trimmed.length > 8) {
-      return trimmed.substring(0, 3).toUpperCase();
-    }
-    return trimmed.toUpperCase();
-  };
-
-  const displayNameA = formatName(teamAName);
-  const displayNameB = formatName(teamBName);
-
-  // Dynamic sizing based on length of displayed name
-  const getNameSize = (name: string) => {
-      if (name.length <= 3) return 'text-9xl'; // Huge for 3 letters
-      if (name.length <= 5) return 'text-8xl';
-      return 'text-6xl';
-  };
-
-  const sizeA = getNameSize(displayNameA);
-  const sizeB = getNameSize(displayNameB);
+  const displayNameA = teamAName.trim();
+  const displayNameB = teamBName.trim();
 
   return (
     <div 
@@ -124,7 +102,7 @@ export const ResultCard: React.FC<ResultCardProps> = memo(({
                 <span className="text-xl font-bold text-slate-200">{date}</span>
              </div>
              <div className="flex items-center gap-2 px-4 py-1">
-                <Zap size={16} className="text-amber-400" />
+                <Clock size={16} className="text-amber-400" />
                 <span className="text-lg font-bold text-slate-400">{durationStr}</span>
              </div>
            </div>
@@ -134,13 +112,14 @@ export const ResultCard: React.FC<ResultCardProps> = memo(({
         <main className="flex-1 flex flex-col justify-center items-center w-full">
             
             {/* Grid Layout: Team A - Score - Team B */}
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-12 w-full">
+            {/* minmax(0, 1fr) is critical for allowing truncation in CSS Grid */}
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-8 w-full max-w-[950px]">
                 
                 {/* Team A */}
-                <div className={`flex flex-col items-end text-right gap-6 ${isWinnerA ? 'opacity-100 scale-105' : 'opacity-60 grayscale-[0.3] scale-95'}`}>
+                <div className={`flex flex-col items-end text-right gap-4 ${isWinnerA ? 'opacity-100' : 'opacity-70'}`}>
                     <h2 
-                        className={`${sizeA} font-black uppercase leading-none tracking-tighter break-words max-w-[450px] drop-shadow-xl`}
-                        style={{ color: isWinnerA ? '#fff' : '#cbd5e1' }}
+                        className="text-7xl font-black uppercase leading-tight tracking-tighter truncate w-full drop-shadow-xl"
+                        style={{ color: isWinnerA ? '#fff' : '#e2e8f0' }}
                     >
                         {displayNameA}
                     </h2>
@@ -152,9 +131,9 @@ export const ResultCard: React.FC<ResultCardProps> = memo(({
                 </div>
                 
                 {/* Center Score */}
-                <div className="flex items-center justify-center gap-2 bg-white/5 p-8 rounded-[3rem] border border-white/5 backdrop-blur-sm shadow-2xl">
+                <div className="flex items-center justify-center gap-2 bg-white/5 p-8 rounded-[3rem] border border-white/5 backdrop-blur-sm shadow-2xl mx-4">
                     <span 
-                        className="text-[14rem] font-black leading-none tabular-nums tracking-tighter" 
+                        className="text-[12rem] font-black leading-none tabular-nums tracking-tighter" 
                         style={{ color: hexA, textShadow: `0 0 80px ${hexA}50` }}
                     >
                         {setsA}
@@ -166,7 +145,7 @@ export const ResultCard: React.FC<ResultCardProps> = memo(({
                     </div>
                     
                     <span 
-                        className="text-[14rem] font-black leading-none tabular-nums tracking-tighter" 
+                        className="text-[12rem] font-black leading-none tabular-nums tracking-tighter" 
                         style={{ color: hexB, textShadow: `0 0 80px ${hexB}50` }}
                     >
                         {setsB}
@@ -174,10 +153,10 @@ export const ResultCard: React.FC<ResultCardProps> = memo(({
                 </div>
 
                 {/* Team B */}
-                <div className={`flex flex-col items-start text-left gap-6 ${!isWinnerA ? 'opacity-100 scale-105' : 'opacity-60 grayscale-[0.3] scale-95'}`}>
+                <div className={`flex flex-col items-start text-left gap-4 ${!isWinnerA ? 'opacity-100' : 'opacity-70'}`}>
                     <h2 
-                        className={`${sizeB} font-black uppercase leading-none tracking-tighter break-words max-w-[450px] drop-shadow-xl`}
-                        style={{ color: !isWinnerA ? '#fff' : '#cbd5e1' }}
+                        className="text-7xl font-black uppercase leading-tight tracking-tighter truncate w-full drop-shadow-xl"
+                        style={{ color: !isWinnerA ? '#fff' : '#e2e8f0' }}
                     >
                         {displayNameB}
                     </h2>
@@ -189,14 +168,21 @@ export const ResultCard: React.FC<ResultCardProps> = memo(({
                 </div>
             </div>
             
-            {/* Sets Summary Strip */}
-            <SetsSummaryStrip sets={setsHistory} hexA={hexA} hexB={hexB} />
+            {/* Scorecard Component */}
+            <div className="mt-16 w-full flex flex-col items-center gap-4">
+                <div className="flex items-center gap-3 opacity-40">
+                    <div className="h-px w-12 bg-white"></div>
+                    <span className="text-xs font-bold uppercase tracking-[0.25em]">Scorecard</span>
+                    <div className="h-px w-12 bg-white"></div>
+                </div>
+                <SetsSummaryStrip sets={setsHistory} hexA={hexA} hexB={hexB} />
+            </div>
 
         </main>
         
         {/* MVP Card */}
         {mvp ? (
-            <footer className="w-full flex justify-center mt-12">
+            <footer className="w-full flex justify-center mt-8">
                 <div 
                     className="relative w-full max-w-4xl bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-6 pr-10 flex items-center gap-8 shadow-2xl"
                 >
@@ -204,7 +190,7 @@ export const ResultCard: React.FC<ResultCardProps> = memo(({
                         <Trophy size={48} strokeWidth={2} />
                     </div>
                     
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-1">
                             <span className="text-sm font-bold text-amber-400 uppercase tracking-[0.2em]">Match MVP</span>
                             <div className="h-px flex-1 bg-white/10"></div>
@@ -212,11 +198,14 @@ export const ResultCard: React.FC<ResultCardProps> = memo(({
                         <span className="block text-5xl font-black text-white uppercase tracking-tight truncate">{mvp.name}</span>
                     </div>
 
-                    <div className="flex flex-col items-end pl-8 border-l border-white/10">
+                    <div className="flex flex-col items-end pl-8 border-l border-white/10 flex-shrink-0">
                         <span className="text-7xl font-black tabular-nums leading-none text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60">
                             {mvp.totalPoints}
                         </span>
-                        <span className="text-xs font-bold text-white/40 uppercase tracking-widest mt-1">Points Scored</span>
+                        <div className="flex items-center gap-1.5 mt-1 opacity-40">
+                            <Zap size={12} fill="currentColor" />
+                            <span className="text-xs font-bold uppercase tracking-widest">Points</span>
+                        </div>
                     </div>
                 </div>
             </footer>

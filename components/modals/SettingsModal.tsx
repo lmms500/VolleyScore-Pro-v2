@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameConfig } from '../../types';
-import { Check, Trophy, Sun, Zap, Download, Moon, AlertTriangle, Volume2, Umbrella, Activity, Globe, Scale, ToggleLeft, ToggleRight, RefreshCw } from 'lucide-react';
+import { Check, Trophy, Sun, Zap, Download, Moon, AlertTriangle, Volume2, Umbrella, Activity, Globe, Scale, ToggleLeft, ToggleRight, RefreshCw, CloudDownload, Smartphone } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useServiceWorker } from '../../hooks/useServiceWorker';
+import pkg from '../../package.json'; // Import local package.json for versioning
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -28,17 +29,63 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const { t, language, setLanguage } = useTranslation();
   const { theme, setTheme } = useTheme();
   
-  // Use new SW hook
+  // Service Worker Hook
   const { 
-      needRefresh, updateServiceWorker, checkForUpdates, isChecking,
+      needRefresh, updateServiceWorker, checkForUpdates: checkSW, isChecking: isSWChecking,
       isInstallable, promptInstall, isStandalone
   } = useServiceWorker();
+
+  // Smart Version Check State
+  const [remoteCheckStatus, setRemoteCheckStatus] = useState<'idle' | 'checking' | 'latest' | 'available' | 'error'>('idle');
+  const [remoteVersion, setRemoteVersion] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setLocalConfig(config);
+      // Reset check status on open if not already needing refresh
+      if (!needRefresh) {
+          setRemoteCheckStatus('idle');
+      }
     }
-  }, [isOpen, config]);
+  }, [isOpen, config, needRefresh]);
+
+  // --- SMART CHECK LOGIC ---
+  const handleSmartCheck = async () => {
+      // 1. Set UI to checking
+      setRemoteCheckStatus('checking');
+      
+      // 2. Trigger SW Check (Standard PWA)
+      checkSW();
+
+      try {
+          // 3. Manual Fetch of remote package.json to compare versions explicitly
+          // Cache-busting with timestamp to ensure fresh read
+          const response = await fetch(`/package.json?t=${Date.now()}`);
+          
+          if (response.ok) {
+              const remotePkg = await response.json();
+              setRemoteVersion(remotePkg.version);
+              
+              // Artificial delay for UX (spinner feel)
+              await new Promise(r => setTimeout(r, 800));
+
+              if (remotePkg.version !== pkg.version) {
+                  setRemoteCheckStatus('available');
+              } else {
+                  setRemoteCheckStatus('latest');
+              }
+          } else {
+              setRemoteCheckStatus('error');
+          }
+      } catch (e) {
+          console.error("Remote version check failed", e);
+          setRemoteCheckStatus('error');
+      }
+  };
+
+  // Combine SW loading state with our manual check state
+  const isActuallyChecking = isSWChecking || remoteCheckStatus === 'checking';
+  const showUpdateAvailable = needRefresh || remoteCheckStatus === 'available';
 
   // --- SMART RESET LOGIC ---
   const structuralKeys: (keyof GameConfig)[] = ['maxSets', 'pointsPerSet', 'hasTieBreak', 'tieBreakPoints', 'deuceType', 'mode'];
@@ -90,32 +137,57 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         size="md" 
                         className="w-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 mb-3"
                     >
-                        <Download size={16} /> {t('install.installNow')}
+                        <Smartphone size={16} /> {t('install.installNow')}
                     </Button>
                 )}
 
                 {/* Update Checker */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                        <RefreshCw size={16} className={`text-emerald-500 ${isChecking ? 'animate-spin' : ''}`} />
+                <div className="flex items-center justify-between bg-white dark:bg-white/5 p-3 rounded-xl border border-black/5 dark:border-white/5">
+                    <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
+                        <div className={`
+                            p-2 rounded-full transition-all
+                            ${showUpdateAvailable ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-slate-100 dark:bg-white/10 text-slate-400'}
+                        `}>
+                            {isActuallyChecking ? (
+                                <RefreshCw size={18} className="animate-spin" />
+                            ) : showUpdateAvailable ? (
+                                <CloudDownload size={18} />
+                            ) : (
+                                <RefreshCw size={18} />
+                            )}
+                        </div>
                         <div className="flex flex-col">
-                            <span className="text-sm font-bold">App Version</span>
-                            <span className="text-[10px] text-slate-400">
-                                {needRefresh ? "Update Available" : "v2.0.0 (Latest)"}
+                            <span className="text-xs font-bold uppercase tracking-wide opacity-50">App Version</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-black tracking-tight">v{pkg.version}</span>
+                                {showUpdateAvailable && remoteVersion && (
+                                    <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded font-bold border border-emerald-500/20">
+                                        → v{remoteVersion}
+                                    </span>
+                                )}
+                            </div>
+                            
+                            {/* Status Text */}
+                            <span className={`text-[10px] font-medium mt-0.5 ${showUpdateAvailable ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                                {isActuallyChecking ? "Checking remote..." : 
+                                 showUpdateAvailable ? "New version available!" : 
+                                 remoteCheckStatus === 'latest' ? "You are up to date" : 
+                                 "Local Installation"}
                             </span>
                         </div>
                     </div>
-                    {needRefresh ? (
-                        <Button onClick={updateServiceWorker} size="sm" className="bg-emerald-500 text-white">
+
+                    {showUpdateAvailable ? (
+                        <Button onClick={updateServiceWorker} size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20">
                             Update
                         </Button>
                     ) : (
                         <button 
-                            onClick={checkForUpdates}
-                            disabled={isChecking}
+                            onClick={handleSmartCheck}
+                            disabled={isActuallyChecking}
                             className="px-3 py-1.5 rounded-lg bg-black/5 dark:bg-white/10 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-50"
                         >
-                            {isChecking ? "Checking..." : "Check Update"}
+                            {isActuallyChecking ? "Checking..." : "Check"}
                         </button>
                     )}
                 </div>

@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameConfig } from '../../types';
-import { Check, Trophy, Sun, Zap, Download, Moon, AlertTriangle, Volume2, Umbrella, Activity, Globe, Scale, ToggleLeft, ToggleRight, RefreshCw, CloudDownload, Smartphone } from 'lucide-react';
+import { Check, Trophy, Sun, Zap, Download, Moon, AlertTriangle, Volume2, Umbrella, Activity, Globe, Scale, ToggleLeft, ToggleRight, RefreshCw, CloudDownload, Smartphone, ArrowRight } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useServiceWorker } from '../../hooks/useServiceWorker';
 
 // Defined constant to avoid importing package.json which causes build/runtime issues in some environments
-const APP_VERSION = '2.0.2';
+const APP_VERSION = '2.0.4';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -159,19 +159,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
                         <div className="flex flex-col">
                             <span className="text-xs font-bold uppercase tracking-wide opacity-50">App Version</span>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-black tracking-tight">v{APP_VERSION}</span>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-sm font-black tracking-tight font-mono text-slate-700 dark:text-slate-200">v{APP_VERSION}</span>
                                 {showUpdateAvailable && remoteVersion && (
-                                    <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded font-bold border border-emerald-500/20">
-                                        → v{remoteVersion}
-                                    </span>
+                                    <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-left-2">
+                                        <ArrowRight size={10} className="text-slate-400" />
+                                        <span className="text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded-md font-bold shadow-sm shadow-emerald-500/20">
+                                            v{remoteVersion}
+                                        </span>
+                                    </div>
                                 )}
                             </div>
                             
                             {/* Status Text */}
                             <span className={`text-[10px] font-medium mt-0.5 ${showUpdateAvailable ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
                                 {isActuallyChecking ? "Checking remote..." : 
-                                 showUpdateAvailable ? "New version available!" : 
+                                 showUpdateAvailable ? "Update available!" : 
                                  remoteCheckStatus === 'latest' ? "You are up to date" : 
                                  "Local Installation"}
                             </span>
@@ -188,7 +191,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             disabled={isActuallyChecking}
                             className="px-3 py-1.5 rounded-lg bg-black/5 dark:bg-white/10 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-50"
                         >
-                            {isActuallyChecking ? "Checking..." : "Check"}
+                            {isActuallyChecking ? "..." : "Check"}
                         </button>
                     )}
                 </div>

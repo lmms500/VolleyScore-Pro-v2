@@ -39,13 +39,12 @@ const ErrorContent: React.FC<{ error: Error | null, onReload: () => void }> = ({
 };
 
 export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null
-    };
-  }
+  // FIX: Use modern class field syntax for state initialization.
+  // This is cleaner and avoids potential 'this' context issues in some setups.
+  public state: State = {
+    hasError: false,
+    error: null,
+  };
 
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };

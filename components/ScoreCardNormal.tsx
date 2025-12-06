@@ -1,4 +1,3 @@
-
 import React, { memo, useState, useCallback } from 'react';
 import { Team, TeamId, SkillType, GameConfig, TeamColor } from '../types';
 import { Volleyball, Zap, Timer, Skull, TrendingUp, Trophy } from 'lucide-react';
@@ -167,7 +166,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             <motion.div 
                 layout
                 transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                className="flex items-center justify-center gap-2 cursor-pointer hover:opacity-80 transition-opacity active:scale-95 duration-200 group px-2 relative overflow-visible"
+                className="w-full flex items-center justify-center gap-2 cursor-pointer hover:opacity-80 transition-opacity active:scale-95 duration-200 group px-2 relative overflow-hidden"
                 onClick={(e) => { e.stopPropagation(); onSetServer(); }}
                 role="button"
                 aria-label={`Set serve to ${team?.name}`}
@@ -175,7 +174,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                 {/* Name */}
                 <motion.h2 
                     layout
-                    className="font-black uppercase text-center z-10 leading-none text-xl md:text-2xl text-slate-800 dark:text-slate-200 tracking-widest truncate max-w-[200px] group-hover:scale-105 transition-transform"
+                    className="font-black uppercase text-center z-10 leading-none text-xl md:text-2xl text-slate-800 dark:text-slate-200 tracking-widest truncate group-hover:scale-105 transition-transform"
                 >
                     {team?.name || ''}
                 </motion.h2>

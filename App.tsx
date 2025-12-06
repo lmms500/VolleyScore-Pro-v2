@@ -370,11 +370,11 @@ function App() {
                      <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl border border-indigo-500 text-center flex flex-col items-center gap-4 animate-bounce-subtle">
                          <RefreshCw size={48} className="text-indigo-500 animate-spin-slow" />
                          <div>
-                             <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white">Switch Sides</h2>
-                             <p className="text-sm font-bold text-slate-500">Sum of points is multiple of {state.config.hasTieBreak && state.currentSet === state.config.maxSets ? 5 : 7}</p>
+                             <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white">{t('app.switchSides.title')}</h2>
+                             <p className="text-sm font-bold text-slate-500">{t('app.switchSides.reason', { number: state.config.hasTieBreak && state.currentSet === state.config.maxSets ? 5 : 7 })}</p>
                          </div>
                          <button className="px-6 py-2 bg-indigo-500 text-white rounded-full font-bold uppercase tracking-widest hover:bg-indigo-600 transition-colors">
-                             Tap to Swap
+                             {t('app.switchSides.action')}
                          </button>
                      </div>
                  </motion.div>
@@ -681,8 +681,8 @@ function App() {
                 isOpen={showResetConfirm}
                 onClose={() => setShowResetConfirm(false)}
                 onConfirm={resetMatch}
-                title="Reset Match?"
-                message="Are you sure you want to reset the match? All scores and history will be lost."
+                title={t('confirm.reset.title')}
+                message={t('confirm.reset.message')}
               />
             )}
           </Suspense>

@@ -108,13 +108,13 @@ const TeamInfoSmart = memo<{
   return (
     <div className={`flex flex-col items-center justify-center relative min-w-0 flex-1 h-full py-1`}>
       <div 
-        className={`flex items-center gap-3 cursor-pointer group h-full w-full relative overflow-visible ${align === 'right' ? 'flex-row-reverse justify-end' : 'flex-row justify-end'} px-2`}
+        className={`flex items-center gap-3 cursor-pointer group h-full w-full relative overflow-visible ${align === 'right' ? 'flex-row-reverse' : ''} px-2`}
         onClick={(e) => { e.stopPropagation(); onSetServer(); }}
       >
         
         {/* Name & Badge Container */}
-        <div className={`flex flex-col ${align === 'right' ? 'items-start' : 'items-end'} min-w-0`}>
-            <span className={`text-sm md:text-base font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 transition-colors truncate block max-w-[140px] leading-tight`}>
+        <div className={`flex flex-col ${align === 'right' ? 'items-start' : 'items-end'} min-w-0 flex-1`}>
+            <span className={`text-sm md:text-base font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 transition-colors truncate block leading-tight`}>
                 {name}
             </span>
             
@@ -135,7 +135,7 @@ const TeamInfoSmart = memo<{
         </div>
 
         {/* Serving Indicator - Animated alongside name */}
-        <div className="relative w-6 h-6 flex items-center justify-center">
+        <div className="relative w-6 h-6 flex items-center justify-center flex-shrink-0">
              {/* Placeholder circle to keep layout stable */}
              <div className={`w-1 h-1 rounded-full opacity-20 ${theme.halo}`} />
              
@@ -202,7 +202,7 @@ const CenterDisplayStealth = memo<{
     key = 'deuce';
     content = <StatusPill 
         icon={TrendingUp} 
-        text="DEUCE" 
+        text={t('status.deuce')} 
         colorClass="text-cyan-600 dark:text-cyan-200" 
         borderClass="border-cyan-500/30" 
         bgClass="bg-cyan-100 dark:bg-cyan-900/40" 
@@ -224,7 +224,7 @@ const CenterDisplayStealth = memo<{
             layout
             className={`text-[9px] font-bold uppercase tracking-[0.1em] flex items-center gap-1 ${isTieBreak ? 'text-amber-500' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`}
         >
-            {isTieBreak ? 'TIE BREAK' : `SET ${currentSet}`}
+            {isTieBreak ? t('status.tie_break') : t('status.setNumber', { number: currentSet })}
         </motion.span>
       </button>
     );

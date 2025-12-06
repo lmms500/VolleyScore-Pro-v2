@@ -656,7 +656,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   }, [props.deletedCount, props.onCommitDeletions]);
 
   // Drag Logic
-  const findContainer = (id: string) => {
+  const findContainer = (id: string): string | null => {
     if (id === 'A' || props.courtA.players.some(p => p.id === id)) return 'A';
     if (id === 'B' || props.courtB.players.some(p => p.id === id)) return 'B';
     for (const team of props.queue) { if (team.id === id || team.players.some(p => p.id === id)) return team.id; }
@@ -686,17 +686,23 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const from = findContainer(active.id as string);
-    const to = findContainer(over.id as string);
-    if (from && to && from !== to) props.onMove(active.id as string, from, to);
+    // FIX: Add explicit types to potentially help with type inference issues in some environments.
+    const fromContainerId: string | null = findContainer(active.id as string);
+    const toContainerId: string | null = findContainer(over.id as string);
+    if (fromContainerId && toContainerId && fromContainerId !== toContainerId) {
+      props.onMove(active.id as string, fromContainerId, toContainerId);
+    }
   };
   
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-        const from = findContainer(active.id as string);
-        const to = findContainer(over.id as string);
-        if (from && to && from !== to) props.onMove(active.id as string, from, to);
+        // FIX: Add explicit types to potentially help with type inference issues in some environments.
+        const fromContainerId: string | null = findContainer(active.id as string);
+        const toContainerId: string | null = findContainer(over.id as string);
+        if (fromContainerId && toContainerId && fromContainerId !== toContainerId) {
+          props.onMove(active.id as string, fromContainerId, toContainerId);
+        }
     }
     setActivePlayer(null);
   };

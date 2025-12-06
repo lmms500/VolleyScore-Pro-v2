@@ -13,8 +13,10 @@ export const useSocialShare = () => {
         throw new Error(`Element with id ${elementId} not found`);
       }
 
-      // 1. Force font loading check or wait a tick to ensure rendering
+      // 1. Pre-warm fonts and layout
       await document.fonts.ready;
+      // Add a small delay to ensure layout shifts (from hidden/offscreen state) are processed by engine
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Helper to generate image with fallback mechanism
       const generateImage = async () => {

@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
-import { TeamId } from '../../types';
-import { Trophy, Calendar, Zap, Activity, Crown } from 'lucide-react';
+import { TeamId, TeamColor } from '../../types';
+import { Trophy, Calendar, Zap, Crown, BarChart2 } from 'lucide-react';
+import { resolveTheme, getHexFromColor } from '../../utils/colors';
 
 interface ResultCardProps {
   teamAName: string;
@@ -12,10 +13,33 @@ interface ResultCardProps {
   mvp?: { name: string; totalPoints: number; team: TeamId } | null;
   durationSeconds: number;
   date: string;
+  colorA: TeamColor;
+  colorB: TeamColor;
 }
 
+const SetsSummaryStrip: React.FC<{ sets: ResultCardProps['setsHistory'], hexA: string, hexB: string }> = ({ sets, hexA, hexB }) => (
+    <div className="flex items-center justify-center gap-4 mt-8 flex-wrap">
+        {sets.map((set, i) => {
+            const winnerColor = set.winner === 'A' ? hexA : hexB;
+            return (
+                <div 
+                    key={i} 
+                    className="px-4 py-2 text-center rounded-xl text-3xl font-bold border-2 shadow-lg backdrop-blur-sm bg-white/5"
+                    style={{ borderColor: `${winnerColor}80` }}
+                >
+                    <span style={{ color: set.winner === 'A' ? hexA : '#9ca3af' }}>{set.scoreA}</span>
+                    <span className="mx-2 text-slate-600">-</span>
+                    <span style={{ color: set.winner === 'B' ? hexB : '#9ca3af' }}>{set.scoreB}</span>
+                </div>
+            );
+        })}
+    </div>
+);
+
+
 export const ResultCard: React.FC<ResultCardProps> = memo(({
-  teamAName, teamBName, setsA, setsB, winner, setsHistory, mvp, durationSeconds, date
+  teamAName, teamBName, setsA, setsB, winner, setsHistory, mvp, durationSeconds, date,
+  colorA, colorB
 }) => {
   
   // Format duration
@@ -24,6 +48,19 @@ export const ResultCard: React.FC<ResultCardProps> = memo(({
   const durationStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
 
   const isWinnerA = winner === 'A';
+  const themeA = resolveTheme(colorA || 'indigo');
+  const themeB = resolveTheme(colorB || 'rose');
+  const hexA = getHexFromColor(colorA || 'indigo');
+  const hexB = getHexFromColor(colorB || 'rose');
+
+  const getTeamNameSize = (name: string): string => {
+    if (name.length <= 5) return 'text-8xl';
+    if (name.length <= 8) return 'text-6xl';
+    return 'text-5xl';
+  };
+
+  const teamANameSize = getTeamNameSize(teamAName);
+  const teamBNameSize = getTeamNameSize(teamBName);
 
   return (
     <div 
@@ -32,138 +69,112 @@ export const ResultCard: React.FC<ResultCardProps> = memo(({
       style={{ 
         position: 'fixed', 
         top: 0, 
-        left: '-9999px', // Hidden from view but renderable
-        zIndex: -1 
+        left: 0, 
+        zIndex: -50,
+        visibility: 'visible',
+        pointerEvents: 'none'
       }}
     >
       {/* --- BACKGROUND FX --- */}
       <div className="absolute inset-0 z-0">
-        {/* Noise Texture */}
-        <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
-        
-        {/* Dynamic Gradients based on Winner */}
-        <div className={`absolute -top-[10%] -left-[10%] w-[1000px] h-[1000px] rounded-full blur-[180px] opacity-40 mix-blend-screen ${isWinnerA ? 'bg-indigo-600' : 'bg-rose-600'}`}></div>
-        <div className={`absolute bottom-[10%] -right-[10%] w-[1000px] h-[1000px] rounded-full blur-[180px] opacity-40 mix-blend-screen ${!isWinnerA ? 'bg-indigo-600' : 'bg-rose-600'}`}></div>
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
+        <div 
+            className="absolute -top-[20%] -left-[30%] w-[1200px] h-[1200px] rounded-full blur-[200px] opacity-50 mix-blend-screen transition-colors duration-500" 
+            style={{ backgroundColor: isWinnerA ? hexA : hexB }}
+        />
+        <div 
+            className="absolute -bottom-[20%] -right-[30%] w-[1200px] h-[1200px] rounded-full blur-[200px] opacity-40 mix-blend-screen transition-colors duration-500" 
+            style={{ backgroundColor: !isWinnerA ? hexA : hexB }}
+        />
       </div>
 
       {/* --- CONTENT LAYER --- */}
-      <div className="relative z-10 flex flex-col h-full p-20 justify-between">
+      <div className="relative z-10 flex flex-col h-full p-20 justify-around">
         
         {/* HEADER */}
-        <div className="flex justify-between items-start">
-           <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3 px-6 py-3 bg-white/5 backdrop-blur-md rounded-full border border-white/10 w-fit shadow-lg">
-                 <Calendar size={28} className="text-slate-300" />
-                 <span className="text-3xl font-bold uppercase tracking-widest text-slate-200">{date}</span>
+        <header className="flex justify-between items-center">
+           <div className="flex items-center gap-3">
+              <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10 shadow-md">
+                 <BarChart2 size={32} className="text-white" />
               </div>
-              <div className="flex items-center gap-3 px-6 py-3 bg-white/5 backdrop-blur-md rounded-full border border-white/10 w-fit shadow-lg">
-                 <Zap size={28} className="text-amber-400" />
-                 <span className="text-3xl font-bold uppercase tracking-widest text-slate-300">{durationStr} Match</span>
-              </div>
+              <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50 uppercase tracking-tighter drop-shadow-lg">
+                VolleyScore Pro
+              </span>
            </div>
            
-           <div className="flex flex-col items-end">
-              <h1 className="text-4xl font-black uppercase tracking-[0.25em] text-white/30">Match Result</h1>
-              <div className="h-1.5 w-32 bg-gradient-to-r from-indigo-500 to-rose-500 mt-4 rounded-full"></div>
+           <div className="flex items-center gap-4 px-6 py-3 bg-white/5 backdrop-blur-md rounded-full border border-white/10 shadow-lg">
+             <div className="flex items-center gap-2">
+                <Calendar size={24} className="text-slate-400" />
+                <span className="text-2xl font-bold text-slate-300">{date}</span>
+             </div>
+             <div className="h-8 w-px bg-white/10"></div>
+             <div className="flex items-center gap-2">
+                <Zap size={24} className="text-amber-400" />
+                <span className="text-2xl font-bold text-slate-300">{durationStr} Match</span>
+             </div>
            </div>
-        </div>
+        </header>
 
-        {/* SCOREBOARD CENTER */}
-        <div className="flex flex-col items-center gap-16 my-auto w-full">
-            
-            {/* Main Score Row */}
-            <div className="flex items-center justify-between w-full">
+        {/* MAIN SCORE & SETS */}
+        <main className="flex flex-col items-center justify-center gap-4 w-full">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-8 w-full">
                 {/* Team A */}
-                <div className={`flex-1 flex flex-col items-center text-center gap-6 ${isWinnerA ? 'scale-110' : 'opacity-70 grayscale-[0.3]'}`}>
-                    {isWinnerA && (
-                        <div className="bg-indigo-500/20 p-6 rounded-full border border-indigo-500/30 mb-2 shadow-[0_0_40px_rgba(99,102,241,0.3)]">
-                            <Crown size={64} className="text-indigo-400" fill="currentColor" />
-                        </div>
-                    )}
-                    <h2 className={`text-6xl font-black uppercase leading-tight tracking-tight break-words max-w-[400px] ${isWinnerA ? 'text-white drop-shadow-[0_0_30px_rgba(129,140,248,0.4)]' : 'text-slate-400'}`}>
+                <div className={`justify-self-end flex flex-col items-end text-right justify-center gap-4 transition-all duration-500 ${isWinnerA ? 'opacity-100' : 'opacity-60 grayscale-[0.2]'}`}>
+                    <h2 className={`${teamANameSize} font-black uppercase leading-none tracking-tighter truncate max-w-[400px]`}>
                         {teamAName}
                     </h2>
                 </div>
-
-                {/* VS / Score */}
-                <div className="flex items-center gap-10 bg-white/5 backdrop-blur-3xl px-16 py-8 rounded-[4rem] border border-white/10 shadow-2xl relative">
-                     <div className="absolute inset-0 rounded-[4rem] border border-white/5 pointer-events-none"></div>
-                     <span className={`text-[14rem] font-black leading-none tabular-nums tracking-tighter ${winner === 'A' ? 'text-indigo-500 drop-shadow-[0_0_50px_rgba(99,102,241,0.6)]' : 'text-slate-600'}`}>
+                
+                {/* Center Score */}
+                <div className="flex items-center justify-center gap-4">
+                    <span className="text-[18rem] font-black leading-none tabular-nums tracking-tighter" style={{ color: hexA, textShadow: isWinnerA ? `0 0 60px ${hexA}60` : 'none' }}>
                         {setsA}
-                     </span>
-                     <div className="h-48 w-[2px] bg-white/10 rounded-full"></div>
-                     <span className={`text-[14rem] font-black leading-none tabular-nums tracking-tighter ${winner === 'B' ? 'text-rose-500 drop-shadow-[0_0_50px_rgba(244,63,94,0.6)]' : 'text-slate-600'}`}>
+                    </span>
+                    
+                    <div className="text-8xl font-thin text-slate-700">:</div>
+                    
+                    <span className="text-[18rem] font-black leading-none tabular-nums tracking-tighter" style={{ color: hexB, textShadow: !isWinnerA ? `0 0 60px ${hexB}60` : 'none' }}>
                         {setsB}
-                     </span>
+                    </span>
                 </div>
 
                 {/* Team B */}
-                <div className={`flex-1 flex flex-col items-center text-center gap-6 ${!isWinnerA ? 'scale-110' : 'opacity-70 grayscale-[0.3]'}`}>
-                    {!isWinnerA && (
-                        <div className="bg-rose-500/20 p-6 rounded-full border border-rose-500/30 mb-2 shadow-[0_0_40px_rgba(244,63,94,0.3)]">
-                            <Crown size={64} className="text-rose-400" fill="currentColor" />
-                        </div>
-                    )}
-                    <h2 className={`text-6xl font-black uppercase leading-tight tracking-tight break-words max-w-[400px] ${!isWinnerA ? 'text-white drop-shadow-[0_0_30px_rgba(244,63,94,0.4)]' : 'text-slate-400'}`}>
+                <div className={`justify-self-start flex flex-col items-start text-left justify-center gap-4 transition-all duration-500 ${!isWinnerA ? 'opacity-100' : 'opacity-60 grayscale-[0.2]'}`}>
+                    <h2 className={`${teamBNameSize} font-black uppercase leading-none tracking-tighter truncate max-w-[400px]`}>
                         {teamBName}
                     </h2>
                 </div>
             </div>
-
-            {/* Set History Strip */}
-            <div className="flex gap-4 p-4 bg-white/5 rounded-3xl backdrop-blur-md border border-white/5">
-                {setsHistory.map((set, i) => (
-                    <div key={i} className="flex flex-col items-center gap-2 px-4">
-                        <span className="text-lg font-bold text-slate-500 uppercase tracking-widest">Set {set.setNumber}</span>
-                        <div className={`
-                            px-8 py-3 rounded-2xl text-4xl font-bold border-2 shadow-lg
-                            ${set.winner === 'A' 
-                                ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/30' 
-                                : 'bg-rose-500/20 text-rose-200 border-rose-500/30'}
-                        `}>
-                            {set.scoreA}-{set.scoreB}
-                        </div>
+            
+            <SetsSummaryStrip sets={setsHistory} hexA={hexA} hexB={hexB} />
+        </main>
+        
+        {/* MVP Card (Conditional) */}
+        {mvp ? (
+            <footer className="w-full flex justify-center">
+                <div 
+                    className="relative group w-full max-w-3xl bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-8 flex items-center gap-8 shadow-2xl"
+                    style={{
+                        background: `radial-gradient(circle at ${mvp.team === 'A' ? '20%' : '80%'} 50%, ${mvp.team === 'A' ? hexA : hexB}15, transparent 70%)`,
+                        borderColor: `${mvp.team === 'A' ? hexA : hexB}40`
+                    }}
+                >
+                    <div className="bg-gradient-to-br from-amber-400 to-amber-600 text-amber-950 p-6 rounded-[1.5rem] shadow-lg shadow-amber-500/20">
+                        <Trophy size={64} strokeWidth={1.5} />
                     </div>
-                ))}
-            </div>
-
-            {/* MVP Card (Conditional) */}
-            {mvp && (
-                <div className="relative group w-full max-w-2xl">
-                    <div className="absolute inset-0 bg-amber-500/30 blur-3xl rounded-full opacity-60"></div>
-                    <div className="relative bg-gradient-to-r from-amber-500/10 to-amber-900/40 backdrop-blur-2xl border border-amber-500/30 rounded-[2.5rem] p-8 flex items-center gap-8 shadow-2xl">
-                        <div className="bg-gradient-to-br from-amber-400 to-amber-600 text-amber-950 p-6 rounded-[1.5rem] shadow-lg shadow-amber-500/20">
-                            <Trophy size={64} strokeWidth={1.5} />
-                        </div>
-                        <div className="flex-1">
-                            <span className="block text-2xl font-bold text-amber-500 uppercase tracking-[0.2em] mb-1">Match MVP</span>
-                            <span className="block text-6xl font-black text-amber-100 uppercase tracking-tight leading-none">{mvp.name}</span>
-                        </div>
-                        <div className="flex flex-col items-end border-l border-amber-500/30 pl-8">
-                            <div className="text-amber-400 font-bold text-6xl tabular-nums leading-none">{mvp.totalPoints}</div>
-                            <span className="text-amber-500/60 font-bold uppercase tracking-wider text-sm mt-1">Total Points</span>
-                        </div>
+                    <div className="flex-1">
+                        <span className="block text-2xl font-bold text-amber-400 uppercase tracking-[0.2em] mb-1">Match MVP</span>
+                        <span className="block text-6xl font-black text-white uppercase tracking-tight leading-none">{mvp.name}</span>
+                    </div>
+                    <div className="flex flex-col items-end border-l border-amber-500/20 pl-8">
+                        <div className="text-amber-300 font-black text-8xl tabular-nums leading-none">{mvp.totalPoints}</div>
+                        <span className="text-amber-500/60 font-bold uppercase tracking-wider text-sm mt-1">Total Points</span>
                     </div>
                 </div>
-            )}
-        </div>
-
-        {/* FOOTER */}
-        <div className="flex justify-between items-end border-t border-white/10 pt-10 mt-4">
-            <div className="flex flex-col gap-2">
-                 <span className="text-3xl font-bold text-slate-500 uppercase tracking-widest">Scoreboard by</span>
-                 <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-rose-400 uppercase tracking-tighter drop-shadow-lg">
-                    VolleyScore Pro
-                 </span>
-            </div>
-            
-            <div className="flex items-center gap-2 opacity-60">
-                 <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10">
-                    <Activity size={32} className="text-white" />
-                 </div>
-            </div>
-        </div>
-
+            </footer>
+        ) : (
+             <div className="h-48" /> // Placeholder to balance layout when no MVP
+        )}
       </div>
     </div>
   );

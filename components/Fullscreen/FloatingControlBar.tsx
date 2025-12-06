@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Undo2, ArrowLeftRight, RotateCcw, Menu, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -96,7 +97,7 @@ export const FloatingControlBar: React.FC<FloatingControlBarProps> = ({
             <button 
               onClick={() => setIsMinimized(true)}
               className={`${buttonBase} p-2 w-10 h-10 text-slate-400 hover:text-white`}
-              title="Minimize Controls"
+              title={t('controls.minimize')}
             >
               <ChevronDown size={18} />
             </button>

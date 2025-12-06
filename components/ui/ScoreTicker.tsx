@@ -61,7 +61,8 @@ export const ScoreTicker: React.FC<ScoreTickerProps> = memo(({ value, className,
   };
 
   return (
-    <div className={`relative inline-grid place-items-center ${className}`} style={{ ...style, overflow: 'hidden' }}>
+    // Removed overflow: hidden to prevent large font clipping (border cutting off numbers)
+    <div className={`relative inline-grid place-items-center ${className}`} style={{ ...style }}>
       <AnimatePresence mode="popLayout" custom={direction} initial={false}>
         <motion.span
           key={value}

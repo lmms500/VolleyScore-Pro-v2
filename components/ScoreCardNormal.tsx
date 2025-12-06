@@ -125,6 +125,7 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
 
   return (
     <GlassSurface 
+        intensity="transparent" // 100% Transparent
         layout
         transition={layoutTransition}
         className={`flex flex-col flex-1 relative h-full select-none ${orderClass} ${isLocked ? 'opacity-40 grayscale transition-all duration-300' : 'transition-all duration-300'} rounded-[2.5rem]`}

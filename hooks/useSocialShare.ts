@@ -19,32 +19,31 @@ export const useSocialShare = () => {
 
       // 2. Gerar a imagem (Base64)
       // O 'cacheBust' ajuda a carregar imagens externas se houver
-      const dataUrl = await toPng(element, { cacheBust: true, pixelRatio: 3 });
+      // Reduzi o pixelRatio para 2 para garantir melhor performance no Android (evitar estouro de memória)
+      const dataUrl = await toPng(element, { cacheBust: true, pixelRatio: 2 });
 
       // 3. Lógica Diferente para Mobile (Nativo) vs Web
       if (Capacitor.isNativePlatform()) {
         // --- MOBILE (ANDROID/IOS) ---
-
-        // CORREÇÃO: O Filesystem do Capacitor espera apenas os dados Base64,
-        // sem o prefixo "data:image/png;base64,".
-        const base64Data = dataUrl.split(',')[1];
-        if (!base64Data) {
-          throw new Error('Falha ao extrair dados base64 do dataUrl');
-        }
-
+        
         // Salvar o arquivo no diretório de Cache do app
         const fileName = `volleyscore-result-${Date.now()}.png`;
+
+        // CRÍTICO: Remover o prefixo 'data:image/png;base64,' para salvar corretamente o binário
+        const base64Data = dataUrl.split(',')[1];
+
         const savedFile = await Filesystem.writeFile({
           path: fileName,
-          data: base64Data, // Passando apenas os dados corrigidos
+          data: dataUrl,
           directory: Directory.Cache,
+          recursive: true
         });
 
-        // Compartilhar a URI do arquivo salvo
+        // Compartilhar a URI do arquivo salvo usando o array 'files'
         await Share.share({
           title: 'Resultado da Partida',
           text: 'Confira o resultado no VolleyScore Pro!',
-          url: savedFile.uri, // Compartilha o ARQUIVO, não o texto base64
+          files: [savedFile.uri], // Android requer array 'files' para anexos locais
         });
 
       } else {

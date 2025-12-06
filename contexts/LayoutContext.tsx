@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 
 type LayoutMode = 'normal' | 'compact' | 'ultra';
 
@@ -21,26 +21,26 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [measurements, setMeasurements] = useState<Record<string, { w: number; h: number }>>({});
   const [windowSize, setWindowSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
-  // Update window size
+  // Update window size with debounce/throttle implicit via React state batching
   useEffect(() => {
     const handleResize = () => setWindowSize({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const registerElement = (id: string, width: number, height: number) => {
+  const registerElement = useCallback((id: string, width: number, height: number) => {
     setMeasurements(prev => {
+      // Identity check to avoid unnecessary state updates
       if (prev[id]?.w === width && prev[id]?.h === height) return prev;
       return { ...prev, [id]: { w: width, h: height } };
     });
-  };
+  }, []);
 
   const layoutState = useMemo((): LayoutState => {
     const { w: winW, h: winH } = windowSize;
     const isLandscape = winW > winH;
     
     // Default safe areas (simulated for PWA/Notch)
-    // In a real scenario, env(safe-area-inset-top) handles CSS, but logic needs numbers
     const safeTop = isLandscape ? 20 : 40; 
     const safeBottom = isLandscape ? 20 : 40;
 
@@ -51,16 +51,11 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const scoreH = Math.max(measurements['scoreA']?.h || 0, measurements['scoreB']?.h || 0);
 
     // Calculate Available Vertical Space
-    // The visual stack is: TopBar -> Name -> Score -> Controls
-    // BUT: Score must be centered. 
-    
-    // Distance from Center to Top of Screen
     const centerToTop = winH / 2;
-    // Distance from Center to Bottom of Screen
     const centerToBottom = winH / 2;
 
     // Required space ABOVE center (Half Score + Name + Padding + TopBar)
-    const requiredTop = (scoreH / 2) + nameH + topBarH + (isLandscape ? 20 : 40); // buffers
+    const requiredTop = (scoreH / 2) + nameH + topBarH + (isLandscape ? 20 : 40); 
     
     // Required space BELOW center (Half Score + Controls + Padding)
     const requiredBottom = (scoreH / 2) + controlsH + (isLandscape ? 20 : 40);
@@ -91,13 +86,16 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         safeAreaTop: safeTop,
         safeAreaBottom: safeBottom,
         isLandscape,
-        scoreCenterOffset: 0 // Could be used to visually nudge if perfectly math center looks "low"
+        scoreCenterOffset: 0
     };
 
   }, [measurements, windowSize]);
 
+  // OPTIMIZATION: Memoize value to avoid re-renders
+  const value = useMemo(() => ({ ...layoutState, registerElement }), [layoutState, registerElement]);
+
   return (
-    <LayoutContext.Provider value={{ ...layoutState, registerElement }}>
+    <LayoutContext.Provider value={value}>
       {children}
     </LayoutContext.Provider>
   );

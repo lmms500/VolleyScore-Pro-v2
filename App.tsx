@@ -114,14 +114,14 @@ function App() {
     const setsChanged = state.setsA > prevSetsRef.current.a || state.setsB > prevSetsRef.current.b;
     if (setsChanged && !state.isMatchOver) {
         audio.playSetWin();
-        vibrate([100, 50, 100]); // Victory Vibration
+        vibrate([100, 50, 100]); 
     }
     prevSetsRef.current = { a: state.setsA, b: state.setsB };
 
     // 2. Match Over Logic
     if (state.isMatchOver && !savedMatchIdRef.current && state.matchWinner) {
-      audio.playMatchWin(); // Play Win Sound
-      vibrate([200, 100, 200, 100, 400]); // Grand Victory Vibration
+      audio.playMatchWin(); 
+      vibrate([200, 100, 200, 100, 400]); 
 
       const newId = uuidv4();
       historyStore.addMatch({
@@ -137,7 +137,7 @@ function App() {
         setsB: state.setsB,
         winner: state.matchWinner,
         sets: state.history,
-        actionLog: state.matchLog, // USE MATCHLOG to include all stats across all sets
+        actionLog: state.matchLog, 
         config: state.config
       });
       savedMatchIdRef.current = newId;
@@ -146,7 +146,7 @@ function App() {
     if (!state.isMatchOver) {
         savedMatchIdRef.current = null;
     }
-  }, [state.isMatchOver, state.matchWinner, state.setsA, state.setsB, historyStore, audio]);
+  }, [state.isMatchOver, state.matchWinner, state.setsA, state.setsB, historyStore, audio, state.matchDurationSeconds, state.teamAName, state.teamBName, state.teamARoster, state.teamBRoster, state.history, state.matchLog, state.config]);
 
   // Wrapper for Undo
   const handleUndo = useCallback(() => {
@@ -154,10 +154,10 @@ function App() {
         historyStore.deleteMatch(savedMatchIdRef.current);
         savedMatchIdRef.current = null;
     }
-    game.undo();
+    undo();
     audio.playUndo();
-    vibrate(30); // Medium haptic for undo
-  }, [state.isMatchOver, game.undo, historyStore, audio]);
+    vibrate(30); 
+  }, [state.isMatchOver, undo, historyStore, audio]);
 
   // Handle Beach Switch Alert
   useEffect(() => {
@@ -178,17 +178,15 @@ function App() {
       
       const prev = prevStatusRef.current;
 
-      // Check if we entered Match Point (Higher priority)
       const enteredMatchPoint = (current.matchPointA && !prev.matchPointA) || (current.matchPointB && !prev.matchPointB);
-      // Check if we entered Set Point (and NOT match point)
       const enteredSetPoint = (current.setPointA && !prev.setPointA && !current.matchPointA) || (current.setPointB && !prev.setPointB && !current.matchPointB);
 
       if (enteredMatchPoint) {
           audio.playMatchPointAlert();
-          vibrate([50, 50, 50, 50]); // Intense flutter
+          vibrate([50, 50, 50, 50]); 
       } else if (enteredSetPoint) {
           audio.playSetPointAlert();
-          vibrate([50, 100]); // Warning tap
+          vibrate([50, 100]); 
       }
 
       prevStatusRef.current = current;
@@ -212,7 +210,6 @@ function App() {
       version: layoutVersion
   });
 
-  // Strict Orientation Management
   const lockOrientation = useCallback(async (mode: 'portrait' | 'landscape') => {
     if (screen.orientation && 'lock' in screen.orientation) {
         try {
@@ -227,7 +224,7 @@ function App() {
     }
   }, []);
 
-  const toggleFullscreen = async () => {
+  const toggleFullscreen = useCallback(async () => {
     audio.playTap();
     vibrate(10);
     if (!document.fullscreenElement) {
@@ -245,7 +242,7 @@ function App() {
              console.log('Exit fullscreen failed:', e);
         }
     }
-  };
+  }, [audio, lockOrientation]);
   
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -268,7 +265,7 @@ function App() {
     audio.playTap();
     vibrate(10);
     game.setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
-  }, [game, audio]);
+  }, [game.setState, audio]);
 
   // Interaction Handlers
   const handleInteractionStartA = useCallback(() => setInteractingTeam('A'), []);
@@ -281,7 +278,7 @@ function App() {
     
     if (!playerId && !state.config.enablePlayerStats) {
          audio.playScore(); 
-         vibrate(15); // Light tap for adding point
+         vibrate(15); 
     }
     
     addPoint('A', metadata);
@@ -289,7 +286,7 @@ function App() {
 
   const handleSubA = useCallback(() => {
     audio.playUndo();
-    vibrate(30); // Heavier tap for subtract
+    vibrate(30); 
     subtractPoint('A');
   }, [subtractPoint, audio]);
 
@@ -315,11 +312,17 @@ function App() {
   const handleTimeoutB = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('B'); }, [useTimeout, audio]);
 
   // Modal Open Wrappers with Sound & Haptic
-  const openSettings = () => { audio.playTap(); vibrate(10); setShowSettings(true); };
-  const openManager = () => { audio.playTap(); vibrate(10); setShowManager(true); };
-  const openHistory = () => { audio.playTap(); vibrate(10); setShowHistory(true); };
-  const openReset = () => { audio.playTap(); vibrate(10); setShowResetConfirm(true); };
-  const toggleSwap = () => { audio.playTap(); vibrate(20); toggleSides(); };
+  const openSettings = useCallback(() => { audio.playTap(); vibrate(10); setShowSettings(true); }, [audio]);
+  const openManager = useCallback(() => { audio.playTap(); vibrate(10); setShowManager(true); }, [audio]);
+  const openHistory = useCallback(() => { audio.playTap(); vibrate(10); setShowHistory(true); }, [audio]);
+  const openReset = useCallback(() => { audio.playTap(); vibrate(10); setShowResetConfirm(true); }, [audio]);
+  const toggleSwap = useCallback(() => { audio.playTap(); vibrate(20); toggleSides(); }, [audio, toggleSides]);
+  const closeSettings = useCallback(() => setShowSettings(false), []);
+  const closeManager = useCallback(() => setShowManager(false), []);
+  const closeHistory = useCallback(() => setShowHistory(false), []);
+  const closeReset = useCallback(() => setShowResetConfirm(false), []);
+  const closeMenu = useCallback(() => setShowFullscreenMenu(false), []);
+  const openMenu = useCallback(() => { audio.playTap(); vibrate(10); setShowFullscreenMenu(true); }, [audio]);
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
@@ -588,13 +591,13 @@ function App() {
                 canUndo={game.canUndo}
                 onSwap={toggleSwap}
                 onReset={openReset}
-                onMenu={() => { audio.playTap(); vibrate(10); setShowFullscreenMenu(true); }}
+                onMenu={openMenu}
             />
           )}
 
           <FullscreenMenuDrawer 
              isOpen={showFullscreenMenu}
-             onClose={() => setShowFullscreenMenu(false)}
+             onClose={closeMenu}
              onOpenSettings={openSettings}
              onOpenRoster={openManager}
              onOpenHistory={openHistory}
@@ -616,7 +619,7 @@ function App() {
             {showSettings && (
               <SettingsModal 
                 isOpen={showSettings} 
-                onClose={() => setShowSettings(false)}
+                onClose={closeSettings}
                 config={state.config}
                 onSave={applySettings}
                 onInstall={pwa.promptInstall}
@@ -630,7 +633,7 @@ function App() {
             {showManager && (
               <TeamManagerModal 
                 isOpen={showManager}
-                onClose={() => setShowManager(false)}
+                onClose={closeManager}
                 courtA={state.teamARoster}
                 courtB={state.teamBRoster}
                 queue={state.queue}
@@ -663,7 +666,7 @@ function App() {
             {showHistory && (
               <HistoryModal 
                 isOpen={showHistory}
-                onClose={() => setShowHistory(false)}
+                onClose={closeHistory}
               />
             )}
 
@@ -680,7 +683,7 @@ function App() {
             {showResetConfirm && (
               <ConfirmationModal 
                 isOpen={showResetConfirm}
-                onClose={() => setShowResetConfirm(false)}
+                onClose={closeReset}
                 onConfirm={resetMatch}
                 title="Reset Match?"
                 message="Are you sure you want to reset the match? All scores and history will be lost."

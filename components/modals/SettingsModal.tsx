@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -7,7 +6,9 @@ import { Check, Trophy, Sun, Zap, Download, Moon, AlertTriangle, Volume2, Umbrel
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useServiceWorker } from '../../hooks/useServiceWorker';
-import pkg from '../../package.json'; // Import local package.json for versioning
+
+// Defined constant to avoid importing package.json which causes build/runtime issues in some environments
+const APP_VERSION = '2.0.2';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -69,7 +70,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               // Artificial delay for UX (spinner feel)
               await new Promise(r => setTimeout(r, 800));
 
-              if (remotePkg.version !== pkg.version) {
+              if (remotePkg.version !== APP_VERSION) {
                   setRemoteCheckStatus('available');
               } else {
                   setRemoteCheckStatus('latest');
@@ -159,7 +160,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <div className="flex flex-col">
                             <span className="text-xs font-bold uppercase tracking-wide opacity-50">App Version</span>
                             <div className="flex items-center gap-2">
-                                <span className="text-sm font-black tracking-tight">v{pkg.version}</span>
+                                <span className="text-sm font-black tracking-tight">v{APP_VERSION}</span>
                                 {showUpdateAvailable && remoteVersion && (
                                     <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded font-bold border border-emerald-500/20">
                                         → v{remoteVersion}

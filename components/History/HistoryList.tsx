@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useHistoryStore, Match } from '../../stores/historyStore';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -14,7 +13,6 @@ import { resolveTheme, getHexFromColor } from '../../utils/colors';
 
 // --- SUB-COMPONENTS ---
 
-// CUSTOM SELECT COMPONENT
 interface CustomSelectProps {
     value: string;
     onChange: (value: string) => void;
@@ -104,12 +102,11 @@ const HistoryCard: React.FC<{
     isExpanded: boolean;
     onToggle: () => void;
     onAnalyze: () => void;
-}> = ({ match, onDelete, isExpanded, onToggle, onAnalyze }) => {
+}> = React.memo(({ match, onDelete, isExpanded, onToggle, onAnalyze }) => {
     const { t } = useTranslation();
     const date = new Date(match.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     const time = new Date(match.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
-    // Format duration
     const h = Math.floor(match.durationSeconds / 3600);
     const m = Math.floor((match.durationSeconds % 3600) / 60);
     const durationStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
@@ -117,7 +114,6 @@ const HistoryCard: React.FC<{
     const isWinnerA = match.winner === 'A';
     const isWinnerB = match.winner === 'B';
 
-    // Resolve Themes dynamically
     const themeA = resolveTheme(match.teamARoster?.color || 'indigo');
     const themeB = resolveTheme(match.teamBRoster?.color || 'rose');
     
@@ -132,7 +128,6 @@ const HistoryCard: React.FC<{
             exit={{ opacity: 0, scale: 0.95 }}
             className="group relative rounded-3xl bg-white dark:bg-white/[0.03] backdrop-blur-md border border-black/5 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-md transition-all"
         >
-            {/* Subtle Gradient Wash for Winner */}
             {isWinnerA && (
                 <div 
                     className="absolute inset-0 opacity-[0.03] pointer-events-none transition-colors duration-500"
@@ -146,12 +141,10 @@ const HistoryCard: React.FC<{
                 />
             )}
 
-            {/* Main Content Area */}
             <div 
                 className="relative z-10 p-4 sm:p-5 cursor-pointer flex flex-col gap-4"
                 onClick={onToggle}
             >
-                {/* Top Row: Meta Data */}
                 <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-400">
                      <div className="flex items-center gap-2">
                         <span className="flex items-center gap-1"><Calendar size={12} /> {date}</span>
@@ -163,10 +156,8 @@ const HistoryCard: React.FC<{
                      </div>
                 </div>
 
-                {/* Matchup Row - Highly Responsive */}
                 <div className="flex items-center justify-between gap-2 sm:gap-4 w-full">
                     
-                    {/* Team A - Flexible Width, Right Align */}
                     <div className={`flex-1 min-w-0 flex items-center justify-end gap-2 text-right ${isWinnerA ? 'opacity-100' : 'opacity-60 grayscale-[0.5]'}`}>
                         <span className={`text-sm sm:text-base leading-tight break-words line-clamp-2 ${isWinnerA ? `font-black ${themeA.text} ${themeA.textDark}` : 'font-medium text-slate-600 dark:text-slate-400'}`}>
                             {match.teamAName}
@@ -174,7 +165,6 @@ const HistoryCard: React.FC<{
                         {isWinnerA && <Crown size={14} className={`${themeA.crown} flex-shrink-0`} fill="currentColor" />}
                     </div>
 
-                    {/* Score Box - Fixed Center */}
                     <div className="flex-shrink-0 flex flex-col items-center justify-center px-3 py-1 bg-slate-100/50 dark:bg-black/20 rounded-xl border border-black/5 dark:border-white/5 min-w-[60px] sm:min-w-[80px]">
                         <div className="flex items-center gap-1 font-inter text-lg sm:text-xl font-black tabular-nums leading-none">
                             <span className={isWinnerA ? `${themeA.text} ${themeA.textDark}` : 'text-slate-400'}>{match.setsA}</span>
@@ -183,7 +173,6 @@ const HistoryCard: React.FC<{
                         </div>
                     </div>
 
-                    {/* Team B - Flexible Width, Left Align */}
                     <div className={`flex-1 min-w-0 flex items-center justify-start gap-2 text-left ${isWinnerB ? 'opacity-100' : 'opacity-60 grayscale-[0.5]'}`}>
                         {isWinnerB && <Crown size={14} className={`${themeB.crown} flex-shrink-0`} fill="currentColor" />}
                         <span className={`text-sm sm:text-base leading-tight break-words line-clamp-2 ${isWinnerB ? `font-black ${themeB.text} ${themeB.textDark}` : 'font-medium text-slate-600 dark:text-slate-400'}`}>
@@ -193,13 +182,11 @@ const HistoryCard: React.FC<{
 
                 </div>
 
-                {/* Bottom Row: Expand Indicator (Center) */}
                 <div className="flex justify-center text-slate-300 dark:text-slate-700 -mt-2">
                     {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </div>
             </div>
 
-            {/* Expanded Content */}
             <AnimatePresence>
                 {isExpanded && (
                     <motion.div 
@@ -210,7 +197,6 @@ const HistoryCard: React.FC<{
                     >
                         <div className="p-4 sm:p-5 flex flex-col items-center space-y-5">
                             
-                            {/* Sets History Strip */}
                             <div className="w-full overflow-x-auto pb-1 no-scrollbar flex justify-center">
                                 <div className="flex gap-2">
                                     {match.sets.map((set, idx) => {
@@ -231,7 +217,6 @@ const HistoryCard: React.FC<{
                                 </div>
                             </div>
 
-                            {/* Actions */}
                             <div className="flex items-center gap-3 w-full sm:w-auto">
                                 <Button 
                                     onClick={(e) => { e.stopPropagation(); onAnalyze(); }}
@@ -254,7 +239,7 @@ const HistoryCard: React.FC<{
             </AnimatePresence>
         </motion.div>
     );
-};
+});
 
 // --- MAIN COMPONENT ---
 
@@ -270,12 +255,12 @@ export const HistoryList: React.FC = () => {
     const [sortOrder, setSortOrder] = useState<SortType>('newest');
     
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [selectedMatch, setSelectedMatch] = useState<Match | null>(null); // Navigation state
+    const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
     const [importMsg, setImportMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Filter Logic
+    // OPTIMIZATION: Memoize filtering/sorting to prevent recalculation on every render
     const filteredMatches = useMemo(() => {
         let filtered = matches.filter(m => {
             const matchesSearch = 
@@ -286,14 +271,12 @@ export const HistoryList: React.FC = () => {
             if (filterType === 'A') matchesFilter = m.winner === 'A';
             if (filterType === 'B') matchesFilter = m.winner === 'B';
             if (filterType === 'scouted') {
-                // Check if match has any scouted points (playerId exists)
                 matchesFilter = (m.actionLog || []).some((log: any) => log.type === 'POINT' && log.playerId);
             }
 
             return matchesSearch && matchesFilter;
         });
 
-        // Sorting
         return filtered.sort((a, b) => {
             if (sortOrder === 'newest') return b.timestamp - a.timestamp;
             if (sortOrder === 'oldest') return a.timestamp - b.timestamp;
@@ -304,7 +287,6 @@ export const HistoryList: React.FC = () => {
 
     }, [matches, searchTerm, filterType, sortOrder]);
 
-    // Handlers
     const handleExport = () => {
         const json = JSON.parse(exportJSON());
         const dateStr = new Date().toISOString().split('T')[0];
@@ -321,7 +303,6 @@ export const HistoryList: React.FC = () => {
 
         try {
             const content = await parseJSONFile(file);
-            // Convert array to string as expected by store
             const result = importJSON(JSON.stringify(content), { merge: true });
             
             if (result.success) {
@@ -333,14 +314,9 @@ export const HistoryList: React.FC = () => {
             setImportMsg({ type: 'error', text: t('historyList.importError') });
         }
         
-        // Reset input
         if (fileInputRef.current) fileInputRef.current.value = '';
-        
-        // Clear message after 3s
         setTimeout(() => setImportMsg(null), 3000);
     };
-
-    // --- NAVIGATION VIEW SWITCH ---
 
     if (selectedMatch) {
         return <MatchDetail match={selectedMatch} onBack={() => setSelectedMatch(null)} />;
@@ -362,8 +338,6 @@ export const HistoryList: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full min-h-[50vh]">
-            
-            {/* Hidden Input */}
             <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -372,11 +346,8 @@ export const HistoryList: React.FC = () => {
                 onChange={handleFileChange}
             />
 
-            {/* --- Control Deck (Enhanced UI) --- */}
             <div className="sticky top-0 z-30 mb-6 -mx-1 px-1">
                 <div className="bg-slate-100/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl p-3 shadow-lg shadow-black/5 dark:shadow-black/20">
-                    
-                    {/* Row 1: Search & Actions */}
                     <div className="flex gap-2 mb-2">
                         <div className="relative flex-1 group">
                             <div className="absolute inset-0 bg-white dark:bg-white/5 rounded-2xl transition-all group-focus-within:ring-2 group-focus-within:ring-indigo-500/30"></div>
@@ -390,18 +361,15 @@ export const HistoryList: React.FC = () => {
                         </div>
                         
                         <div className="flex gap-1">
-                            {/* Export: UP Arrow (Upload Icon) */}
                             <button onClick={handleExport} className="p-2.5 rounded-2xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors" title={t('historyList.export')}>
                                 <Upload size={18} /> 
                             </button>
-                            {/* Import: DOWN Arrow (Download Icon) */}
                             <button onClick={handleImportClick} className="p-2.5 rounded-2xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors" title={t('historyList.import')}>
                                 <Download size={18} />
                             </button>
                         </div>
                     </div>
 
-                    {/* Row 2: Filters & Sort - FIXED GRID LAYOUT */}
                     <div className="grid grid-cols-2 gap-2 relative z-20">
                         <CustomSelect 
                             value={filterType}
@@ -419,7 +387,6 @@ export const HistoryList: React.FC = () => {
                         />
                     </div>
 
-                    {/* Import Status Message */}
                     <AnimatePresence>
                         {importMsg && (
                             <motion.div 
@@ -435,7 +402,6 @@ export const HistoryList: React.FC = () => {
                 </div>
             </div>
 
-            {/* --- List Content --- */}
             <div className="space-y-4 flex-1 overflow-y-auto pb-8 min-h-0 px-1 custom-scrollbar">
                 {filteredMatches.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-slate-400 opacity-60">

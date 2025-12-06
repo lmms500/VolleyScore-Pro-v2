@@ -1,5 +1,4 @@
-
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Player, Team, TeamId, RotationReport, RotationMode, PlayerProfile, TeamColor } from '../types';
 import { PLAYER_LIMIT_ON_COURT, PLAYERS_PER_TEAM } from '../constants';
 import { sanitizeInput } from '../utils/security';
@@ -36,9 +35,10 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
   
   const { profiles, upsertProfile, deleteProfile, findProfileByName, isReady: profilesReady } = usePlayerProfiles();
 
-  const _updateNames = (cA: Team, cB: Team) => {
+  // Internal helper, not exposed
+  const _updateNames = useCallback((cA: Team, cB: Team) => {
     onNamesChange(cA.name, cB.name);
-  };
+  }, [onNamesChange]);
 
   // --- SYNC ENGINE ---
   useEffect(() => {
@@ -76,10 +76,12 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
   }, [profiles, profilesReady]);
 
 
-  // --- FACTORIES ---
-  const createPlayer = (name: string, index: number, existingProfile?: PlayerProfile, number?: string, skillLevel?: number): Player => {
+  // --- FACTORIES (Pure functions, no hooks needed) ---
+  const createPlayer = useCallback((name: string, index: number, existingProfile?: PlayerProfile, number?: string, skillLevel?: number): Player => {
       const safeName = sanitizeInput(name);
-      const profile = existingProfile || findProfileByName(safeName);
+      // findProfileByName dependency removed by passing profile directly or doing lookup in calling scope
+      // But we need to use the one from closure if not passed.
+      const profile = existingProfile || (findProfileByName ? findProfileByName(safeName) : undefined);
 
       return {
           id: uuidv4(),
@@ -91,7 +93,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
           fixedSide: null,
           originalIndex: index // Critical for Restore Order
       };
-  };
+  }, [findProfileByName]);
 
   const createTeam = (name: string, players: Player[], color: TeamColor = 'slate'): Team => ({
     id: uuidv4(),
@@ -106,7 +108,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
       setQueueState(prev => ({ ...prev, mode }));
   }, []);
 
-  // CRITICAL: Force state override (used by Undo logic in Game Hook)
   const overrideQueueState = useCallback((courtA: Team, courtB: Team, queue: Team[]) => {
       console.log("[Queue] Overriding State from Snapshot (Undo)");
       setQueueState(prev => ({
@@ -114,7 +115,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
           courtA,
           courtB,
           queue,
-          lastReport: null // Clear report as we reverted to a state before rotation
+          lastReport: null 
       }));
   }, []);
 
@@ -127,7 +128,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
         ];
 
         let result;
-        // Global Balance now accepts Queue to preserve locked players within queue teams
         if (prev.mode === 'balanced') {
             result = balanceTeamsSnake(allPlayers, prev.courtA, prev.courtB, prev.queue);
         } else {
@@ -146,7 +146,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
 
   const generateTeams = useCallback((namesList: string[]) => {
     const validNames = namesList.filter(n => n.trim().length > 0);
-    // Create new players preserving index
     const allNewPlayers = validNames.map((name, idx) => createPlayer(name, idx));
 
     setQueueState(prev => {
@@ -166,7 +165,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
         };
     });
     setDeletedHistory([]);
-  }, [profiles, findProfileByName]); 
+  }, [createPlayer, _updateNames]); 
 
   // --- PERSISTENCE & SYNC ---
   const savePlayerToProfile = useCallback((playerId: string) => {
@@ -224,6 +223,10 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     });
   }, []);
 
+  const updatePlayerName = useCallback((id: string, name: string) => updatePlayer(id, { name }), [updatePlayer]);
+  const updatePlayerNumber = useCallback((id: string, number: string) => updatePlayer(id, { number }), [updatePlayer]);
+  const updatePlayerSkill = useCallback((id: string, skillLevel: number) => updatePlayer(id, { skillLevel }), [updatePlayer]);
+
   const updateTeamName = useCallback((teamId: string, name: string) => {
     const safeName = sanitizeInput(name);
     setQueueState(prev => {
@@ -250,14 +253,12 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
   const getRotationPreview = useCallback((winnerId: TeamId): RotationReport | null => {
     const { courtA, courtB, queue, mode } = queueState;
     if (queue.length === 0 && courtA.players.length >= PLAYER_LIMIT_ON_COURT && courtB.players.length >= PLAYER_LIMIT_ON_COURT) {
-       // If no queue, no rotation
        return null;
     }
 
     const winnerTeam = winnerId === 'A' ? courtA : courtB;
     const loserTeam = winnerId === 'A' ? courtB : courtA;
 
-    // Use specific logic based on mode
     if (mode === 'balanced') {
         const result = getBalancedRotationResult(winnerTeam, loserTeam, queue);
         return {
@@ -301,15 +302,15 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
         lastReport: report
       };
     });
-  }, [getRotationPreview]);
+  }, [getRotationPreview, _updateNames]);
 
   const addPlayer = useCallback((name: string, target: 'A' | 'B' | 'Queue', number?: string, skill?: number) => {
-      const getMaxIndex = (s: QueueState) => {
-          const all = [...s.courtA.players, ...s.courtB.players, ...s.queue.flatMap(t => t.players)];
-          return all.reduce((max, p) => Math.max(max, p.originalIndex), -1);
-      };
-
       setQueueState(prev => {
+          const getMaxIndex = (s: QueueState) => {
+              const all = [...s.courtA.players, ...s.courtB.players, ...s.queue.flatMap(t => t.players)];
+              return all.reduce((max, p) => Math.max(max, p.originalIndex), -1);
+          };
+
           const safeName = sanitizeInput(name);
           const profile = findProfileByName(safeName);
           
@@ -333,7 +334,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
           }
           return prev;
       });
-  }, [findProfileByName]);
+  }, [findProfileByName, createPlayer]);
 
   const removePlayer = useCallback((id: string) => {
     setQueueState(prev => {
@@ -395,12 +396,9 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
      });
   }, []);
 
-  /**
-   * Enhanced Move Player: Handles both Cross-Team movement and Intra-Team Reordering.
-   */
   const movePlayer = useCallback((playerId: string, fromId: string, toId: string, newIndex?: number) => {
       setQueueState(prev => {
-         // --- CASE 1: REORDER WITHIN SAME TEAM ---
+         // Same Team
          if (fromId === toId) {
              const reorderList = (list: Player[]) => {
                  const oldIndex = list.findIndex(p => p.id === playerId);
@@ -422,13 +420,12 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
              return { ...prev, courtA: newA, courtB: newB, queue: newQ };
          }
 
-         // --- CASE 2: MOVE BETWEEN TEAMS ---
+         // Cross Team
          let player: Player | undefined;
          let newA = { ...prev.courtA };
          let newB = { ...prev.courtB };
          let newQ = [...prev.queue];
 
-         // 1. Remove from Source
          const removeFromList = (list: Player[]) => list.filter(p => p.id !== playerId);
          
          if (fromId === 'A' || fromId === prev.courtA.id) {
@@ -448,9 +445,8 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
              });
          }
 
-         if (!player) return prev; // Player not found, abort
+         if (!player) return prev;
 
-         // 2. Add to Destination (Insert at Index)
          const addToList = (list: Player[], p: Player, idx?: number) => {
              const copy = [...list];
              if (idx !== undefined && idx >= 0 && idx <= copy.length) {
@@ -475,7 +471,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
              }
          }
          
-         // Filter empty queue teams if needed (optional based on rules, here we keep them stable for drag targets)
          return { ...prev, courtA: newA, courtB: newB, queue: newQ };
       });
   }, []);
@@ -502,7 +497,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
                   const nB = parseInt(b.number || '999');
                   return nA - nB;
               }
-              if (criteria === 'skill') return b.skillLevel - a.skillLevel; // Descending
+              if (criteria === 'skill') return b.skillLevel - a.skillLevel;
               return 0;
           };
 
@@ -522,24 +517,26 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
       });
   }, []);
   
+  const commitDeletions = useCallback(() => setDeletedHistory([]), []);
 
-  return {
+  // OPTIMIZATION: Memoize the return object to keep stable references for functions
+  return useMemo(() => ({
     queueState,
     generateTeams,
     updateTeamName,
     updateTeamColor,
-    updatePlayerName: (id: string, name: string) => updatePlayer(id, { name }),
-    updatePlayerNumber: (id: string, number: string) => updatePlayer(id, { number }),
-    updatePlayerSkill: (id: string, skillLevel: number) => updatePlayer(id, { skillLevel }),
+    updatePlayerName,
+    updatePlayerNumber,
+    updatePlayerSkill,
     rotateTeams,
     getRotationPreview,
-    overrideQueueState, // EXPORTED FOR UNDO
+    overrideQueueState, 
     togglePlayerFixed,
     movePlayer,
     addPlayer,
     removePlayer,
     undoRemovePlayer,
-    commitDeletions: () => setDeletedHistory([]),
+    commitDeletions,
     hasDeletedPlayers: deletedHistory.length > 0,
     deletedCount: deletedHistory.length,
     setRotationMode,
@@ -550,5 +547,11 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     deleteProfile,
     upsertProfile,
     profiles
-  };
+  }), [
+    queueState, deletedHistory.length, profiles, 
+    generateTeams, updateTeamName, updateTeamColor, updatePlayerName, updatePlayerNumber, updatePlayerSkill,
+    rotateTeams, getRotationPreview, overrideQueueState, togglePlayerFixed, movePlayer, addPlayer, removePlayer,
+    undoRemovePlayer, commitDeletions, setRotationMode, balanceTeams, sortTeam, savePlayerToProfile, revertPlayerChanges,
+    deleteProfile, upsertProfile
+  ]);
 };

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -16,6 +15,7 @@ import {
   useSensor,
   useSensors,
   KeyboardSensor,
+  TouchSensor
 } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -545,7 +545,7 @@ const TeamColumn = memo(({
     onRevertProfile,
     onAddPlayer, 
     onToggleFixed, 
-    onRemove,
+    onRemove, 
     usedColors,
     isQueue = false,
     onSortTeam
@@ -719,14 +719,15 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   const [undoVisible, setUndoVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // SENSOR FIX: Adjusted for better drag responsiveness while allowing scroll
+  // OPTIMIZATION: Memoize sensors to avoid re-creating on every render
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5, // Reduced distance for quicker pickup
+        distance: 5,
       },
     }),
-    useSensor(KeyboardSensor)
+    useSensor(KeyboardSensor),
+    useSensor(TouchSensor) // Add TouchSensor for better mobile support
   );
   
   useEffect(() => {
@@ -743,13 +744,13 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
     return () => clearTimeout(timer);
   }, [props.deletedCount, props.onCommitDeletions]);
 
-  // Drag Logic Helpers
-  const findContainer = (id: string) => {
+  // Drag Logic Helpers - wrapped in useCallback for stability if passed down (though here used internally)
+  const findContainer = useCallback((id: string) => {
     if (id === 'A' || props.courtA.players.some(p => p.id === id)) return 'A';
     if (id === 'B' || props.courtB.players.some(p => p.id === id)) return 'B';
     for (const team of props.queue) { if (team.id === id || team.players.some(p => p.id === id)) return team.id; }
     return null;
-  };
+  }, [props.courtA, props.courtB, props.queue]);
 
   const getTeamById = (id: string) => {
       if (id === 'A') return props.courtA;
@@ -763,7 +764,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
     return map;
   }, [props.courtA, props.courtB, props.queue]);
 
-  // Determine Used Colors
+  // Determine Used Colors - Memoized
   const usedColors = useMemo(() => {
       const set = new Set<string>();
       if (props.courtA.color) set.add(props.courtA.color);
@@ -772,6 +773,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
       return set;
   }, [props.courtA.color, props.courtB.color, props.queue]);
 
+  // OPTIMIZATION: Memoize filtering logic
   const filteredProfiles = useMemo(() => {
       return Array.from(props.profiles.values())
           .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -1060,8 +1062,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
        {createPortal(
             <DragOverlayFixed dropAnimation={{ duration: 150, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
               {activePlayer ? (
-                // USES forceDragStyle to render a cleaner, OPAQUE version of the card
-                // This removes blurring/transparency effects during the drag, vastly improving FPS.
                 <div className="w-[300px]">
                     <PlayerCard 
                         player={activePlayer} locationId="" profiles={props.profiles}

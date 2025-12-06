@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { GameState, TeamId, SetHistory, GameConfig, Team, Player, RotationReport, SkillType, ActionLog } from '../types';
 import { DEFAULT_CONFIG, MIN_LEAD_TO_WIN, SETS_TO_WIN_MATCH } from '../constants';
 import { usePlayerQueue } from './usePlayerQueue'; 
@@ -17,7 +17,7 @@ const INITIAL_STATE: GameState = {
   currentSet: 1,
   history: [],
   actionLog: [],
-  matchLog: [], // Initialize empty match log
+  matchLog: [],
   isMatchOver: false,
   matchWinner: null,
   servingTeam: null,
@@ -105,14 +105,12 @@ export const useVolleyGame = () => {
           savedState.actionLog = savedState.actionLog.filter((action: any) => action.type !== 'TOGGLE_SERVE');
           savedState.matchLog = savedState.matchLog.filter((action: any) => action.type !== 'TOGGLE_SERVE');
           
-          // Ensure legacy saves don't break with new snapshot field
           if ((savedState as any).lastSnapshot) delete (savedState as any).lastSnapshot;
 
           setState(savedState); 
         }
       } catch (e) {
         console.error("Failed to load game state, resetting to default.", e);
-        // Fallback to initial state is implicit as state isn't updated
       }
       setIsLoaded(true);
     };
@@ -157,18 +155,14 @@ export const useVolleyGame = () => {
 
   // Optimized Actions
   
-  // REFACTORED: Now accepts metadata object for proper spread into ActionLog
   const addPoint = useCallback((team: TeamId, metadata?: { playerId: string, skill: SkillType }) => {
     setState(prev => {
       if (prev.isMatchOver) return prev;
-      
-      // Safety Guard: Hard limit to prevent integer overflow or UI breaking
       if (prev.scoreA >= 999 || prev.scoreB >= 999) return prev;
 
       let newScoreA = team === 'A' ? prev.scoreA + 1 : prev.scoreA;
       let newScoreB = team === 'B' ? prev.scoreB + 1 : prev.scoreB;
       
-      // --- BEACH MODE LOGIC (Rule Implementation) ---
       let triggerSideSwitch = false;
       const totalPoints = newScoreA + newScoreB;
       
@@ -179,7 +173,6 @@ export const useVolleyGame = () => {
              triggerSideSwitch = true;
          }
       }
-      // ------------------------------------
 
       const target = (prev.config.hasTieBreak && prev.currentSet === prev.config.maxSets) ? prev.config.tieBreakPoints : prev.config.pointsPerSet;
       let enteringSuddenDeath = false;
@@ -202,7 +195,6 @@ export const useVolleyGame = () => {
            else if (newScoreB >= target && newScoreB >= newScoreA + MIN_LEAD_TO_WIN) setWinner = 'B';
       }
 
-      // Create Action Log Entry
       const newAction: ActionLog = { 
         type: 'POINT', 
         team,
@@ -220,6 +212,7 @@ export const useVolleyGame = () => {
           const setsNeeded = SETS_TO_WIN_MATCH(prev.config.maxSets);
           const matchWinner = newSetsA === setsNeeded ? 'A' : (newSetsB === setsNeeded ? 'B' : null);
           
+          // Use current QueueManager reference to get report
           let previewReport = null;
           if (matchWinner) {
               previewReport = queueManager.getRotationPreview(matchWinner);
@@ -236,9 +229,9 @@ export const useVolleyGame = () => {
               rotationReport: previewReport, 
               servingTeam: null, isTimerRunning: matchWinner ? false : true, timeoutsA: 0, timeoutsB: 0, 
               inSuddenDeath: false,
-              pendingSideSwitch: false, // Reset switch on set end
-              actionLog: [], // Clear current set undo stack
-              matchLog: [...prev.matchLog, newAction], // Keep full match history (stats) - CRITICAL FIX
+              pendingSideSwitch: false, 
+              actionLog: [], 
+              matchLog: [...prev.matchLog, newAction], 
               lastSnapshot: snapshotState
           };
       }
@@ -252,7 +245,7 @@ export const useVolleyGame = () => {
           inSuddenDeath: prev.inSuddenDeath || enteringSuddenDeath,
           pendingSideSwitch: triggerSideSwitch,
           actionLog: [...prev.actionLog, newAction],
-          matchLog: [...prev.matchLog, newAction], // Persist full match history
+          matchLog: [...prev.matchLog, newAction], 
           lastSnapshot: undefined 
       };
     });
@@ -261,8 +254,6 @@ export const useVolleyGame = () => {
   const subtractPoint = useCallback((team: TeamId) => {
     setState(prev => {
         if (prev.isMatchOver) return prev;
-        
-        // Ensure strictly non-negative scores
         const currentScore = team === 'A' ? prev.scoreA : prev.scoreB;
         if (currentScore <= 0) return prev;
         
@@ -270,7 +261,7 @@ export const useVolleyGame = () => {
             ...prev, 
             scoreA: team === 'A' ? Math.max(0, prev.scoreA - 1) : prev.scoreA, 
             scoreB: team === 'B' ? Math.max(0, prev.scoreB - 1) : prev.scoreB,
-            pendingSideSwitch: false // Removing a point cancels any pending switch
+            pendingSideSwitch: false 
         };
     });
   }, []);
@@ -307,7 +298,6 @@ export const useVolleyGame = () => {
 
   const undo = useCallback(() => { 
     setState(prev => {
-        // Priority 1: Restore Snapshot (Set/Match Transitions)
         if (prev.lastSnapshot) {
             console.log("Restoring snapshot (Undo Match/Set Win)");
             if (prev.lastSnapshot.teamARoster && prev.lastSnapshot.teamBRoster) {
@@ -326,9 +316,7 @@ export const useVolleyGame = () => {
         const newLog = [...prev.actionLog];
         const lastAction = newLog.pop()!;
         
-        // Fix: Also remove from matchLog to keep stats accurate
         const newMatchLog = [...prev.matchLog];
-        // Only pop if the last item in matchLog matches the one we are undoing
         if (newMatchLog.length > 0 && newMatchLog[newMatchLog.length - 1].type === lastAction.type) {
             newMatchLog.pop();
         }
@@ -352,7 +340,7 @@ export const useVolleyGame = () => {
                 scoreA: lastAction.prevScoreA,
                 scoreB: lastAction.prevScoreB,
                 servingTeam: lastAction.prevServingTeam, 
-                pendingSideSwitch: false, // Undo cancels pending switch
+                pendingSideSwitch: false, 
                 lastSnapshot: undefined
             };
         }
@@ -376,7 +364,7 @@ export const useVolleyGame = () => {
   const toggleSides = useCallback(() => setState(prev => ({ 
       ...prev, 
       swappedSides: !prev.swappedSides,
-      pendingSideSwitch: false // Acknowledged
+      pendingSideSwitch: false 
   })), []);
   
   const setServer = useCallback((team: TeamId) => {
@@ -406,12 +394,13 @@ export const useVolleyGame = () => {
     setState(prev => ({
         ...prev, 
         scoreA: 0, scoreB: 0, setsA: 0, setsB: 0, currentSet: 1, history: [], 
-        actionLog: [], matchLog: [], // Clear logs for new match
+        actionLog: [], matchLog: [], 
         isMatchOver: false, matchWinner: null, servingTeam: null, timeoutsA: 0, timeoutsB: 0, inSuddenDeath: false, matchDurationSeconds: 0, isTimerRunning: false,
     }));
   }, [state.matchWinner, state.rotationReport, queueManager]);
 
-  return {
+  // OPTIMIZATION: Memoize return object to keep function references stable for child components
+  return useMemo(() => ({
     state, setState, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, setServer, useTimeout, applySettings, 
     canUndo: state.actionLog.length > 0 || !!state.lastSnapshot, 
     isMatchActive,
@@ -448,5 +437,7 @@ export const useVolleyGame = () => {
     pointsToWinCurrentSet,
     setsNeededToWin,
     isDeuce
-  };
+  }), [
+    state, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, setServer, useTimeout, applySettings, isMatchActive, rotateTeams, queueManager, isTieBreak, statusA, statusB, pointsToWinCurrentSet, setsNeededToWin, isDeuce
+  ]);
 };

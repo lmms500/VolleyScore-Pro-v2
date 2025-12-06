@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
 
 type Language = 'en' | 'pt' | 'es';
 
@@ -46,10 +46,10 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetchTranslations();
   }, []);
 
-  const setLanguage = (lang: Language) => {
+  const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('volleyscore-lang', lang);
-  };
+  }, []);
 
   const t = useCallback((key: string, options?: Record<string, string | number>): string => {
     if (!translations) {
@@ -78,8 +78,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return translation;
   }, [language, translations]);
 
+  // OPTIMIZATION: Memoize value to prevent consumer re-renders
+  const value = useMemo(() => ({ language, setLanguage, t }), [language, setLanguage, t]);
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );

@@ -2,30 +2,32 @@ import React, { useState, useEffect, lazy, Suspense, useCallback, useRef } from 
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
 import { useTutorial } from './hooks/useTutorial';
+// EAGER IMPORTS (Critical for First Contentful Paint)
 import { ScoreCardNormal } from './components/ScoreCardNormal';
 import { ScoreCardFullscreen } from './components/ScoreCardFullscreen';
 import { HistoryBar } from './components/HistoryBar';
 import { Controls } from './components/Controls';
-import { Minimize2, RefreshCw } from 'lucide-react';
-import { TeamId, SkillType } from './types';
 import { MeasuredFullscreenHUD } from './components/MeasuredFullscreenHUD';
-import { useTranslation } from './contexts/LanguageContext';
 import { FloatingControlBar } from './components/Fullscreen/FloatingControlBar';
 import { FloatingTopBar } from './components/Fullscreen/FloatingTopBar';
 import { FullscreenMenuDrawer } from './components/Fullscreen/FullscreenMenuDrawer';
 import { LayoutProvider } from './contexts/LayoutContext';
-import { useHudMeasure } from './hooks/useHudMeasure';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SuddenDeathOverlay } from './components/ui/CriticalPointAnimation';
 import { BackgroundGlow } from './components/ui/BackgroundGlow';
 import { ReloadPrompt } from './components/ui/ReloadPrompt';
 import { InstallReminder } from './components/ui/InstallReminder';
-import { motion, LayoutGroup, AnimatePresence } from 'framer-motion';
+import { useTranslation } from './contexts/LanguageContext';
+import { useHudMeasure } from './hooks/useHudMeasure';
 import { useHistoryStore } from './stores/historyStore';
-import { v4 as uuidv4 } from 'uuid';
 import { useGameAudio } from './hooks/useGameAudio';
+import { TeamId, SkillType } from './types';
+import { Minimize2, RefreshCw, Loader2 } from 'lucide-react';
+import { motion, LayoutGroup, AnimatePresence } from 'framer-motion';
+import { v4 as uuidv4 } from 'uuid';
 
-// Lazy Loaded Heavy Modals
+// --- LAZY LOADED CHUNKS (Optimized for Mobile Performance) ---
+// These components are code-split and only loaded when needed.
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
 const TeamManagerModal = lazy(() => import('./components/modals/TeamManagerModal').then(module => ({ default: module.TeamManagerModal })));
 const MatchOverModal = lazy(() => import('./components/modals/MatchOverModal').then(module => ({ default: module.MatchOverModal })));
@@ -39,6 +41,15 @@ const vibrate = (pattern: number | number[]) => {
         navigator.vibrate(pattern);
     }
 };
+
+// Lightweight Loading Spinner for Suspense (No extra libs)
+const SuspenseLoader = () => (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm">
+    <div className="bg-white/80 dark:bg-black/80 p-4 rounded-full shadow-lg border border-white/20">
+      <Loader2 className="animate-spin text-indigo-500" size={32} />
+    </div>
+  </div>
+);
 
 function App() {
   const game = useVolleyGame();
@@ -324,7 +335,7 @@ function App() {
   const closeMenu = useCallback(() => setShowFullscreenMenu(false), []);
   const openMenu = useCallback(() => { audio.playTap(); vibrate(10); setShowFullscreenMenu(true); }, [audio]);
 
-  if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
+  if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-slate-100 dark:bg-[#020617]"><Loader2 className="animate-spin text-indigo-500" size={48}/></div>;
 
   const setsLeft = state.swappedSides ? state.setsB : state.setsA;
   const setsRight = state.swappedSides ? state.setsA : state.setsB;
@@ -604,7 +615,7 @@ function App() {
              onExitFullscreen={toggleFullscreen}
           />
 
-          <Suspense fallback={null}>
+          <Suspense fallback={<SuspenseLoader />}>
             {tutorial.showTutorial && (
               <TutorialModal 
                 isOpen={tutorial.showTutorial}

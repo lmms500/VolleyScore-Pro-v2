@@ -8,7 +8,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useServiceWorker } from '../../hooks/useServiceWorker';
 
 // Defined constant to avoid importing package.json which causes build/runtime issues in some environments
-const APP_VERSION = '2.0.4';
+const APP_VERSION = '2.0.5';
 
 interface SettingsModalProps {
   isOpen: boolean;

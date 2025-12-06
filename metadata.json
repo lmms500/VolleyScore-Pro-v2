@@ -1,5 +1,6 @@
 {
   "name": "VolleyScore Pro 2",
   "description": "Advanced Volleyball Scoreboard & Team Management PWA with rotation logic, sudden death rules, and neo-glass UI.",
+  "version": "2.0.6",
   "requestFramePermissions": []
 }

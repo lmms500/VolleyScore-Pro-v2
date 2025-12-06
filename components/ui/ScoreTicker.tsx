@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { springSnappy } from '../../utils/animations';
@@ -61,6 +62,7 @@ export const ScoreTicker: React.FC<ScoreTickerProps> = memo(({ value, className,
           animate="center"
           exit="exit"
           className="block w-full text-center leading-none"
+          style={{ willChange: 'transform, opacity, filter' }}
         >
           {value}
         </motion.span>

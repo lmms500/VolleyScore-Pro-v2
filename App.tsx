@@ -98,7 +98,7 @@ function App() {
   const savedMatchIdRef = useRef<string | null>(null);
   
   // Audio for App-level events (Match Over, Set Over)
-  const audio = useGameAudio(state.config);
+  const audio = useGameAudio({ enableSound: state.config.enableSound });
 
   // Track sets to detect Set Changes for Audio
   const prevSetsRef = useRef({ a: 0, b: 0 });
@@ -108,6 +108,10 @@ function App() {
       setPointA: false, matchPointA: false, 
       setPointB: false, matchPointB: false 
   });
+
+  // Create a ref to hold the latest state to stabilize callbacks
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   useEffect(() => {
     // 1. Detect Set Win (Audio Only)
@@ -146,18 +150,18 @@ function App() {
     if (!state.isMatchOver) {
         savedMatchIdRef.current = null;
     }
-  }, [state.isMatchOver, state.matchWinner, state.setsA, state.setsB, historyStore, audio]);
+  }, [state.isMatchOver, state.matchWinner, state.setsA, state.setsB, historyStore, audio, state.config, state.history, state.matchDurationSeconds, state.teamAName, state.teamBName, state.teamARoster, state.teamBRoster, state.matchLog]);
 
   // Wrapper for Undo
   const handleUndo = useCallback(() => {
-    if (state.isMatchOver && savedMatchIdRef.current) {
+    if (stateRef.current.isMatchOver && savedMatchIdRef.current) {
         historyStore.deleteMatch(savedMatchIdRef.current);
         savedMatchIdRef.current = null;
     }
     game.undo();
     audio.playUndo();
     vibrate(30); // Medium haptic for undo
-  }, [state.isMatchOver, game.undo, historyStore, audio]);
+  }, [game, historyStore, audio]);
 
   // Handle Beach Switch Alert
   useEffect(() => {
@@ -275,32 +279,32 @@ function App() {
   const handleInteractionStartB = useCallback(() => setInteractingTeam('B'), []);
   const handleInteractionEnd = useCallback(() => setInteractingTeam(null), []);
   
-  // --- UPDATED HANDLERS FOR SCOUT MODE & AUDIO & HAPTICS ---
-  const handleAddA = useCallback((teamId: TeamId, playerId?: string, skill?: any) => {
-    const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
+  // --- STABLE HANDLERS FOR SCOUT MODE & AUDIO & HAPTICS ---
+  const handleAddA = useCallback((playerId?: string, skill?: SkillType) => {
+    const metadata = playerId ? { playerId, skill } : undefined;
     
-    if (!playerId && !state.config.enablePlayerStats) {
+    if (!playerId && !stateRef.current.config.enablePlayerStats) {
          audio.playScore(); 
-         vibrate(15); // Light tap for adding point
+         vibrate(15);
     }
     
     addPoint('A', metadata);
-  }, [addPoint, state.config.enablePlayerStats, audio]);
+  }, [addPoint, audio]);
 
   const handleSubA = useCallback(() => {
     audio.playUndo();
-    vibrate(30); // Heavier tap for subtract
+    vibrate(30);
     subtractPoint('A');
   }, [subtractPoint, audio]);
 
-  const handleAddB = useCallback((teamId: TeamId, playerId?: string, skill?: any) => {
-    const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
-    if (!playerId && !state.config.enablePlayerStats) {
+  const handleAddB = useCallback((playerId?: string, skill?: SkillType) => {
+    const metadata = playerId ? { playerId, skill } : undefined;
+    if (!playerId && !stateRef.current.config.enablePlayerStats) {
          audio.playScore(); 
          vibrate(15);
     }
     addPoint('B', metadata);
-  }, [addPoint, state.config.enablePlayerStats, audio]);
+  }, [addPoint, audio]);
   
   const handleSubB = useCallback(() => {
     audio.playUndo();
@@ -313,13 +317,17 @@ function App() {
   
   const handleTimeoutA = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('A'); }, [useTimeout, audio]);
   const handleTimeoutB = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('B'); }, [useTimeout, audio]);
+  
+  const handleScoutOpen = useCallback(() => {
+      audio.playTap();
+  }, [audio]);
 
   // Modal Open Wrappers with Sound & Haptic
-  const openSettings = () => { audio.playTap(); vibrate(10); setShowSettings(true); };
-  const openManager = () => { audio.playTap(); vibrate(10); setShowManager(true); };
-  const openHistory = () => { audio.playTap(); vibrate(10); setShowHistory(true); };
-  const openReset = () => { audio.playTap(); vibrate(10); setShowResetConfirm(true); };
-  const toggleSwap = () => { audio.playTap(); vibrate(20); toggleSides(); };
+  const openSettings = useCallback(() => { audio.playTap(); vibrate(10); setShowSettings(true); }, [audio]);
+  const openManager = useCallback(() => { audio.playTap(); vibrate(10); setShowManager(true); }, [audio]);
+  const openHistory = useCallback(() => { audio.playTap(); vibrate(10); setShowHistory(true); }, [audio]);
+  const openReset = useCallback(() => { audio.playTap(); vibrate(10); setShowResetConfirm(true); }, [audio]);
+  const toggleSwap = useCallback(() => { audio.playTap(); vibrate(20); toggleSides(); }, [audio, toggleSides]);
 
   if (!isLoaded) return <div className="h-screen flex items-center justify-center text-slate-500 font-inter">{t('app.loading')}</div>;
 
@@ -450,7 +458,6 @@ function App() {
                           teamId="A"
                           team={state.teamARoster} 
                           score={state.scoreA}
-                          isServing={state.servingTeam === 'A'}
                           onAdd={handleAddA}
                           onSubtract={handleSubA} 
                           isMatchPoint={game.isMatchPointA}
@@ -462,6 +469,7 @@ function App() {
                           onInteractionEnd={handleInteractionEnd}
                           reverseLayout={state.swappedSides}
                           scoreRefCallback={setScoreElA}
+                          isServing={state.servingTeam === 'A'}
                           alignment={state.swappedSides ? 'right' : 'left'}
                           config={state.config}
                           colorTheme={colorA} 
@@ -470,7 +478,6 @@ function App() {
                           teamId="B"
                           team={state.teamBRoster} 
                           score={state.scoreB}
-                          isServing={state.servingTeam === 'B'}
                           onAdd={handleAddB}
                           onSubtract={handleSubB} 
                           isMatchPoint={game.isMatchPointB}
@@ -482,6 +489,7 @@ function App() {
                           onInteractionEnd={handleInteractionEnd}
                           reverseLayout={state.swappedSides}
                           scoreRefCallback={setScoreElB}
+                          isServing={state.servingTeam === 'B'}
                           alignment={state.swappedSides ? 'left' : 'right'}
                           config={state.config} 
                           colorTheme={colorB}
@@ -545,7 +553,7 @@ function App() {
                             isLocked={interactingTeam !== null && interactingTeam !== 'B'}
                             onInteractionStart={handleInteractionStartB}
                             onInteractionEnd={handleInteractionEnd}
-                            config={state.config} 
+                            config={state.config}
                         />
                       </motion.div>
                     </LayoutGroup>

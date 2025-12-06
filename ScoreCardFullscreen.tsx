@@ -1,11 +1,10 @@
 
 import React, { useState, memo, useMemo, useRef, useCallback } from 'react';
-import { TeamId, Team, SkillType, GameConfig, TeamColor } from '../types';
+import { TeamId, Team, SkillType, TeamColor } from '../types';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { ScoreTicker } from './ui/ScoreTicker';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { pulseHeartbeat, layoutTransition } from '../utils/animations';
-import { useGameAudio } from '../hooks/useGameAudio';
 import { ScoutModal } from './modals/ScoutModal';
 import { resolveTheme } from '../utils/colors';
 
@@ -13,9 +12,9 @@ interface ScoreCardFullscreenProps {
   teamId: TeamId;
   team: Team; 
   score: number;
-  // FIX: Changed onAdd signature to match usage in App.tsx. It no longer needs teamId.
   onAdd: (playerId?: string, skill?: SkillType) => void;
   onSubtract: () => void;
+  onScoutOpen: () => void;
   isMatchPoint: boolean;
   isSetPoint: boolean;
   isDeuce?: boolean;
@@ -28,7 +27,7 @@ interface ScoreCardFullscreenProps {
   scoreRefCallback?: (node: HTMLElement | null) => void;
   isServing?: boolean;
   alignment?: 'left' | 'right';
-  config: GameConfig; 
+  enablePlayerStats: boolean; 
 }
 
 const ScoreNumberDisplay = memo(({ 
@@ -53,11 +52,6 @@ const ScoreNumberDisplay = memo(({
                 gridTemplateAreas: '"stack"' 
             }}
         >
-            {/* The Halo - Fix for "Square" issue: 
-                1. Removed mix-blend-screen from base class (applied conditionally for dark mode via CSS or explicit style)
-                2. Use opacity layering for Light Mode compatibility
-                3. Ensure transform-3d to use GPU composition properly
-            */}
             <motion.div
                 className={`
                     rounded-full aspect-square pointer-events-none z-0
@@ -70,7 +64,7 @@ const ScoreNumberDisplay = memo(({
                     gridArea: 'stack',
                     width: '1.2em', 
                     height: '1.2em',
-                    transform: 'translate3d(0,0,0)' // Force GPU to prevent clipping
+                    transform: 'translate3d(0,0,0)'
                 }}
                 animate={
                     isPressed 
@@ -82,7 +76,7 @@ const ScoreNumberDisplay = memo(({
                         }
                         : { 
                             scale: 1, 
-                            opacity: isServing ? 0.4 : 0 // Show brilliance if serving/scored
+                            opacity: isServing ? 0.4 : 0
                         }
                 }
                 transition={
@@ -108,7 +102,6 @@ const ScoreNumberDisplay = memo(({
                             ${textEffectClass}
                             ${isPressed ? 'brightness-110 scale-95' : ''}
                         `}
-                        // Removed massive textShadow to prevent box artifact
                     />
                 </div>
             </motion.div>
@@ -117,17 +110,16 @@ const ScoreNumberDisplay = memo(({
 });
 
 export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
-  teamId, team, score, onAdd, onSubtract,
-  isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, 
+  teamId, team, score, onAdd, onSubtract, onScoutOpen,
+  isMatchPoint, isSetPoint, inSuddenDeath, 
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
-  scoreRefCallback, isServing, alignment = 'left', config, colorTheme
+  scoreRefCallback, isServing, alignment = 'left', enablePlayerStats, colorTheme
 }) => {
   const [isPressed, setIsPressed] = useState(false);
   const [showScout, setShowScout] = useState(false);
   const [isInteractionLocked, setIsInteractionLocked] = useState(false);
   
   const numberRef = useRef<HTMLDivElement>(null);
-  const audio = useGameAudio(config);
 
   const handleStart = useCallback(() => {
     setIsPressed(true);
@@ -139,7 +131,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
     onInteractionEnd?.();
   }, [onInteractionEnd]);
 
-  // When modal closes, enforce cooldown
   const handleScoutClose = useCallback(() => {
     setShowScout(false);
     setIsInteractionLocked(true);
@@ -147,40 +138,29 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
     return () => clearTimeout(t);
   }, []);
 
-  // Audio & Scout Logic Wrappers
   const handleAddWrapper = useCallback(() => {
       if (isInteractionLocked) return;
 
-      if (config.enablePlayerStats) {
-          audio.playTap();
+      if (enablePlayerStats) {
+          onScoutOpen();
           setShowScout(true);
       } else {
-          // FIX: Call onAdd without teamId, as it's already scoped in App.tsx
           onAdd();
-          // Audio handled in App.tsx
       }
-  }, [config.enablePlayerStats, onAdd, audio, isInteractionLocked]);
+  }, [enablePlayerStats, onAdd, onScoutOpen, isInteractionLocked]);
 
   const handleScoutConfirm = useCallback((pid: string, skill: SkillType) => {
-      // FIX: Call onAdd with only player/skill info.
       onAdd(pid, skill);
-      audio.playScore();
-  }, [onAdd, audio]);
+  }, [onAdd]);
 
-  const handleSubtractWrapper = useCallback(() => {
-      onSubtract();
-      // Audio handled in App.tsx
-  }, [onSubtract]);
-  
   const gestureHandlers = useScoreGestures({
     onAdd: handleAddWrapper, 
-    onSubtract: handleSubtractWrapper, 
+    onSubtract: onSubtract, 
     isLocked: isLocked || isInteractionLocked, 
     onInteractionStart: handleStart, 
     onInteractionEnd: handleEnd
   });
 
-  // Resolve Theme
   const resolvedColor = colorTheme || team.color || 'slate';
   const theme = resolveTheme(resolvedColor);
 
@@ -203,7 +183,6 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
 
   return (
     <>
-        {/* Render ScoutModal outside the gesture container to isolate events */}
         <ScoutModal 
             isOpen={showScout}
             onClose={handleScoutClose}

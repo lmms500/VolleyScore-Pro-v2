@@ -4,7 +4,6 @@ import { Team, TeamId, SkillType, GameConfig, TeamColor } from '../types';
 import { Volleyball, Zap, Timer, Skull, TrendingUp, Trophy } from 'lucide-react';
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
-import { useGameAudio } from '../hooks/useGameAudio';
 import { ScoreTicker } from './ui/ScoreTicker';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { layoutTransition, stampVariants } from '../utils/animations';
@@ -17,10 +16,10 @@ interface ScoreCardNormalProps {
   score: number;
   setsWon: number;
   isServing: boolean;
-  // FIX: Changed onAdd signature to match usage in App.tsx. It no longer needs teamId.
   onAdd: (playerId?: string, skill?: SkillType) => void;
   onSubtract: () => void;
   onSetServer: () => void;
+  onScoutOpen: () => void;
   timeouts: number;
   onTimeout: () => void;
   isMatchPoint: boolean;
@@ -33,21 +32,19 @@ interface ScoreCardNormalProps {
   isLocked?: boolean;
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
-  config: GameConfig;
+  enablePlayerStats: boolean;
 }
 
 export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
-  teamId, team, score, setsWon, isServing, onAdd, onSubtract, onSetServer, timeouts, onTimeout, 
+  teamId, team, score, setsWon, isServing, onAdd, onSubtract, onSetServer, onScoutOpen, timeouts, onTimeout, 
   isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, reverseLayout, setsNeededToWin, 
-  isLocked = false, onInteractionStart, onInteractionEnd, config, colorTheme
+  isLocked = false, onInteractionStart, onInteractionEnd, enablePlayerStats, colorTheme
 }) => {
   const { t } = useTranslation();
-  const audio = useGameAudio(config);
   
   const [showScout, setShowScout] = useState(false);
   const [isInteractionLocked, setIsInteractionLocked] = useState(false);
 
-  // When modal closes, enforce a short cooldown to prevent "ghost clicks" or rapid double-taps
   const handleScoutClose = useCallback(() => {
      setShowScout(false);
      setIsInteractionLocked(true);
@@ -55,40 +52,29 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
      return () => clearTimeout(t);
   }, []);
 
-  // Audio Wrappers
   const handleAddWrapper = useCallback(() => {
     if (isInteractionLocked) return;
 
-    // If scout is enabled, sound plays on scout confirm or in App.tsx
-    if (config.enablePlayerStats) {
-        audio.playTap();
+    if (enablePlayerStats) {
+        onScoutOpen();
         setShowScout(true);
     } else {
-        // Direct point add
-        // FIX: Call onAdd without teamId, as it's already scoped in App.tsx
         onAdd();
     }
-  }, [config.enablePlayerStats, onAdd, audio, isInteractionLocked]);
+  }, [enablePlayerStats, onAdd, onScoutOpen, isInteractionLocked]);
 
   const handleScoutConfirm = useCallback((pid: string, skill: SkillType) => {
-    // FIX: Call onAdd with only player/skill info.
     onAdd(pid, skill);
-    audio.playScore(); // Explicit success sound on modal close
-  }, [onAdd, audio]);
-
-  const handleSubtractWrapper = useCallback(() => {
-    onSubtract();
-  }, [onSubtract]);
+  }, [onAdd]);
 
   const gestureHandlers = useScoreGestures({
     onAdd: handleAddWrapper, 
-    onSubtract: handleSubtractWrapper, 
+    onSubtract: onSubtract, 
     isLocked: isLocked || isInteractionLocked, 
     onInteractionStart, 
     onInteractionEnd
   });
 
-  // Resolve Dynamic Theme - Prioritize prop, fallback to team property, then slate
   const resolvedColor = colorTheme || team.color || 'slate';
   const theme = resolveTheme(resolvedColor);
 
@@ -96,7 +82,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
   const timeoutsExhausted = timeouts >= 2;
   const isCritical = isMatchPoint || isSetPoint;
 
-  // Badge Configuration
   let badgeConfig = null;
   if (inSuddenDeath) {
       badgeConfig = { 
@@ -128,7 +113,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
       };
   }
 
-  // Halo Variants
   const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : theme.halo;
   const haloVariants: Variants = {
     idle: { scale: 1, opacity: isServing ? 0.4 : 0 },
@@ -164,7 +148,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
       
       <div className="flex flex-col h-full w-full relative z-10 py-2 md:py-4 px-2 justify-between items-center">
         
-        {/* Header: Name, Sets, Serve */}
         <div className="flex flex-col items-center justify-center w-full flex-none order-1 mt-4 space-y-3 relative z-30">
             
             <motion.div 
@@ -175,7 +158,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                 role="button"
                 aria-label={`Set serve to ${team?.name}`}
             >
-                {/* Name */}
                 <motion.h2 
                     layout
                     className="font-black uppercase text-center z-10 leading-none text-xl md:text-2xl text-slate-800 dark:text-slate-200 tracking-widest truncate group-hover:scale-105 transition-transform"
@@ -183,7 +165,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                     {team?.name || ''}
                 </motion.h2>
 
-                {/* Serving Icon - Sliding in nicely */}
                 <AnimatePresence>
                   {isServing && (
                     <motion.div
@@ -207,7 +188,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                 </AnimatePresence>
             </motion.div>
 
-            {/* Sets Indicator */}
             <div className="flex gap-2">
                 {[...Array(setsNeededToWin)].map((_, i) => (
                     <div 
@@ -223,7 +203,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             </div>
         </div>
 
-        {/* Badges */}
         <AnimatePresence mode="popLayout">
             {badgeConfig && (
                 <motion.div 
@@ -256,7 +235,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
         
         {!badgeConfig && <div className="order-2 min-h-[2.5rem] flex-none"></div>}
 
-        {/* The Number + Halo Container */}
         <div 
             className={`
                 relative order-3 flex items-center justify-center w-full flex-1 min-h-0 overflow-visible
@@ -294,7 +272,6 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
             </div>
         </div>
 
-        {/* Timeouts */}
         <div className="order-4 w-full flex items-center justify-center flex-none transition-all z-20 mt-2 mb-6">
            <motion.button 
              whileTap={{ scale: 0.95 }}

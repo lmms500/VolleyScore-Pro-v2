@@ -1,6 +1,5 @@
 
-
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { GameState, TeamId, SetHistory, GameConfig, Team, Player, RotationReport, SkillType, ActionLog } from '../types';
 import { DEFAULT_CONFIG, MIN_LEAD_TO_WIN, SETS_TO_WIN_MATCH } from '../constants';
 import { usePlayerQueue } from './usePlayerQueue'; 
@@ -40,6 +39,8 @@ const INITIAL_STATE: GameState = {
 export const useVolleyGame = () => {
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [isLoaded, setIsLoaded] = useState(false);
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   // Sync names with queue manager (Sanitized)
   const updateNamesFromQueue = useCallback((nameA: string, nameB: string) => {
@@ -135,24 +136,43 @@ export const useVolleyGame = () => {
     return () => clearInterval(interval);
   }, [state.isTimerRunning, state.isMatchOver]);
 
-  // --- SCORE LOGIC ---
-  const isTieBreak = state.config.hasTieBreak && state.currentSet === state.config.maxSets;
-  const pointsToWinCurrentSet = isTieBreak ? state.config.tieBreakPoints : state.config.pointsPerSet;
-  const setsNeededToWin = SETS_TO_WIN_MATCH(state.config.maxSets);
-  
-  const getGameStatus = (scoreMy: number, scoreOpponent: number, setsMy: number) => {
-      const isSetPoint = scoreMy >= pointsToWinCurrentSet - 1 && scoreMy > scoreOpponent;
-      const isMatchPoint = isSetPoint && (setsMy === setsNeededToWin - 1);
-      return { isSetPoint, isMatchPoint };
-  };
+  // --- MEMOIZED DERIVED STATE ---
+  const { 
+    isTieBreak, 
+    pointsToWinCurrentSet, 
+    setsNeededToWin,
+    statusA,
+    statusB,
+    isDeuce,
+    isMatchActive
+  } = useMemo(() => {
+    const isTieBreak = state.config.hasTieBreak && state.currentSet === state.config.maxSets;
+    const pointsToWin = isTieBreak ? state.config.tieBreakPoints : state.config.pointsPerSet;
+    const setsNeeded = SETS_TO_WIN_MATCH(state.config.maxSets);
 
-  const statusA = getGameStatus(state.scoreA, state.scoreB, state.setsA);
-  const statusB = getGameStatus(state.scoreB, state.scoreA, state.setsB);
+    const getGameStatus = (scoreMy: number, scoreOpponent: number, setsMy: number) => {
+        const isSetPoint = scoreMy >= pointsToWin - 1 && scoreMy > scoreOpponent;
+        const isMatchPoint = isSetPoint && (setsMy === setsNeeded - 1);
+        return { isSetPoint, isMatchPoint };
+    };
 
-  const isDeuce = state.scoreA === state.scoreB && state.scoreA >= pointsToWinCurrentSet - 1;
-  const isMatchActive = state.scoreA > 0 || state.scoreB > 0 || state.setsA > 0 || state.setsB > 0 || state.currentSet > 1;
+    const statusA = getGameStatus(state.scoreA, state.scoreB, state.setsA);
+    const statusB = getGameStatus(state.scoreB, state.scoreA, state.setsB);
 
-  // Optimized Actions
+    const isDeuce = state.scoreA === state.scoreB && state.scoreA >= pointsToWin - 1;
+    const isMatchActive = state.scoreA > 0 || state.scoreB > 0 || state.setsA > 0 || state.setsB > 0 || state.currentSet > 1;
+
+    return {
+        isTieBreak,
+        pointsToWinCurrentSet: pointsToWin,
+        setsNeededToWin: setsNeeded,
+        statusA,
+        statusB,
+        isDeuce,
+        isMatchActive
+    };
+  }, [state.config, state.currentSet, state.scoreA, state.scoreB, state.setsA, state.setsB]);
+
   
   // REFACTORED: Now accepts metadata object for proper spread into ActionLog
   const addPoint = useCallback((team: TeamId, metadata?: { playerId: string, skill: SkillType }) => {
@@ -258,10 +278,6 @@ export const useVolleyGame = () => {
         if (prev.isMatchOver) return prev;
         if (!isValidScoreOperation(team === 'A' ? prev.scoreA : prev.scoreB, -1)) return prev;
         
-        // Note: Subtract is "Manual Correction", not "Undo". It doesn't use actionLog.
-        // It does not remove from matchLog because it's a correction of the current state, 
-        // not a rewind of history. Ideally, users should use UNDO for mistakes.
-        
         return { 
             ...prev, 
             scoreA: team === 'A' ? prev.scoreA - 1 : prev.scoreA, 
@@ -276,12 +292,6 @@ export const useVolleyGame = () => {
       if (team === 'A' && !isValidTimeoutRequest(prev.timeoutsA)) return prev;
       if (team === 'B' && !isValidTimeoutRequest(prev.timeoutsB)) return prev;
 
-      let newTimeoutsA = prev.timeoutsA;
-      let newTimeoutsB = prev.timeoutsB;
-
-      if (team === 'A') newTimeoutsA++;
-      if (team === 'B') newTimeoutsB++;
-
       const newAction: ActionLog = { 
         type: 'TIMEOUT', 
         team,
@@ -292,8 +302,8 @@ export const useVolleyGame = () => {
 
       return { 
           ...prev, 
-          timeoutsA: newTimeoutsA, 
-          timeoutsB: newTimeoutsB,
+          timeoutsA: team === 'A' ? prev.timeoutsA + 1 : prev.timeoutsA, 
+          timeoutsB: team === 'B' ? prev.timeoutsB + 1 : prev.timeoutsB,
           actionLog: [...prev.actionLog, newAction],
           matchLog: [...prev.matchLog, newAction],
           lastSnapshot: undefined
@@ -303,7 +313,6 @@ export const useVolleyGame = () => {
 
   const undo = useCallback(() => { 
     setState(prev => {
-        // Priority 1: Restore Snapshot (Set/Match Transitions)
         if (prev.lastSnapshot) {
             console.log("Restoring snapshot (Undo Match/Set Win)");
             if (prev.lastSnapshot.teamARoster && prev.lastSnapshot.teamBRoster) {
@@ -322,10 +331,7 @@ export const useVolleyGame = () => {
         const newLog = [...prev.actionLog];
         const lastAction = newLog.pop()!;
         
-        // Fix: Also remove from matchLog to keep stats accurate
         const newMatchLog = [...prev.matchLog];
-        // Only pop if the last item in matchLog matches the one we are undoing
-        // (It should always match in linear time, but safe to check type)
         if (newMatchLog.length > 0 && newMatchLog[newMatchLog.length - 1].type === lastAction.type) {
             newMatchLog.pop();
         }
@@ -398,15 +404,18 @@ export const useVolleyGame = () => {
   }, []);
 
   const rotateTeams = useCallback(() => {
-    if (!state.matchWinner) return;
-    queueManager.rotateTeams(state.matchWinner, state.rotationReport);
+    const currentState = stateRef.current;
+    if (!currentState.matchWinner) return;
+
+    queueManager.rotateTeams(currentState.matchWinner, currentState.rotationReport);
+    
     setState(prev => ({
         ...prev, 
         scoreA: 0, scoreB: 0, setsA: 0, setsB: 0, currentSet: 1, history: [], 
         actionLog: [], matchLog: [], // Clear logs for new match
         isMatchOver: false, matchWinner: null, servingTeam: null, timeoutsA: 0, timeoutsB: 0, inSuddenDeath: false, matchDurationSeconds: 0, isTimerRunning: false,
     }));
-  }, [state.matchWinner, state.rotationReport, queueManager]);
+  }, [queueManager]);
 
   return {
     state, setState, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, setServer, useTimeout, applySettings, 
@@ -426,6 +435,7 @@ export const useVolleyGame = () => {
     hasDeletedPlayers: queueManager.hasDeletedPlayers,
     togglePlayerFixed: queueManager.togglePlayerFixed,
     commitDeletions: queueManager.commitDeletions,
+    // FIX: Expose deletedCount from queueManager
     deletedCount: queueManager.deletedCount,
     setRotationMode: queueManager.setRotationMode,
     balanceTeams: queueManager.balanceTeams,

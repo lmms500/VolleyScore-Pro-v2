@@ -200,7 +200,7 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
             layout
             transition={layoutTransition}
             className={`
-                fixed z-10 flex flex-col justify-center items-center select-none overflow-hidden
+                fixed z-10 flex flex-col justify-center items-center select-none overflow-visible
                 ${positionClasses}
             `}
             style={{ 

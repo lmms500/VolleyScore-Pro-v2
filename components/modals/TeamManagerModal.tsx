@@ -11,7 +11,7 @@ import {
   DragOverEvent,
   DragStartEvent,
   DragOverlay,
-  closestCorners,
+  closestCenter, // Changed from closestCorners for better list accuracy
   PointerSensor,
   useSensor,
   useSensors,
@@ -40,7 +40,7 @@ interface TeamManagerModalProps {
   onGenerate: (names: string[]) => void;
   onToggleFixed: (playerId: string) => void;
   onRemove: (id: string) => void;
-  onMove: (playerId: string, fromId: string, toId: string) => void;
+  onMove: (playerId: string, fromId: string, toId: string, newIndex?: number) => void;
   onUpdateTeamName: (teamId: string, name: string) => void;
   onUpdateTeamColor: (teamId: string, color: TeamColor) => void;
   onUpdatePlayerName: (playerId: string, name: string) => void;
@@ -554,7 +554,7 @@ const TeamColumn = memo(({
   const { t } = useTranslation();
   const [showSortMenu, setShowSortMenu] = useState(false);
   const isFull = team.players.length >= 6;
-  const { setNodeRef, isOver } = useSortable({ id: id, data: { type: 'container' } });
+  const { setNodeRef, isOver } = useSortable({ id: id, data: { type: 'container', containerId: id } });
   
   const teamStrength = useMemo(() => calculateTeamStrength(team.players), [team.players]);
 
@@ -703,12 +703,11 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   const [undoVisible, setUndoVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // SENSOR FIX: Use only PointerSensor with constraints to allow scrolling but enable drag on deliberate moves
-  // Also KeyboardSensor for accessibility
+  // SENSOR FIX: Adjusted for better drag responsiveness while allowing scroll
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Requires 8px movement to start drag, allowing tap/scroll otherwise
+        distance: 5, // Reduced distance for quicker pickup
       },
     }),
     useSensor(KeyboardSensor)
@@ -728,15 +727,18 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
     return () => clearTimeout(timer);
   }, [props.deletedCount, props.onCommitDeletions]);
 
-  // Drag Logic
+  // Drag Logic Helpers
   const findContainer = (id: string) => {
     if (id === 'A' || props.courtA.players.some(p => p.id === id)) return 'A';
     if (id === 'B' || props.courtB.players.some(p => p.id === id)) return 'B';
-    
-    // Check main Queue teams
     for (const team of props.queue) { if (team.id === id || team.players.some(p => p.id === id)) return team.id; }
-    
     return null;
+  };
+
+  const getTeamById = (id: string) => {
+      if (id === 'A') return props.courtA;
+      if (id === 'B') return props.courtB;
+      return props.queue.find(t => t.id === id);
   };
 
   const playersById = useMemo(() => {
@@ -760,6 +762,8 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
           .sort((a, b) => a.name.localeCompare(b.name));
   }, [props.profiles, searchTerm]);
 
+  // --- DND HANDLERS ---
+
   const handleDragStart = (event: DragStartEvent) => {
     const player = playersById.get(event.active.id as string);
     if (player) setActivePlayer(player);
@@ -767,24 +771,56 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const from = findContainer(active.id as string);
-    const to = findContainer(over.id as string);
-    if (from && to && from !== to) {
-        props.onMove(active.id as string, from, to);
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    const activeContainer = findContainer(activeId);
+    const overContainer = findContainer(overId);
+
+    if (!activeContainer || !overContainer) return;
+
+    // Handle Moving BETWEEN Containers during Drag (Visual Feedback)
+    if (activeContainer !== overContainer) {
+        const overTeam = getTeamById(overContainer);
+        if (!overTeam) return;
+
+        const activeIndex = active.data.current?.sortable.index;
+        const overIndex = over.data.current?.sortable.index ?? overTeam.players.length + 1;
+
+        props.onMove(activeId, activeContainer, overContainer, overIndex);
     }
   };
   
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-        const from = findContainer(active.id as string);
-        const to = findContainer(over.id as string);
-        if (from && to && from !== to) {
-             props.onMove(active.id as string, from, to);
+    setActivePlayer(null);
+
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    const activeContainer = findContainer(activeId);
+    const overContainer = findContainer(overId);
+
+    if (activeContainer && overContainer) {
+        const overTeam = getTeamById(overContainer);
+        if (!overTeam) return;
+
+        const activeIndex = active.data.current?.sortable.index;
+        const overIndex = over.data.current?.sortable.index;
+
+        // If containers are same, check if reorder is needed
+        if (activeContainer === overContainer && activeIndex !== overIndex) {
+             props.onMove(activeId, activeContainer, overContainer, overIndex);
+        }
+        // If containers different, handleDragOver likely handled it, but ensure final position
+        else if (activeContainer !== overContainer) {
+             props.onMove(activeId, activeContainer, overContainer, overIndex ?? overTeam.players.length);
         }
     }
-    setActivePlayer(null);
   };
   
   const handleGenerate = useCallback((names: string[]) => {
@@ -938,7 +974,13 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
       )}
 
       {activeTab === 'roster' && (
-        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+        <DndContext 
+            sensors={sensors} 
+            collisionDetection={closestCenter} 
+            onDragStart={handleDragStart} 
+            onDragOver={handleDragOver} 
+            onDragEnd={handleDragEnd}
+        >
           
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start pb-24 px-1 min-h-[60vh]">
             
@@ -1002,7 +1044,8 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
        {createPortal(
             <DragOverlayFixed>
               {activePlayer ? (
-                <div className="scale-105 shadow-2xl opacity-90 cursor-grabbing w-[280px]">
+                // Force fixed width on drag preview to prevent layout shift during pickup
+                <div className="scale-105 shadow-2xl opacity-90 cursor-grabbing w-[300px]">
                     <PlayerCard 
                         player={activePlayer} locationId="" profiles={props.profiles}
                         onToggleFixed={() => {}} onRemove={() => {}} onUpdateName={() => {}} onUpdateNumber={()=>{}} onUpdateSkill={()=>{}} onSaveProfile={()=>{}} onRevertProfile={()=>{}}

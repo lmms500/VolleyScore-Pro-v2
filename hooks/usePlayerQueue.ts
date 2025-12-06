@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Player, Team, TeamId, RotationReport, RotationMode, PlayerProfile, TeamColor } from '../types';
 import { PLAYER_LIMIT_ON_COURT, PLAYERS_PER_TEAM } from '../constants';
@@ -5,6 +6,7 @@ import { sanitizeInput } from '../utils/security';
 import { usePlayerProfiles } from './usePlayerProfiles';
 import { balanceTeamsSnake, distributeStandard, getStandardRotationResult, getBalancedRotationResult } from '../utils/balanceUtils';
 import { v4 as uuidv4 } from 'uuid';
+import { arrayMove } from '@dnd-kit/sortable';
 
 interface QueueState {
   courtA: Team;
@@ -56,8 +58,8 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
               }
 
               if (master.name !== p.name || master.skillLevel !== p.skillLevel) {
-                  hasChanges = true;
-                  return { ...p, name: master.name, skillLevel: master.skillLevel };
+                   hasChanges = true;
+                   return { ...p, name: master.name, skillLevel: master.skillLevel };
               }
               return p;
           });
@@ -148,9 +150,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     const allNewPlayers = validNames.map((name, idx) => createPlayer(name, idx));
 
     setQueueState(prev => {
-        // IMPORTANT: We pass EMPTY teams to distributeStandard here.
-        // This ensures that "Restore Order" (Standard Distribution) sees ZERO anchors/locked players
-        // effectively forcing a complete wipe of the old roster and locks, replacing them with new data.
         const cleanA = { ...prev.courtA, players: [] };
         const cleanB = { ...prev.courtB, players: [] };
         
@@ -264,13 +263,11 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
         return {
             outgoingTeam: loserTeam,
             incomingTeam: result.incomingTeam,
-            retainedPlayers: [], // In full mixing/filling, tracking retained is trivial (everyone not stolen)
+            retainedPlayers: [],
             stolenPlayers: result.stolenPlayers,
             queueAfterRotation: result.queueAfterRotation
         };
     } else {
-        // Standard Logic (Winner Stays, Loser -> Queue, Queue -> Court)
-        // Fixed players stay with their SQUAD (Losers leave court), except in Balanced mode.
         const result = getStandardRotationResult(winnerTeam, loserTeam, queue);
         return {
             outgoingTeam: loserTeam,
@@ -283,10 +280,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
   }, [queueState]);
 
   const rotateTeams = useCallback((winnerId: TeamId, manualReport?: RotationReport | null) => {
-    // If a manual report is provided (e.g. from history snapshot or match over modal), use it.
-    // This ensures consistency even if queue state fluctuated slightly, though queue state should be stable.
-    
-    // Fallback: If no manual report (shouldn't happen in normal flow), calculate fresh.
     const report = manualReport || getRotationPreview(winnerId);
     
     if (!report) {
@@ -297,8 +290,6 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     setQueueState(prev => {
       const nextCourtA = winnerId === 'A' ? prev.courtA : report.incomingTeam;
       const nextCourtB = winnerId === 'B' ? prev.courtB : report.incomingTeam;
-      
-      console.log(`[Rotation] Executing. Winner: ${winnerId}. Incoming: ${report.incomingTeam.name}`);
       
       _updateNames(nextCourtA, nextCourtB);
       
@@ -404,19 +395,49 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
      });
   }, []);
 
-  const movePlayer = useCallback((playerId: string, fromId: string, toId: string) => {
+  /**
+   * Enhanced Move Player: Handles both Cross-Team movement and Intra-Team Reordering.
+   */
+  const movePlayer = useCallback((playerId: string, fromId: string, toId: string, newIndex?: number) => {
       setQueueState(prev => {
+         // --- CASE 1: REORDER WITHIN SAME TEAM ---
+         if (fromId === toId) {
+             const reorderList = (list: Player[]) => {
+                 const oldIndex = list.findIndex(p => p.id === playerId);
+                 if (oldIndex !== -1 && newIndex !== undefined) {
+                     return arrayMove(list, oldIndex, newIndex);
+                 }
+                 return list;
+             };
+
+             let newA = prev.courtA;
+             let newB = prev.courtB;
+             let newQ = prev.queue;
+
+             if (fromId === 'A' || fromId === prev.courtA.id) newA = { ...newA, players: reorderList(newA.players) };
+             else if (fromId === 'B' || fromId === prev.courtB.id) newB = { ...newB, players: reorderList(newB.players) };
+             else {
+                 newQ = newQ.map(t => t.id === fromId ? { ...t, players: reorderList(t.players) } : t);
+             }
+             return { ...prev, courtA: newA, courtB: newB, queue: newQ };
+         }
+
+         // --- CASE 2: MOVE BETWEEN TEAMS ---
          let player: Player | undefined;
          let newA = { ...prev.courtA };
          let newB = { ...prev.courtB };
          let newQ = [...prev.queue];
 
+         // 1. Remove from Source
          const removeFromList = (list: Player[]) => list.filter(p => p.id !== playerId);
-         const addToList = (list: Player[], p: Player) => [...list, p];
-
-         if (fromId === 'A') { player = newA.players.find(p => p.id === playerId); newA.players = removeFromList(newA.players); }
-         else if (fromId === 'B') { player = newB.players.find(p => p.id === playerId); newB.players = removeFromList(newB.players); }
-         else {
+         
+         if (fromId === 'A' || fromId === prev.courtA.id) {
+             player = newA.players.find(p => p.id === playerId);
+             newA.players = removeFromList(newA.players);
+         } else if (fromId === 'B' || fromId === prev.courtB.id) {
+             player = newB.players.find(p => p.id === playerId);
+             newB.players = removeFromList(newB.players);
+         } else {
              newQ = newQ.map(t => {
                  if (t.id === fromId) {
                      const found = t.players.find(p => p.id === playerId);
@@ -424,29 +445,43 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
                      return { ...t, players: removeFromList(t.players) };
                  }
                  return t;
-             }).filter(t => t.players.length > 0);
+             });
          }
 
-         if (!player) return prev;
+         if (!player) return prev; // Player not found, abort
 
-         if (toId === 'A') newA.players = addToList(newA.players, player);
-         else if (toId === 'B') newB.players = addToList(newB.players, player);
-         else {
+         // 2. Add to Destination (Insert at Index)
+         const addToList = (list: Player[], p: Player, idx?: number) => {
+             const copy = [...list];
+             if (idx !== undefined && idx >= 0 && idx <= copy.length) {
+                 copy.splice(idx, 0, p);
+             } else {
+                 copy.push(p);
+             }
+             return copy;
+         };
+
+         if (toId === 'A' || toId === prev.courtA.id) {
+             newA.players = addToList(newA.players, player, newIndex);
+         } else if (toId === 'B' || toId === prev.courtB.id) {
+             newB.players = addToList(newB.players, player, newIndex);
+         } else {
              const targetIdx = newQ.findIndex(t => t.id === toId);
              if (targetIdx >= 0) {
-                 newQ[targetIdx] = { ...newQ[targetIdx], players: addToList(newQ[targetIdx].players, player) };
+                 newQ[targetIdx] = { 
+                     ...newQ[targetIdx], 
+                     players: addToList(newQ[targetIdx].players, player, newIndex) 
+                 };
              }
          }
          
+         // Filter empty queue teams if needed (optional based on rules, here we keep them stable for drag targets)
          return { ...prev, courtA: newA, courtB: newB, queue: newQ };
       });
   }, []);
   
   const togglePlayerFixed = useCallback((playerId: string) => {
       setQueueState(prev => {
-          // Simplification: In V2, "Fixed" means locked to the SQUAD (Team structure), not strictly the COURT SIDE.
-          // This allows standard rotation to move fixed players to the queue without breaking their team.
-          // In Balanced Mode, "Fixed" still acts as an anchor to the court side.
           const toggle = (list: Player[]) => list.map(p => p.id === playerId ? { ...p, isFixed: !p.isFixed } : p);
           
           return {

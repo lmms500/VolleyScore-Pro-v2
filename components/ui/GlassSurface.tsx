@@ -16,16 +16,16 @@ export const GlassSurface: React.FC<GlassSurfaceProps> = ({
 }) => {
   
   const intensityMap = {
-    low: 'bg-white/40 dark:bg-[#0f172a]/40 backdrop-blur-md border border-white/20 dark:border-white/5 shadow-2xl shadow-black/5 dark:shadow-black/20 ring-1 ring-white/20 dark:ring-white/5 inset-ring',
-    medium: 'bg-white/60 dark:bg-[#0f172a]/60 backdrop-blur-xl border border-white/20 dark:border-white/5 shadow-2xl shadow-black/5 dark:shadow-black/20 ring-1 ring-white/20 dark:ring-white/5 inset-ring',
-    high: 'bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-2xl shadow-black/5 dark:shadow-black/20 ring-1 ring-white/20 dark:ring-white/5 inset-ring',
+    low: 'overflow-hidden bg-white/40 dark:bg-[#0f172a]/40 backdrop-blur-md border border-white/20 dark:border-white/5 shadow-2xl shadow-black/5 dark:shadow-black/20 ring-1 ring-white/20 dark:ring-white/5 inset-ring',
+    medium: 'overflow-hidden bg-white/60 dark:bg-[#0f172a]/60 backdrop-blur-xl border border-white/20 dark:border-white/5 shadow-2xl shadow-black/5 dark:shadow-black/20 ring-1 ring-white/20 dark:ring-white/5 inset-ring',
+    high: 'overflow-hidden bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-2xl shadow-black/5 dark:shadow-black/20 ring-1 ring-white/20 dark:ring-white/5 inset-ring',
     transparent: 'bg-transparent border-none shadow-none ring-0 backdrop-blur-none'
   };
 
   return (
     <motion.div
       className={`
-        relative overflow-hidden
+        relative
         ${intensityMap[intensity]}
         ${className}
       `}

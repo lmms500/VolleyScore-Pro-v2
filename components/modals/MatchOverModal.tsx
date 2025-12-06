@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom'; // Import createPortal
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -23,6 +23,7 @@ interface MatchOverModalProps {
 export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, onRotate, onReset, onUndo }) => {
   const { t } = useTranslation();
   const [showLogs, setShowLogs] = useState(false);
+  const [renderShareCard, setRenderShareCard] = useState(false);
   const { isSharing, shareResult } = useSocialShare();
 
   const winnerName = state.matchWinner === 'A' ? state.teamAName : state.teamBName;
@@ -35,6 +36,16 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   
   const winnerColorKey = isA ? colorA : colorB;
   const winnerTheme = resolveTheme(winnerColorKey);
+  
+  // Defer rendering of heavy ResultCard to avoid freezing main thread during modal open animation
+  useEffect(() => {
+      if (isOpen) {
+          const timer = setTimeout(() => setRenderShareCard(true), 800);
+          return () => clearTimeout(timer);
+      } else {
+          setRenderShareCard(false);
+      }
+  }, [isOpen]);
   
   // Mapping for background blur
   const getBgColor = (c: string) => {
@@ -78,6 +89,16 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   }, [state.matchLog, state.teamARoster, state.teamBRoster]);
 
   const handleShare = () => {
+      // Force render if sharing clicked before timeout
+      if (!renderShareCard) {
+          setRenderShareCard(true);
+          // Wait briefly for render
+          setTimeout(() => {
+              const dateStr = new Date().toISOString().split('T')[0];
+              shareResult('social-share-card', `volleyscore_result_${dateStr}.png`);
+          }, 200);
+          return;
+      }
       const dateStr = new Date().toISOString().split('T')[0];
       shareResult('social-share-card', `volleyscore_result_${dateStr}.png`);
   };
@@ -85,7 +106,7 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   return (
     <>
       {/* HIDDEN RENDER TARGET FOR SHARING - PORTALED TO BODY TO AVOID CSS TRANSFORMS */}
-      {isOpen && createPortal(
+      {renderShareCard && createPortal(
           <ResultCard 
              teamAName={state.teamAName}
              teamBName={state.teamBName}

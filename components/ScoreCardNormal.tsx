@@ -10,7 +10,7 @@ import { ScoreTicker } from './ui/ScoreTicker';
 import { GlassSurface } from './ui/GlassSurface';
 import { GestureHint } from './ui/GestureHint';
 import { motion, AnimatePresence } from 'framer-motion';
-import { layoutTransition, stampVariants, springPremium } from '../utils/animations';
+import { layoutTransition, stampVariants, springPremium, pulseHeartbeat } from '../utils/animations';
 import { ScoutModal } from './modals/ScoutModal';
 import { resolveTheme } from '../utils/colors';
 
@@ -241,15 +241,21 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                 
                 {/* ANIMATED NUMBER */}
                 <div className="col-start-1 row-start-1 relative z-20 w-full flex justify-center items-center h-full">
-                    <ScoreTicker 
-                        value={score}
-                        className={`
-                            font-black tracking-tighter outline-none select-none
-                            text-8xl md:text-9xl lg:text-[10rem] leading-none
-                            text-slate-900 dark:text-white
-                            ${isMatchPoint ? 'drop-shadow-[0_0_30px_rgba(251,191,36,0.5)]' : ''}
-                        `}
-                    />
+                    <motion.div
+                        variants={pulseHeartbeat}
+                        animate={isCritical ? "pulse" : "idle"}
+                        className="flex items-center justify-center w-full"
+                    >
+                        <ScoreTicker 
+                            value={score}
+                            className={`
+                                font-black tracking-tighter outline-none select-none
+                                text-8xl md:text-9xl lg:text-[10rem] leading-none
+                                text-slate-900 dark:text-white
+                                ${isMatchPoint ? 'drop-shadow-[0_0_30px_rgba(251,191,36,0.5)]' : ''}
+                            `}
+                        />
+                    </motion.div>
                 </div>
             </div>
         </div>

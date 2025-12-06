@@ -1,81 +1,77 @@
-
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { toPng } from 'html-to-image';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
 
 export const useSocialShare = () => {
   const [isSharing, setIsSharing] = useState(false);
 
-  const shareResult = useCallback(async (elementId: string, fileName = 'volleyscore-result.png') => {
-    setIsSharing(true);
+  const shareMatch = useCallback(async () => {
     try {
-      const node = document.getElementById(elementId);
-      if (!node) {
-        throw new Error(`Element with id ${elementId} not found`);
+      setIsSharing(true);
+
+      // 1. Encontrar o elemento do card (que pode estar escondido ou visível)
+      const element = document.getElementById('social-share-card');
+      if (!element) {
+        throw new Error('Card element not found');
       }
 
-      // 1. Pre-warm fonts and layout
-      await document.fonts.ready;
-      // Add a small delay to ensure layout shifts (from hidden/offscreen state) are processed by engine
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Helper to generate image with fallback mechanism
-      const generateImage = async () => {
-        try {
-          // Attempt 1: High Fidelity (With Fonts)
-          return await toPng(node, { 
-            cacheBust: true, 
-            pixelRatio: 2, 
-            backgroundColor: '#020617', // Ensure solid background
-            skipAutoScale: true,
-            fetchRequestInit: { mode: 'cors' } // Explicitly request CORS for external assets
-          });
-        } catch (innerError) {
-          console.warn('High-fidelity image generation failed (likely CORS/Fonts). Retrying without fonts.', innerError);
-          
-          // Attempt 2: Fallback (Skip Fonts)
-          return await toPng(node, { 
-            cacheBust: true, 
-            pixelRatio: 2, 
-            backgroundColor: '#020617', 
-            skipAutoScale: true,
-            skipFonts: true // Bypass font embedding to ensure success
-          });
-        }
-      };
+      // 2. Gerar a imagem (Base64)
+      // O 'cacheBust' ajuda a carregar imagens externas se houver
+      const dataUrl = await toPng(element, { cacheBust: true, pixelRatio: 3 });
 
-      // 2. Generate PNG
-      const dataUrl = await generateImage();
+      // 3. Lógica Diferente para Mobile (Nativo) vs Web
+      if (Capacitor.isNativePlatform()) {
+        // --- MOBILE (ANDROID/IOS) ---
+        
+        // Salvar o arquivo no diretório de Cache do app
+        const fileName = `volleyscore-result-${Date.now()}.png`;
+        const savedFile = await Filesystem.writeFile({
+          path: fileName,
+          data: dataUrl,
+          directory: Directory.Cache,
+        });
 
-      // 3. Convert to Blob
-      const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], fileName, { type: 'image/png' });
+        // Compartilhar a URI do arquivo salvo
+        await Share.share({
+          title: 'Resultado da Partida',
+          text: 'Confira o resultado no VolleyScore Pro!',
+          url: savedFile.uri, // Compartilha o ARQUIVO, não o texto base64
+        });
 
-      // 4. Share or Download
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-            await navigator.share({
-                files: [file],
-                title: 'VolleyScore Pro Result',
-                text: 'Check out the match result!'
-            });
-        } catch (shareError) {
-             // Abort or user cancelled
-             console.warn('Share cancelled or failed', shareError);
-        }
       } else {
-        // Fallback: Download
+        // --- WEB (PWA/DESKTOP) ---
+        
+        // Tenta usar a API nativa do navegador se suportar arquivos
+        if (navigator.share) {
+          const blob = await (await fetch(dataUrl)).blob();
+          const file = new File([blob], 'placar.png', { type: 'image/png' });
+          
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'VolleyScore Pro',
+              text: 'Resultado da Partida'
+            });
+            return;
+          }
+        }
+
+        // Fallback: Download direto se não der para compartilhar
         const link = document.createElement('a');
-        link.download = fileName;
+        link.download = `volleyscore-${Date.now()}.png`;
         link.href = dataUrl;
         link.click();
       }
 
     } catch (error) {
-      console.error('Social Share Failed:', error);
+      console.error('Erro ao compartilhar:', error);
+      // Aqui você poderia adicionar um Toast de erro se quisesse
     } finally {
       setIsSharing(false);
     }
   }, []);
 
-  return { isSharing, shareResult };
+  return { shareMatch, isSharing };
 };

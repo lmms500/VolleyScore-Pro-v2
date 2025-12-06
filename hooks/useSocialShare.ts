@@ -24,12 +24,19 @@ export const useSocialShare = () => {
       // 3. Lógica Diferente para Mobile (Nativo) vs Web
       if (Capacitor.isNativePlatform()) {
         // --- MOBILE (ANDROID/IOS) ---
-        
+
+        // CORREÇÃO: O Filesystem do Capacitor espera apenas os dados Base64,
+        // sem o prefixo "data:image/png;base64,".
+        const base64Data = dataUrl.split(',')[1];
+        if (!base64Data) {
+          throw new Error('Falha ao extrair dados base64 do dataUrl');
+        }
+
         // Salvar o arquivo no diretório de Cache do app
         const fileName = `volleyscore-result-${Date.now()}.png`;
         const savedFile = await Filesystem.writeFile({
           path: fileName,
-          data: dataUrl,
+          data: base64Data, // Passando apenas os dados corrigidos
           directory: Directory.Cache,
         });
 

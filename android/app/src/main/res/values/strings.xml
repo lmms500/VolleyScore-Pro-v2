@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">VolleyScorePro</string>
+    <string name="title_activity_main">VolleyScorePro</string>
+    <string name="package_name">LucasFilms.Studio.volleyscore</string>
+    <string name="custom_url_scheme">LucasFilms.Studio.volleyscore</string>
+</resources>

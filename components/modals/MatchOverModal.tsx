@@ -24,7 +24,7 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
   const { t } = useTranslation();
   const [showLogs, setShowLogs] = useState(false);
   const [renderShareCard, setRenderShareCard] = useState(false);
-  const { isSharing, shareResult } = useSocialShare();
+  const { isSharing, shareMatch } = useSocialShare();
 
   const winnerName = state.matchWinner === 'A' ? state.teamAName : state.teamBName;
   const isA = state.matchWinner === 'A';
@@ -84,8 +84,7 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
       
       // 2. Wait briefly for React to mount it and layout to stabilize, then capture
       setTimeout(() => {
-          const dateStr = new Date().toISOString().split('T')[0];
-          shareResult('social-share-card', `volleyscore_result_${dateStr}.png`);
+          shareMatch();
       }, 500);
   };
 

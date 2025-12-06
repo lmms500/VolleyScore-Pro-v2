@@ -1,50 +1,27 @@
-
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { GameConfig, SetHistory, TeamId, ActionLog, Team } from '../types';
 
 // --- TYPES (Derived/Extended from Core Types) ---
 
-/**
- * Represents the configuration used for a specific match.
- * Aliased from core types to maintain consistency.
- */
 export type MatchSettings = GameConfig;
-
-/**
- * Represents a single score event or action within a match.
- * Aliased from core types.
- */
 export type ScoreEvent = ActionLog;
 
-/**
- * Snapshot of a completed match.
- */
 export interface Match {
-  id: string;                 // UUID
-  date: string;               // ISO Date String
-  timestamp: number;          // Unix Timestamp for sorting
-  durationSeconds: number;    // Total match time
-  
+  id: string;
+  date: string;
+  timestamp: number;
+  durationSeconds: number;
   teamAName: string;
   teamBName: string;
-  
-  // Roster Snapshots (Optional for backward compatibility)
   teamARoster?: Team;
   teamBRoster?: Team;
-
   setsA: number;
   setsB: number;
-  
-  winner: TeamId | null;      // 'A' | 'B'
-  
-  // Detailed History
+  winner: TeamId | null;
   sets: SetHistory[];
-  
-  // Detailed Actions (New for V2 Stats)
   actionLog?: ActionLog[];
-
-  // Configuration used
   config: MatchSettings;
 }
 
@@ -53,35 +30,51 @@ interface HistoryStoreState {
 }
 
 interface HistoryStoreActions {
-  /**
-   * Adds a completed match to the history.
-   * Newest matches appear first.
-   */
   addMatch: (match: Match) => void;
-
-  /**
-   * Deletes a single match by ID.
-   */
   deleteMatch: (matchId: string) => void;
-
-  /**
-   * Wipes all match history. Irreversible.
-   */
   clearHistory: () => void;
-
-  /**
-   * Exports the current history as a JSON string.
-   */
   exportJSON: () => string;
-
-  /**
-   * Imports history from a JSON string.
-   * @param jsonStr The raw JSON string.
-   * @param options.merge If true, adds unique matches to existing history. If false, overwrites.
-   * @returns Object indicating success status and any error messages.
-   */
   importJSON: (jsonStr: string, options?: { merge: boolean }) => { success: boolean; errors?: string[] };
 }
+
+// 1. CAPACITOR-BASED STORAGE ADAPTER
+const capacitorFileStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    try {
+      const { data } = await Filesystem.readFile({
+        path: name,
+        directory: Directory.Data,
+        encoding: Encoding.UTF8,
+      });
+      return data as string;
+    } catch (error) {
+      console.warn(`[Capacitor Storage] Could not read file ${name}. It may not exist yet.`);
+      return null;
+    }
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    try {
+      await Filesystem.writeFile({
+        path: name,
+        data: value,
+        directory: Directory.Data,
+        encoding: Encoding.UTF8,
+      });
+    } catch (error) {
+      console.error(`[Capacitor Storage] Error writing file ${name}:`, error);
+    }
+  },
+  removeItem: async (name: string): Promise<void> => {
+    try {
+      await Filesystem.deleteFile({
+        path: name,
+        directory: Directory.Data,
+      });
+    } catch (error) { 
+      console.warn(`[Capacitor Storage] Could not remove file ${name}. It may already be deleted.`);
+    }
+  },
+};
 
 // --- STORE IMPLEMENTATION ---
 
@@ -92,7 +85,7 @@ export const useHistoryStore = create<HistoryStoreState & HistoryStoreActions>()
 
       addMatch: (match) => {
         set((state) => ({
-          matches: [match, ...state.matches] // Unshift (Newest first)
+          matches: [match, ...state.matches]
         }));
       },
 
@@ -119,7 +112,6 @@ export const useHistoryStore = create<HistoryStoreState & HistoryStoreActions>()
             return { success: false, errors: ['Invalid format: Root must be an array.'] };
           }
 
-          // Basic Validation of Match Structure
           const validMatches: Match[] = [];
           const errors: string[] = [];
 
@@ -143,15 +135,12 @@ export const useHistoryStore = create<HistoryStoreState & HistoryStoreActions>()
 
           set((state) => {
             if (options.merge) {
-              // Create Map of existing IDs to avoid duplicates
               const existingIds = new Set(state.matches.map(m => m.id));
               const newUniqueMatches = validMatches.filter(m => !existingIds.has(m.id));
               
-              // Merge and sort by timestamp descending
               const merged = [...newUniqueMatches, ...state.matches].sort((a, b) => b.timestamp - a.timestamp);
               return { matches: merged };
             } else {
-              // Overwrite mode
               return { matches: validMatches.sort((a, b) => b.timestamp - a.timestamp) };
             }
           });
@@ -167,9 +156,9 @@ export const useHistoryStore = create<HistoryStoreState & HistoryStoreActions>()
       }
     }),
     {
-      name: 'vsp_matches_v1', // LocalStorage Key
-      storage: createJSONStorage(() => localStorage), // Explicit storage definition
-      version: 1,
+      name: 'vsp_matches_v2.json', // NOME DO ARQUIVO DE DADOS
+      storage: createJSONStorage(() => capacitorFileStorage), // USA O ADAPTADOR NATIVO
+      version: 2, // Versionamento do schema de dados
     }
   )
 );

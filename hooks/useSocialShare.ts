@@ -11,45 +11,35 @@ export const useSocialShare = () => {
     try {
       setIsSharing(true);
 
-      // 1. Encontrar o elemento do card (que pode estar escondido ou visível)
       const element = document.getElementById('social-share-card');
       if (!element) {
         throw new Error('Card element not found');
       }
 
-      // 2. Gerar a imagem (Base64)
-      // O 'cacheBust' ajuda a carregar imagens externas se houver
-      // Reduzi o pixelRatio para 2 para garantir melhor performance no Android (evitar estouro de memória)
       const dataUrl = await toPng(element, { cacheBust: true, pixelRatio: 2 });
 
-      // 3. Lógica Diferente para Mobile (Nativo) vs Web
       if (Capacitor.isNativePlatform()) {
         // --- MOBILE (ANDROID/IOS) ---
-        
-        // Salvar o arquivo no diretório de Cache do app
         const fileName = `volleyscore-result-${Date.now()}.png`;
-
-        // CRÍTICO: Remover o prefixo 'data:image/png;base64,' para salvar corretamente o binário
+        
+        // FIX: Remove the data URL prefix before saving to the filesystem
         const base64Data = dataUrl.split(',')[1];
 
         const savedFile = await Filesystem.writeFile({
           path: fileName,
-          data: dataUrl,
+          data: base64Data, // Use the corrected base64 data
           directory: Directory.Cache,
           recursive: true
         });
 
-        // Compartilhar a URI do arquivo salvo usando o array 'files'
         await Share.share({
           title: 'Resultado da Partida',
           text: 'Confira o resultado no VolleyScore Pro!',
-          files: [savedFile.uri], // Android requer array 'files' para anexos locais
+          files: [savedFile.uri], // Share the native file URI
         });
 
       } else {
         // --- WEB (PWA/DESKTOP) ---
-        
-        // Tenta usar a API nativa do navegador se suportar arquivos
         if (navigator.share) {
           const blob = await (await fetch(dataUrl)).blob();
           const file = new File([blob], 'placar.png', { type: 'image/png' });
@@ -64,7 +54,7 @@ export const useSocialShare = () => {
           }
         }
 
-        // Fallback: Download direto se não der para compartilhar
+        // Fallback: Download
         const link = document.createElement('a');
         link.download = `volleyscore-${Date.now()}.png`;
         link.href = dataUrl;
@@ -73,7 +63,9 @@ export const useSocialShare = () => {
 
     } catch (error) {
       console.error('Erro ao compartilhar:', error);
-      // Aqui você poderia adicionar um Toast de erro se quisesse
+      if (!(error as Error).message.includes('Share-cancel')) {
+        alert('Ocorreu um erro ao tentar compartilhar a imagem.');
+      }
     } finally {
       setIsSharing(false);
     }

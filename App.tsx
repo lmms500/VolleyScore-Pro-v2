@@ -1,8 +1,12 @@
 import React, { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
 import { useTutorial } from './hooks/useTutorial';
-// EAGER IMPORTS (Critical for First Contentful Paint)
+
+// EAGER IMPORTS
 import { ScoreCardNormal } from './components/ScoreCardNormal';
 import { ScoreCardFullscreen } from './components/ScoreCardFullscreen';
 import { HistoryBar } from './components/HistoryBar';
@@ -26,8 +30,7 @@ import { Minimize2, RefreshCw, Loader2 } from 'lucide-react';
 import { motion, LayoutGroup, AnimatePresence } from 'framer-motion';
 import { v4 as uuidv4 } from 'uuid';
 
-// --- LAZY LOADED CHUNKS (Optimized for Mobile Performance) ---
-// These components are code-split and only loaded when needed.
+// LAZY LOADED CHUNKS
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
 const TeamManagerModal = lazy(() => import('./components/modals/TeamManagerModal').then(module => ({ default: module.TeamManagerModal })));
 const MatchOverModal = lazy(() => import('./components/modals/MatchOverModal').then(module => ({ default: module.MatchOverModal })));
@@ -35,14 +38,12 @@ const ConfirmationModal = lazy(() => import('./components/modals/ConfirmationMod
 const HistoryModal = lazy(() => import('./components/modals/HistoryModal').then(module => ({ default: module.HistoryModal })));
 const TutorialModal = lazy(() => import('./components/modals/TutorialModal').then(module => ({ default: module.TutorialModal })));
 
-// Haptic Helper
 const vibrate = (pattern: number | number[]) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(pattern);
     }
 };
 
-// Lightweight Loading Spinner for Suspense (No extra libs)
 const SuspenseLoader = () => (
   <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm">
     <div className="bg-white/80 dark:bg-black/80 p-4 rounded-full shadow-lg border border-white/20">
@@ -101,27 +102,34 @@ function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [interactingTeam, setInteractingTeam] = useState<TeamId | null>(null);
 
-  // Refs for HUD Measurement (Passed down to ScoreCards)
   const [scoreElA, setScoreElA] = useState<HTMLElement | null>(null);
   const [scoreElB, setScoreElB] = useState<HTMLElement | null>(null);
 
-  // Auto-Save Match History Logic with Undo Support
   const savedMatchIdRef = useRef<string | null>(null);
-  
-  // Audio for App-level events (Match Over, Set Over)
   const audio = useGameAudio(state.config);
-
-  // Track sets to detect Set Changes for Audio
   const prevSetsRef = useRef({ a: 0, b: 0 });
-  
-  // Track Status to detect transition into Critical States (Set/Match Point)
   const prevStatusRef = useRef({ 
       setPointA: false, matchPointA: false, 
       setPointB: false, matchPointB: false 
   });
 
   useEffect(() => {
-    // 1. Detect Set Win (Audio Only)
+    const initializeNativeSettings = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await ScreenOrientation.lock({ orientation: 'portrait-primary' });
+          await StatusBar.setOverlaysWebView({ overlay: true });
+          await StatusBar.setStyle({ style: Style.Dark });
+        } catch (error) {
+          console.error("Falha ao configurar o ambiente nativo:", error);
+        }
+      }
+    };
+
+    initializeNativeSettings();
+  }, []);
+
+  useEffect(() => {
     const setsChanged = state.setsA > prevSetsRef.current.a || state.setsB > prevSetsRef.current.b;
     if (setsChanged && !state.isMatchOver) {
         audio.playSetWin();
@@ -129,7 +137,6 @@ function App() {
     }
     prevSetsRef.current = { a: state.setsA, b: state.setsB };
 
-    // 2. Match Over Logic
     if (state.isMatchOver && !savedMatchIdRef.current && state.matchWinner) {
       audio.playMatchWin(); 
       vibrate([200, 100, 200, 100, 400]); 
@@ -159,7 +166,6 @@ function App() {
     }
   }, [state.isMatchOver, state.matchWinner, state.setsA, state.setsB, historyStore, audio, state.matchDurationSeconds, state.teamAName, state.teamBName, state.teamARoster, state.teamBRoster, state.history, state.matchLog, state.config]);
 
-  // Wrapper for Undo
   const handleUndo = useCallback(() => {
     if (state.isMatchOver && savedMatchIdRef.current) {
         historyStore.deleteMatch(savedMatchIdRef.current);
@@ -170,7 +176,6 @@ function App() {
     vibrate(30); 
   }, [state.isMatchOver, undo, historyStore, audio]);
 
-  // Handle Beach Switch Alert
   useEffect(() => {
       if (state.pendingSideSwitch) {
           audio.playWhistle();
@@ -178,7 +183,6 @@ function App() {
       }
   }, [state.pendingSideSwitch, audio]);
 
-  // Handle Critical Moments (Audio Transition)
   useEffect(() => {
       const current = {
           setPointA: game.isSetPointA,
@@ -186,7 +190,6 @@ function App() {
           setPointB: game.isSetPointB,
           matchPointB: game.isMatchPointB
       };
-      
       const prev = prevStatusRef.current;
 
       const enteredMatchPoint = (current.matchPointA && !prev.matchPointA) || (current.matchPointB && !prev.matchPointB);
@@ -203,7 +206,6 @@ function App() {
       prevStatusRef.current = current;
   }, [game.isMatchPointA, game.isMatchPointB, game.isSetPointA, game.isSetPointB, audio]);
 
-  // Fullscreen Logic
   const visualLeftScoreEl = state.swappedSides ? scoreElB : scoreElA;
   const visualRightScoreEl = state.swappedSides ? scoreElA : scoreElB;
 
@@ -221,77 +223,28 @@ function App() {
       version: layoutVersion
   });
 
-  const lockOrientation = useCallback(async (mode: 'portrait' | 'landscape') => {
-    if (screen.orientation && 'lock' in screen.orientation) {
-        try {
-            // @ts-ignore
-            await screen.orientation.lock(mode);
-        } catch (e) {
-            console.warn(`Orientation lock to ${mode} failed:`, e);
-            if (mode === 'portrait' && 'unlock' in screen.orientation) {
-                screen.orientation.unlock();
-            }
-        }
-    }
-  }, []);
-
-  const toggleFullscreen = useCallback(async () => {
+  const toggleFullscreen = useCallback(() => {
     audio.playTap();
     vibrate(10);
-    if (!document.fullscreenElement) {
-        try {
-            await document.documentElement.requestFullscreen();
-            await lockOrientation('landscape');
-        } catch (e) {
-            console.log('Fullscreen request failed:', e);
-        }
-    } else {
-        try {
-            await document.exitFullscreen();
-            await lockOrientation('portrait');
-        } catch (e) {
-             console.log('Exit fullscreen failed:', e);
-        }
-    }
-  }, [audio, lockOrientation]);
+    setIsFullscreen(prev => !prev);
+  }, [audio]);
   
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-        const isFull = !!document.fullscreenElement;
-        setIsFullscreen(isFull);
-        if (!isFull) {
-            lockOrientation('portrait');
-        } else {
-            lockOrientation('landscape');
-        }
-    };
-    
-    lockOrientation('portrait');
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, [lockOrientation]);
-
   const toggleTimer = useCallback(() => {
     audio.playTap();
     vibrate(10);
     game.setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
   }, [game.setState, audio]);
 
-  // Interaction Handlers
   const handleInteractionStartA = useCallback(() => setInteractingTeam('A'), []);
   const handleInteractionStartB = useCallback(() => setInteractingTeam('B'), []);
   const handleInteractionEnd = useCallback(() => setInteractingTeam(null), []);
   
-  // --- UPDATED HANDLERS FOR SCOUT MODE & AUDIO & HAPTICS ---
   const handleAddA = useCallback((teamId: TeamId, playerId?: string, skill?: any) => {
     const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
-    
     if (!playerId && !state.config.enablePlayerStats) {
          audio.playScore(); 
          vibrate(15); 
     }
-    
     addPoint('A', metadata);
   }, [addPoint, state.config.enablePlayerStats, audio]);
 
@@ -322,7 +275,6 @@ function App() {
   const handleTimeoutA = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('A'); }, [useTimeout, audio]);
   const handleTimeoutB = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('B'); }, [useTimeout, audio]);
 
-  // Modal Open Wrappers with Sound & Haptic
   const openSettings = useCallback(() => { audio.playTap(); vibrate(10); setShowSettings(true); }, [audio]);
   const openManager = useCallback(() => { audio.playTap(); vibrate(10); setShowManager(true); }, [audio]);
   const openHistory = useCallback(() => { audio.playTap(); vibrate(10); setShowHistory(true); }, [audio]);
@@ -352,7 +304,7 @@ function App() {
   return (
     <ErrorBoundary>
       <LayoutProvider>
-        <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative transition-colors duration-700 ease-in-out">
+        <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative transition-colors duration-700 ease-in-out pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
           
           <BackgroundGlow 
             isSwapped={state.swappedSides} 
@@ -399,7 +351,7 @@ function App() {
               z-30 transition-all duration-500 flex-none
               ${isFullscreen 
                 ? '-translate-y-24 opacity-0 pointer-events-none absolute w-full' 
-                : 'relative pt-[env(safe-area-inset-top)] pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] pb-2 mt-1'}
+                : 'relative pt-2 pr-4 pb-2 pl-4 mt-1'}
           `}>
             <HistoryBar 
               history={state.history} 
@@ -578,10 +530,9 @@ function App() {
 
           <div 
             className={`
-                flex-none w-full z-50 flex justify-center pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-2
+                flex-none w-full z-50 flex justify-center pb-2 pt-2
                 transition-all duration-500 overflow-hidden
                 ${isFullscreen ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-40 opacity-100 pointer-events-auto'}
-                pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
             `}
           >
               <Controls 

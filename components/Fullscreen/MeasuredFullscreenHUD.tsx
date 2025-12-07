@@ -1,9 +1,9 @@
 
 import React, { memo } from 'react';
-import { HudPlacement } from '../hooks/useHudMeasure';
+import { HudPlacement } from '../../hooks/useHudMeasure';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
-import { TeamColor } from '../types';
-import { resolveTheme } from '../utils/colors';
+import { TeamColor } from '../../types';
+import { resolveTheme } from '../../utils/colors';
 
 interface MeasuredFullscreenHUDProps {
   placement: HudPlacement;

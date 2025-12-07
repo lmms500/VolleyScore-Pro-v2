@@ -1,13 +1,13 @@
 
 import React, { useState, memo, useMemo, useRef, useCallback } from 'react';
-import { TeamId, Team, SkillType, GameConfig, TeamColor } from '../types';
-import { useScoreGestures } from '../hooks/useScoreGestures';
-import { ScoreTicker } from './ui/ScoreTicker';
+import { TeamId, Team, SkillType, GameConfig, TeamColor } from '../../types';
+import { useScoreGestures } from '../../hooks/useScoreGestures';
+import { ScoreTicker } from '../ui/ScoreTicker';
 import { motion, AnimatePresence } from 'framer-motion';
-import { pulseHeartbeat, layoutTransition } from '../utils/animations';
-import { useGameAudio } from '../hooks/useGameAudio';
-import { ScoutModal } from './modals/ScoutModal';
-import { resolveTheme } from '../utils/colors';
+import { pulseHeartbeat, layoutTransition } from '../../utils/animations';
+import { useGameAudio } from '../../hooks/useGameAudio';
+import { ScoutModal } from '../modals/ScoutModal';
+import { resolveTheme } from '../../utils/colors';
 
 interface ScoreCardFullscreenProps {
   teamId: TeamId;

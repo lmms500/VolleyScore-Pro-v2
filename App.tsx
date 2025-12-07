@@ -7,10 +7,10 @@ import { useTutorial } from './hooks/useTutorial';
 
 // EAGER IMPORTS
 import { ScoreCardNormal } from './components/ScoreCardNormal';
-import { ScoreCardFullscreen } from './components/ScoreCardFullscreen';
+import { ScoreCardFullscreen } from './components/Fullscreen/ScoreCardFullscreen';
 import { HistoryBar } from './components/HistoryBar';
 import { Controls } from './components/Controls';
-import { MeasuredFullscreenHUD } from './components/MeasuredFullscreenHUD';
+import { MeasuredFullscreenHUD } from './components/Fullscreen/MeasuredFullscreenHUD';
 import { FloatingControlBar } from './components/Fullscreen/FloatingControlBar';
 import { FloatingTopBar } from './components/Fullscreen/FloatingTopBar';
 import { FullscreenMenuDrawer } from './components/Fullscreen/FullscreenMenuDrawer';

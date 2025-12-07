@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -71,7 +72,7 @@ function App() {
     updateTeamName, 
     updateTeamColor,
     updatePlayerName, 
-    updatePlayerNumber,
+    updatePlayerNumber, 
     updatePlayerSkill,
     addPlayer, 
     undoRemovePlayer, 
@@ -81,7 +82,7 @@ function App() {
     balanceTeams,
     savePlayerToProfile,
     revertPlayerChanges,
-    upsertProfile,
+    upsertProfile, 
     deleteProfile,
     sortTeam
   } = game;
@@ -114,10 +115,11 @@ function App() {
   // Track sets to detect Set Changes for Audio
   const prevSetsRef = useRef({ a: 0, b: 0 });
   
-  // Track Status to detect transition into Critical States (Set/Match Point)
+  // Track Status to detect transition into Critical States (Set/Match Point/Sudden Death)
   const prevStatusRef = useRef({ 
       setPointA: false, matchPointA: false, 
-      setPointB: false, matchPointB: false 
+      setPointB: false, matchPointB: false,
+      inSuddenDeath: false
   });
 
   useEffect(() => {
@@ -184,15 +186,20 @@ function App() {
           setPointA: game.isSetPointA,
           matchPointA: game.isMatchPointA,
           setPointB: game.isSetPointB,
-          matchPointB: game.isMatchPointB
+          matchPointB: game.isMatchPointB,
+          inSuddenDeath: state.inSuddenDeath
       };
       
       const prev = prevStatusRef.current;
 
       const enteredMatchPoint = (current.matchPointA && !prev.matchPointA) || (current.matchPointB && !prev.matchPointB);
       const enteredSetPoint = (current.setPointA && !prev.setPointA && !current.matchPointA) || (current.setPointB && !prev.setPointB && !current.matchPointB);
+      const enteredSuddenDeath = current.inSuddenDeath && !prev.inSuddenDeath;
 
-      if (enteredMatchPoint) {
+      if (enteredSuddenDeath) {
+          audio.playSuddenDeath();
+          vibrate([50, 100, 50, 100, 50, 100]); // Dramatic vibration
+      } else if (enteredMatchPoint) {
           audio.playMatchPointAlert();
           vibrate([50, 50, 50, 50]); 
       } else if (enteredSetPoint) {
@@ -201,7 +208,7 @@ function App() {
       }
 
       prevStatusRef.current = current;
-  }, [game.isMatchPointA, game.isMatchPointB, game.isSetPointA, game.isSetPointB, audio]);
+  }, [game.isMatchPointA, game.isMatchPointB, game.isSetPointA, game.isSetPointB, state.inSuddenDeath, audio]);
 
   // Fullscreen Logic
   const visualLeftScoreEl = state.swappedSides ? scoreElB : scoreElA;

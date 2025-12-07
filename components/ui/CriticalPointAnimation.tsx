@@ -22,8 +22,8 @@ export const SuddenDeathOverlay: React.FC<SuddenDeathOverlayProps> = ({ active }
           exit="hidden"
           variants={vignettePulse}
           style={{
-            background: 'radial-gradient(circle, transparent 40%, rgba(220, 20, 60, 0.4) 85%, rgba(255, 0, 0, 0.6) 100%)',
-            boxShadow: 'inset 0 0 80px 20px rgba(255, 0, 0, 0.4)'
+            background: 'radial-gradient(circle, transparent 50%, rgba(220, 20, 60, 0.1) 85%, rgba(255, 0, 0, 0.5) 100%)',
+            boxShadow: 'inset 0 0 100px 30px rgba(255, 0, 0, 0.6), inset 0 0 20px 10px rgba(255, 0, 0, 0.9)'
           }}
         />
       )}

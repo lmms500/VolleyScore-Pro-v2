@@ -201,6 +201,7 @@ export const useVolleyGame = () => {
         prevScoreA: prev.scoreA,
         prevScoreB: prev.scoreB,
         prevServingTeam: prev.servingTeam,
+        prevInSuddenDeath: prev.inSuddenDeath,
         timestamp: Date.now(),
         ...(metadata || {})   
       };
@@ -340,6 +341,7 @@ export const useVolleyGame = () => {
                 scoreA: lastAction.prevScoreA,
                 scoreB: lastAction.prevScoreB,
                 servingTeam: lastAction.prevServingTeam, 
+                inSuddenDeath: lastAction.prevInSuddenDeath ?? prev.inSuddenDeath,
                 pendingSideSwitch: false, 
                 lastSnapshot: undefined
             };

@@ -150,10 +150,11 @@ export const stampVariants: Variants = {
 export const vignettePulse: Variants = {
   hidden: { opacity: 0 },
   pulse: {
-    opacity: [0.3, 1, 0.5, 1],
+    opacity: [0.1, 1],
     transition: {
-      duration: 0.8,
+      duration: 0.6,
       repeat: Infinity,
+      repeatType: "reverse",
       ease: "easeInOut"
     }
   }

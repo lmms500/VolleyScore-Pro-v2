@@ -17,7 +17,7 @@ interface ColorTheme {
 
 export const TEAM_COLORS: Record<string, ColorTheme> = {
     indigo: {
-        text: 'text-indigo-700',
+        text: 'text-indigo-800',
         textDark: 'dark:text-indigo-300',
         bg: 'bg-indigo-500/20',
         bgDark: 'dark:bg-indigo-500/20',
@@ -30,7 +30,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
         solid: 'bg-indigo-500'
     },
     rose: {
-        text: 'text-rose-700',
+        text: 'text-rose-800',
         textDark: 'dark:text-rose-300',
         bg: 'bg-rose-500/20',
         bgDark: 'dark:bg-rose-500/20',
@@ -43,7 +43,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
         solid: 'bg-rose-500'
     },
     emerald: {
-        text: 'text-emerald-700',
+        text: 'text-emerald-800',
         textDark: 'dark:text-emerald-300',
         bg: 'bg-emerald-500/20',
         bgDark: 'dark:bg-emerald-500/20',
@@ -56,7 +56,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
         solid: 'bg-emerald-500'
     },
     sky: {
-        text: 'text-sky-700',
+        text: 'text-sky-800',
         textDark: 'dark:text-sky-300',
         bg: 'bg-sky-500/20',
         bgDark: 'dark:bg-sky-500/20',
@@ -69,7 +69,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
         solid: 'bg-sky-500'
     },
     violet: {
-        text: 'text-violet-700',
+        text: 'text-violet-800',
         textDark: 'dark:text-violet-300',
         bg: 'bg-violet-500/20',
         bgDark: 'dark:bg-violet-500/20',
@@ -82,7 +82,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
         solid: 'bg-violet-500'
     },
     slate: {
-        text: 'text-slate-700',
+        text: 'text-slate-800',
         textDark: 'dark:text-slate-300',
         bg: 'bg-slate-500/20',
         bgDark: 'dark:bg-slate-500/20',
@@ -95,7 +95,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
         solid: 'bg-slate-500'
     },
     fuchsia: {
-        text: 'text-fuchsia-700',
+        text: 'text-fuchsia-800',
         textDark: 'dark:text-fuchsia-300',
         bg: 'bg-fuchsia-500/20',
         bgDark: 'dark:bg-fuchsia-500/20',

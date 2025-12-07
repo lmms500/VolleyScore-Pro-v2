@@ -776,8 +776,8 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   // OPTIMIZATION: Memoize filtering logic
   const filteredProfiles = useMemo(() => {
       return Array.from(props.profiles.values())
-          .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .filter((p: PlayerProfile) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+          .sort((a: PlayerProfile, b: PlayerProfile) => a.name.localeCompare(b.name));
   }, [props.profiles, searchTerm]);
 
   // --- DND HANDLERS ---

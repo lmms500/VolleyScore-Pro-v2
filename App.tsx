@@ -1,7 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
 import { useTutorial } from './hooks/useTutorial';
@@ -29,6 +28,7 @@ import { TeamId, SkillType } from './types';
 import { Minimize2, RefreshCw, Loader2 } from 'lucide-react';
 import { motion, LayoutGroup, AnimatePresence } from 'framer-motion';
 import { v4 as uuidv4 } from 'uuid';
+import { useScreenOrientationLock } from './hooks/useScreenOrientationLock';
 
 // LAZY LOADED CHUNKS
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -113,11 +113,13 @@ function App() {
       setPointB: false, matchPointB: false 
   });
 
+  // Bloqueio de orientação condicional
+  useScreenOrientationLock(!isFullscreen);
+
   useEffect(() => {
     const initializeNativeSettings = async () => {
       if (Capacitor.isNativePlatform()) {
         try {
-          await ScreenOrientation.lock({ orientation: 'portrait-primary' });
           await StatusBar.setOverlaysWebView({ overlay: true });
           await StatusBar.setStyle({ style: Style.Dark });
         } catch (error) {
@@ -128,42 +130,6 @@ function App() {
 
     initializeNativeSettings();
   }, []);
-
-  useEffect(() => {
-    const controlOrientation = async () => {
-      if (!Capacitor.isNativePlatform()) return;
-
-      if (isFullscreen) {
-        try {
-          await ScreenOrientation.lock({ orientation: 'landscape' });
-        } catch (e) {
-          console.error('Failed to lock screen to landscape', e);
-        }
-      } else {
-        try {
-          await ScreenOrientation.unlock();
-          await ScreenOrientation.lock({ orientation: 'portrait-primary' });
-        } catch (e) {
-          console.error('Failed to reset screen to portrait', e);
-        }
-      }
-    };
-
-    controlOrientation();
-
-    return () => {
-      if (Capacitor.isNativePlatform()) {
-        (async () => {
-          try {
-            await ScreenOrientation.unlock();
-            await ScreenOrientation.lock({ orientation: 'portrait-primary' });
-          } catch (e) {
-            // Ignore errors on unmount
-          }
-        })();
-      }
-    };
-  }, [isFullscreen]);
 
   useEffect(() => {
     const setsChanged = state.setsA > prevSetsRef.current.a || state.setsB > prevSetsRef.current.b;

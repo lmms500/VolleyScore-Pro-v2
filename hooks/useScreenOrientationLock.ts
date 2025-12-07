@@ -2,23 +2,20 @@ import { useEffect } from 'react';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { Capacitor } from '@capacitor/core';
 
-// Define os tipos de orientação para consistência
-type OrientationLockType = 'portrait-primary' | 'landscape'; // Alterado para 'landscape'
-
 /**
  * Este hook gerencia o bloqueio de orientação da tela em plataformas nativas.
- * Ele observa o estado de tela cheia e bloqueia a tela para paisagem ou retrato.
- * A orientação 'landscape' permite a rotação entre paisagem normal e invertida.
- * 
- * @param isFullscreen O estado booleano que determina se o modo de tela cheia está ativo.
+ * Ele pode ser desativado para permitir que outros componentes controlem a orientação.
+ *
+ * @param shouldLock Condição booleana para ativar o bloqueio para 'portrait'.
+ *                   Se `false`, o hook não executa nenhuma ação de bloqueio.
  */
-export const useScreenOrientationLock = (isFullscreen: boolean) => {
-
-  const lock = async (orientation: OrientationLockType) => {
+export const useScreenOrientationLock = (shouldLock: boolean) => {
+  const lock = async () => {
     if (!Capacitor.isNativePlatform()) return;
 
     try {
-      await ScreenOrientation.lock({ orientation });
+      // Força o bloqueio para a orientação padrão (retrato)
+      await ScreenOrientation.lock({ orientation: 'portrait-primary' });
     } catch (error) {
       console.error('Falha ao bloquear a orientação da tela', error);
     }
@@ -35,16 +32,15 @@ export const useScreenOrientationLock = (isFullscreen: boolean) => {
   };
 
   useEffect(() => {
-    if (isFullscreen) {
-      lock('landscape'); // Permite rotação completa em paisagem
-    } else {
-      lock('portrait-primary');
+    // Só executa o bloqueio se a condição `shouldLock` for verdadeira
+    if (shouldLock) {
+      lock();
     }
 
-    // A função de limpeza continua vital para devolver o controle ao sistema
+    // A função de limpeza desbloqueia a orientação ao desmontar ou quando a condição muda.
+    // Isso é crucial para não deixar a tela travada permanentemente.
     return () => {
       unlock();
     };
-  }, [isFullscreen]);
-
+  }, [shouldLock]); // O efeito é reavaliado sempre que `shouldLock` mudar
 };

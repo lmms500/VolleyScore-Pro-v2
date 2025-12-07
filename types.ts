@@ -73,19 +73,21 @@ export interface RotationReport {
   logs?: string[]; // Debug logs for rotation logic
 }
 
-export type ActionLog = 
-  | { 
-      type: 'POINT'; 
+// ... (omitting lines for brevity)
+export type ActionLog =
+  | {
+      type: 'POINT';
       team: TeamId;
       prevScoreA: number;
       prevScoreB: number;
       prevServingTeam: TeamId | null;
-      prevInSuddenDeath?: boolean;
+      prevInSuddenDeath?: boolean; // CORREÇÃO: Adicionado para salvar o estado de Morte Súbita antes do ponto
       timestamp?: number;
       // Scout Metadata (Explicitly typed)
-      playerId?: string; 
-      skill?: SkillType; 
+      playerId?: string;
+      skill?: SkillType;
     }
+// ...
   | { 
       type: 'TIMEOUT'; 
       team: TeamId;

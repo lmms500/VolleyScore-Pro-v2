@@ -43,27 +43,3 @@ export const SuddenDeathOverlay: React.FC<CriticalOverlayProps> = ({ active }) =
     </AnimatePresence>
   );
 };
-
-/**
- * Global animated overlay for Match Point scenarios.
- * Creates a subtle "breathing" ambar glow.
- */
-export const MatchPointOverlay: React.FC<CriticalOverlayProps> = ({ active }) => {
-  return (
-    <AnimatePresence>
-      {active && (
-        <motion.div
-          className="fixed inset-0 z-[5] pointer-events-none"
-          initial="hidden"
-          animate="pulse"
-          exit="hidden"
-          variants={vignettePulse} // Reusing the same pulse animation for now
-          style={{
-            background: 'radial-gradient(circle, transparent 50%, rgba(255, 158, 11, 0.1) 85%, rgba(255, 158, 11, 0.5) 100%)', // ambar glow
-            boxShadow: 'inset 0 0 100px 30px rgba(255, 158, 11, 0.6), inset 0 0 20px 10px rgba(255, 158, 11, 0.9)'
-          }}
-        />
-      )}
-    </AnimatePresence>
-  );
-};

@@ -199,16 +199,18 @@ export const useVolleyGame = () => {
            else if (newScoreB >= target && newScoreB >= newScoreA + MIN_LEAD_TO_WIN) setWinner = 'B';
       }
 
-      const newAction: ActionLog = { 
-        type: 'POINT', 
+      // ... (Trecho da função addPoint em torno da linha 147)
+      const newAction: ActionLog = {
+        type: 'POINT',
         team,
         prevScoreA: prev.scoreA,
         prevScoreB: prev.scoreB,
         prevServingTeam: prev.servingTeam,
-        prevInSuddenDeath: prev.inSuddenDeath, // ADDED: Capture current sudden death state
+        prevInSuddenDeath: prev.inSuddenDeath, // Salva o estado atual (antes do ponto ser aplicado)
         timestamp: Date.now(),
-        ...(metadata || {})   
+        ...(metadata || {})
       };
+// ...
       
       if (setWinner) {
           const newSetsA = setWinner === 'A' ? prev.setsA + 1 : prev.setsA;
@@ -316,11 +318,12 @@ export const useVolleyGame = () => {
         }
 
         if (prev.isMatchOver) return prev; 
+       // ... (Trecho da função undo)
         if (prev.actionLog.length === 0) return prev;
 
         const newLog = [...prev.actionLog];
         const lastAction = newLog.pop()!;
-        
+
         const newMatchLog = [...prev.matchLog];
         if (newMatchLog.length > 0 && newMatchLog[newMatchLog.length - 1].type === lastAction.type) {
             newMatchLog.pop();
@@ -338,14 +341,17 @@ export const useVolleyGame = () => {
         }
 
         if (lastAction.type === 'POINT') {
+            // CORREÇÃO: Restaura o estado de Morte Súbita do log, ou assume 'false' para logs antigos.
+            const restoredSuddenDeath = (lastAction as any).prevInSuddenDeath ?? false;
+
             return {
                 ...prev,
                 actionLog: newLog,
                 matchLog: newMatchLog,
                 scoreA: lastAction.prevScoreA,
                 scoreB: lastAction.prevScoreB,
-                servingTeam: lastAction.prevServingTeam, 
-                inSuddenDeath: lastAction.prevInSuddenDeath ?? prev.inSuddenDeath, // MODIFIED: Restore sudden death state
+                servingTeam: lastAction.prevServingTeam,
+                inSuddenDeath: restoredSuddenDeath, // Usa o estado de Morte Súbita restaurado
                 pendingSideSwitch: false,
                 lastSnapshot: undefined
             };
@@ -353,7 +359,8 @@ export const useVolleyGame = () => {
 
         return prev;
     });
-  }, [queueManager]); 
+  }, [queueManager]);
+// ...
 
   const resetMatch = useCallback(() => {
       setState(prev => ({ 

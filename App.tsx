@@ -6,6 +6,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
 import { useTutorial } from './hooks/useTutorial';
+import { useHaptics } from './hooks/useHaptics';
 
 // EAGER IMPORTS
 import { ScoreCardNormal } from './components/ScoreCardNormal';
@@ -18,7 +19,7 @@ import { FloatingTopBar } from './components/Fullscreen/FloatingTopBar';
 import { FullscreenMenuDrawer } from './components/Fullscreen/FullscreenMenuDrawer';
 import { LayoutProvider } from './contexts/LayoutContext';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
-import { SuddenDeathOverlay, MatchPointOverlay } from './components/ui/CriticalPointAnimation';
+import { SuddenDeathOverlay } from './components/ui/CriticalPointAnimation';
 import { BackgroundGlow } from './components/ui/BackgroundGlow';
 import { ReloadPrompt } from './components/ui/ReloadPrompt';
 import { InstallReminder } from './components/ui/InstallReminder';
@@ -40,12 +41,6 @@ import { ConfirmationModal } from './components/modals/ConfirmationModal';
 import { HistoryModal } from './components/modals/HistoryModal';
 import { TutorialModal } from './components/modals/TutorialModal';
 
-const vibrate = (pattern: number | number[]) => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate(pattern);
-    }
-};
-
 // Simple SuspenseLoader component
 const SuspenseLoader: React.FC = () => (
   <div className="h-screen flex items-center justify-center bg-slate-100 dark:bg-[#020617]">
@@ -55,31 +50,31 @@ const SuspenseLoader: React.FC = () => (
 
 function App() {
   const game = useVolleyGame();
-  const { 
-    state, 
-    isLoaded, 
-    addPoint, 
-    subtractPoint, 
-    setServer, 
-    useTimeout, 
-    undo, 
-    toggleSides, 
-    applySettings, 
-    resetMatch, 
-    generateTeams, 
-    togglePlayerFixed, 
-    removePlayer, 
-    movePlayer, 
-    updateTeamName, 
+  const {
+    state,
+    isLoaded,
+    addPoint,
+    subtractPoint,
+    setServer,
+    useTimeout,
+    undo,
+    toggleSides,
+    applySettings,
+    resetMatch,
+    generateTeams,
+    togglePlayerFixed,
+    removePlayer,
+    movePlayer,
+    updateTeamName,
     updateTeamColor,
-    updatePlayerName, 
+    updatePlayerName,
     updatePlayerNumber,
     updatePlayerSkill,
-    addPlayer, 
-    undoRemovePlayer, 
-    commitDeletions, 
+    addPlayer,
+    undoRemovePlayer,
+    commitDeletions,
     rotateTeams,
-    setRotationMode, 
+    setRotationMode,
     balanceTeams,
     savePlayerToProfile,
     revertPlayerChanges,
@@ -90,16 +85,16 @@ function App() {
 
   const { t } = useTranslation();
   const historyStore = useHistoryStore();
-  
+
   const pwa = usePWAInstallPrompt();
   const tutorial = useTutorial(pwa.isStandalone);
-  
+
   const [showSettings, setShowSettings] = useState(false);
   const [showManager, setShowManager] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showFullscreenMenu, setShowFullscreenMenu] = useState(false);
-  
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [interactingTeam, setInteractingTeam] = useState<TeamId | null>(null);
 
@@ -108,11 +103,13 @@ function App() {
 
   const savedMatchIdRef = useRef<string | null>(null);
   const audio = useGameAudio(state.config);
+  // NOVO: Inicializa o useHaptics controlando-o com a configuração de som
+  const haptics = useHaptics(state.config.enableSound);
   const prevSetsRef = useRef({ a: 0, b: 0 });
-  
+
   // Track Status to detect transition into Critical States (Set/Match Point/Sudden Death)
-  const prevStatusRef = useRef({ 
-      setPointA: false, matchPointA: false, 
+  const prevStatusRef = useRef({
+      setPointA: false, matchPointA: false,
       setPointB: false, matchPointB: false,
       inSuddenDeath: false
   });
@@ -154,13 +151,13 @@ function App() {
     const setsChanged = state.setsA > prevSetsRef.current.a || state.setsB > prevSetsRef.current.b;
     if (setsChanged && !state.isMatchOver) {
         audio.playSetWin();
-        vibrate([100, 50, 100]); 
+        haptics.trigger([100, 50, 100]);
     }
     prevSetsRef.current = { a: state.setsA, b: state.setsB };
 
     if (state.isMatchOver && !savedMatchIdRef.current && state.matchWinner) {
-      audio.playMatchWin(); 
-      vibrate([200, 100, 200, 100, 400]); 
+      audio.playMatchWin();
+      haptics.trigger([200, 100, 200, 100, 400]);
 
       const newId = uuidv4();
       historyStore.addMatch({
@@ -170,8 +167,8 @@ function App() {
         durationSeconds: state.matchDurationSeconds,
         teamAName: state.teamAName,
         teamBName: state.teamBName,
-        teamARoster: state.teamARoster, 
-        teamBRoster: state.teamBRoster, 
+        teamARoster: state.teamARoster,
+        teamBRoster: state.teamBRoster,
         setsA: state.setsA,
         setsB: state.setsB,
         winner: state.matchWinner,
@@ -180,12 +177,12 @@ function App() {
         config: state.config
       });
       savedMatchIdRef.current = newId;
-    } 
-    
+    }
+
     if (!state.isMatchOver) {
         savedMatchIdRef.current = null;
     }
-  }, [state.isMatchOver, state.matchWinner, state.setsA, state.setsB, historyStore, audio, state.matchDurationSeconds, state.teamAName, state.teamBName, state.teamARoster, state.teamBRoster, state.history, state.matchLog, state.config]);
+  }, [state.isMatchOver, state.matchWinner, state.setsA, state.setsB, historyStore, audio, state.matchDurationSeconds, state.teamAName, state.teamBName, state.teamARoster, state.teamBRoster, state.history, state.matchLog, state.config, haptics]);
 
   // Wrapper for Undo
   const handleUndo = useCallback(() => {
@@ -195,16 +192,16 @@ function App() {
     }
     undo();
     audio.playUndo();
-    vibrate(30); 
-  }, [state.isMatchOver, undo, historyStore, audio]);
+    haptics.trigger(30);
+  }, [state.isMatchOver, undo, historyStore, audio, haptics]);
 
   // Handle Beach Switch Alert
   useEffect(() => {
       if (state.pendingSideSwitch) {
           audio.playWhistle();
-          vibrate([300, 100, 300]);
+          haptics.trigger([300, 100, 300]);
       }
-  }, [state.pendingSideSwitch, audio]);
+  }, [state.pendingSideSwitch, audio, haptics]);
 
   // Handle Critical Moments (Audio Transition)
   useEffect(() => {
@@ -215,7 +212,7 @@ function App() {
           matchPointB: game.isMatchPointB,
           inSuddenDeath: state.inSuddenDeath
       };
-      
+
       const prev = prevStatusRef.current;
 
       const enteredMatchPoint = (current.matchPointA && !prev.matchPointA) || (current.matchPointB && !prev.matchPointB);
@@ -224,17 +221,17 @@ function App() {
 
       if (enteredSuddenDeath) {
           audio.playSuddenDeath();
-          vibrate([50, 100, 50, 100, 50, 100]); // Dramatic vibration
+          haptics.trigger([50, 100, 50, 100, 50, 100]);
       } else if (enteredMatchPoint) {
           audio.playMatchPointAlert();
-          vibrate([50, 50, 50, 50]); 
+          haptics.trigger([50, 50, 50, 50]);
       } else if (enteredSetPoint) {
           audio.playSetPointAlert();
-          vibrate([50, 100]); 
+          haptics.trigger([50, 100]);
       }
 
       prevStatusRef.current = current;
-  }, [game.isMatchPointA, game.isMatchPointB, game.isSetPointA, game.isSetPointB, state.inSuddenDeath, audio]);
+  }, [game.isMatchPointA, game.isMatchPointB, game.isSetPointA, game.isSetPointB, state.inSuddenDeath, audio, haptics]);
 
   // Fullscreen Logic
   const visualLeftScoreEl = state.swappedSides ? scoreElB : scoreElA;
@@ -246,8 +243,8 @@ function App() {
     return () => clearTimeout(t);
   }, [state.swappedSides, isFullscreen]);
 
-  const hudPlacement = useHudMeasure({ 
-      leftScoreEl: visualLeftScoreEl, 
+  const hudPlacement = useHudMeasure({
+      leftScoreEl: visualLeftScoreEl,
       rightScoreEl: visualRightScoreEl,
       enabled: isFullscreen,
       maxSets: state.config.maxSets,
@@ -256,86 +253,84 @@ function App() {
 
   const toggleFullscreen = useCallback(() => {
     audio.playTap();
-    vibrate(10);
+    haptics.trigger(10);
     setIsFullscreen(prev => !prev);
-  }, [audio]);
-  
-  // Removed the problematic useEffect that was manually calling lockOrientation
+  }, [audio, haptics]);
 
   const toggleTimer = useCallback(() => {
     audio.playTap();
-    vibrate(10);
+    haptics.trigger(10);
     game.setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
-  }, [game.setState, audio]);
+  }, [game.setState, audio, haptics]);
 
   // Interaction Handlers
   const handleInteractionStartA = useCallback(() => setInteractingTeam('A'), []);
   const handleInteractionStartB = useCallback(() => setInteractingTeam('B'), []);
   const handleInteractionEnd = useCallback(() => setInteractingTeam(null), []);
-  
-  // --- UPDATED HANDLERS FOR SCOUT MODE & AUDIO & HAPTICS ---
+
+  // --- HANDLERS ---
   const handleAddA = useCallback((teamId: TeamId, playerId?: string, skill?: any) => {
     const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
-    
+
     if (!playerId && !state.config.enablePlayerStats) {
-         audio.playScore(); 
-         vibrate(15); 
+         audio.playScore();
+         haptics.trigger(15);
     }
-    
+
     addPoint('A', metadata);
-  }, [addPoint, state.config.enablePlayerStats, audio]);
+  }, [addPoint, state.config.enablePlayerStats, audio, haptics]);
 
   const handleSubA = useCallback(() => {
     audio.playUndo();
-    vibrate(30); 
+    haptics.trigger(30);
     subtractPoint('A');
-  }, [subtractPoint, audio]);
+  }, [subtractPoint, audio, haptics]);
 
   const handleAddB = useCallback((teamId: TeamId, playerId?: string, skill?: any) => {
     const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
     if (!playerId && !state.config.enablePlayerStats) {
-         audio.playScore(); 
-         vibrate(15);
+         audio.playScore();
+         haptics.trigger(15);
     }
     addPoint('B', metadata);
-  }, [addPoint, state.config.enablePlayerStats, audio]);
-  
+  }, [addPoint, state.config.enablePlayerStats, audio, haptics]);
+
   const handleSubB = useCallback(() => {
     audio.playUndo();
-    vibrate(30);
+    haptics.trigger(30);
     subtractPoint('B');
-  }, [subtractPoint, audio]);
-  
-  const handleSetServerA = useCallback(() => { audio.playTap(); vibrate(10); setServer('A'); }, [setServer, audio]);
-  const handleSetServerB = useCallback(() => { audio.playTap(); vibrate(10); setServer('B'); }, [setServer, audio]);
-  
-  const handleTimeoutA = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('A'); }, [useTimeout, audio]);
-  const handleTimeoutB = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('B'); }, [useTimeout, audio]);
+  }, [subtractPoint, audio, haptics]);
+
+  const handleSetServerA = useCallback(() => { audio.playTap(); haptics.trigger(10); setServer('A'); }, [setServer, audio, haptics]);
+  const handleSetServerB = useCallback(() => { audio.playTap(); haptics.trigger(10); setServer('B'); }, [setServer, audio, haptics]);
+
+  const handleTimeoutA = useCallback(() => { audio.playWhistle(); haptics.trigger(50); useTimeout('A'); }, [useTimeout, audio, haptics]);
+  const handleTimeoutB = useCallback(() => { audio.playWhistle(); haptics.trigger(50); useTimeout('B'); }, [useTimeout, audio, haptics]);
 
   // Modal Open Wrappers with Sound & Haptic
-  const openSettings = useCallback(() => { audio.playTap(); vibrate(10); setShowSettings(true); }, [audio]);
-  const openManager = useCallback(() => { audio.playTap(); vibrate(10); setShowManager(true); }, [audio]);
-  const openHistory = useCallback(() => { audio.playTap(); vibrate(10); setShowHistory(true); }, [audio]);
-  const openReset = useCallback(() => { audio.playTap(); vibrate(10); setShowResetConfirm(true); }, [audio]);
-  const toggleSwap = useCallback(() => { audio.playTap(); vibrate(20); toggleSides(); }, [audio, toggleSides]);
+  const openSettings = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowSettings(true); }, [audio, haptics]);
+  const openManager = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowManager(true); }, [audio, haptics]);
+  const openHistory = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowHistory(true); }, [audio, haptics]);
+  const openReset = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowResetConfirm(true); }, [audio, haptics]);
+  const toggleSwap = useCallback(() => { audio.playTap(); haptics.trigger(20); toggleSides(); }, [audio, toggleSides, haptics]);
   const closeSettings = useCallback(() => setShowSettings(false), []);
   const closeManager = useCallback(() => setShowManager(false), []);
   const closeHistory = useCallback(() => setShowHistory(false), []);
   const closeReset = useCallback(() => setShowResetConfirm(false), []);
   const closeMenu = useCallback(() => setShowFullscreenMenu(false), []);
-  const openMenu = useCallback(() => { audio.playTap(); vibrate(10); setShowFullscreenMenu(true); }, [audio]);
+  const openMenu = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowFullscreenMenu(true); }, [audio, haptics]);
 
   if (!isLoaded) return <SuspenseLoader />;
 
   const setsLeft = state.swappedSides ? state.setsB : state.setsA;
   const setsRight = state.swappedSides ? state.setsA : state.setsB;
-  
+
   const colorA = state.teamARoster.color || 'indigo';
   const colorB = state.teamBRoster.color || 'rose';
-  
+
   const colorLeft = state.swappedSides ? colorB : colorA;
   const colorRight = state.swappedSides ? colorA : colorB;
-  
+
   const isServingLeft = state.swappedSides ? state.servingTeam === 'B' : state.servingTeam === 'A';
   const isServingRight = state.swappedSides ? state.servingTeam === 'A' : state.servingTeam === 'B';
   const isMatchPoint = game.isMatchPointA || game.isMatchPointB;
@@ -343,20 +338,20 @@ function App() {
   return (
     <ErrorBoundary>
       <LayoutProvider>
-        <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative transition-colors duration-700 ease-in-out pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
-          
-          <BackgroundGlow 
-            isSwapped={state.swappedSides} 
+        {/* MUDANÇA 1: Removido pt-[env(...)] e pb-[env(...)] daqui, mantendo apenas pr/pl. */}
+        <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative transition-colors duration-700 ease-in-out pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
+
+          <BackgroundGlow
+            isSwapped={state.swappedSides}
             isFullscreen={isFullscreen}
             colorA={colorA}
             colorB={colorB}
           />
 
           <SuddenDeathOverlay active={state.inSuddenDeath} />
-          <MatchPointOverlay active={isMatchPoint && !state.inSuddenDeath} />
           <ReloadPrompt />
-          
-          <InstallReminder 
+
+          <InstallReminder
              isVisible={tutorial.showReminder}
              onInstall={pwa.promptInstall}
              onDismiss={tutorial.dismissReminder}
@@ -366,7 +361,7 @@ function App() {
 
           <AnimatePresence>
              {state.pendingSideSwitch && (
-                 <motion.div 
+                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
@@ -387,22 +382,23 @@ function App() {
              )}
           </AnimatePresence>
 
+          {/* MUDANÇA 2: Adicionado pt-[calc(env(...)+0.5rem)] para garantir que a barra comece abaixo do notch/barra de notificação. */}
           <div className={`
               z-30 transition-all duration-500 flex-none
-              ${isFullscreen 
-                ? '-translate-y-24 opacity-0 pointer-events-none absolute w-full' 
-                : 'relative pt-2 pr-4 pb-2 pl-4 mt-1'}
+              ${isFullscreen
+                ? '-translate-y-24 opacity-0 pointer-events-none absolute w-full'
+                : 'relative pt-[calc(env(safe-area-inset-top)+0.8rem)] pr-4 pb-2 pl-4 mt-1'}
           `}>
-            <HistoryBar 
-              history={state.history} 
-              duration={state.matchDurationSeconds} 
+            <HistoryBar
+              history={state.history}
+              duration={state.matchDurationSeconds}
               setsA={state.setsA}
               setsB={state.setsB}
               colorA={colorA}
               colorB={colorB}
             />
           </div>
-          
+
           {isFullscreen && (
               <>
                 <FloatingTopBar
@@ -443,19 +439,19 @@ function App() {
 
           {/* O padding p-4 (16px) garante uma margem de segurança essencial para evitar que o conteúdo seja obstruído por notches, ilhas dinâmicas ou barras de navegação. */}
           <main className="relative flex-1 z-10 flex flex-col justify-center items-center min-h-0 p-4 overflow-hidden">
-              {/* FIX: Removed 'transition-all duration-500' and 'overflow-visible' */}
+              {/* SAFETY NOTE: O 'p-4' (16px) deve ser mantido para garantir margens de segurança para os ScoreCards dentro da área de conteúdo principal. */}
               <div className={`
                   w-full h-full overflow-hidden
-                  ${isFullscreen 
-                     ? 'fixed inset-0 z-10 p-0 border-none m-0 block' 
+                  ${isFullscreen
+                     ? 'fixed inset-0 z-10 p-0 border-none m-0 block'
                      : 'flex flex-col landscape:flex-row md:flex-row gap-2 md:gap-4'}
               `}>
-                 
+
                  {isFullscreen ? (
                     <>
-                      <ScoreCardFullscreen 
+                      <ScoreCardFullscreen
                           teamId="A"
-                          team={state.teamARoster} 
+                          team={state.teamARoster}
                           score={state.scoreA}
                           isServing={state.servingTeam === 'A'}
                           onAdd={handleAddA}
@@ -471,15 +467,15 @@ function App() {
                           scoreRefCallback={setScoreElA}
                           alignment={state.swappedSides ? 'right' : 'left'}
                           config={state.config}
-                          colorTheme={colorA} 
+                          colorTheme={colorA}
                       />
                       <ScoreCardFullscreen
                           teamId="B"
-                          team={state.teamBRoster} 
+                          team={state.teamBRoster}
                           score={state.scoreB}
                           isServing={state.servingTeam === 'B'}
                           onAdd={handleAddB}
-                          onSubtract={handleSubB} 
+                          onSubtract={handleSubB}
                           isMatchPoint={game.isMatchPointB}
                           isSetPoint={game.isSetPointB}
                           isDeuce={game.isDeuce}
@@ -490,14 +486,14 @@ function App() {
                           reverseLayout={state.swappedSides}
                           scoreRefCallback={setScoreElB}
                           alignment={state.swappedSides ? 'left' : 'right'}
-                          config={state.config} 
+                          config={state.config}
                           colorTheme={colorB}
                       />
                     </>
                  ) : (
                     <LayoutGroup>
-                      <motion.div 
-                        layout 
+                      <motion.div
+                        layout
                         key="card-wrapper-A"
                         className={`flex-1 w-full h-auto flex flex-col ${state.swappedSides ? 'order-last' : 'order-first'}`}
                         transition={{ type: "spring", stiffness: 250, damping: 25 }}
@@ -518,16 +514,16 @@ function App() {
                             isDeuce={game.isDeuce}
                             inSuddenDeath={state.inSuddenDeath}
                             setsNeededToWin={game.setsNeededToWin}
-                            colorTheme={colorA} 
+                            colorTheme={colorA}
                             isLocked={interactingTeam !== null && interactingTeam !== 'A'}
                             onInteractionStart={handleInteractionStartA}
                             onInteractionEnd={handleInteractionEnd}
-                            config={state.config} 
+                            config={state.config}
                         />
                       </motion.div>
 
-                      <motion.div 
-                        layout 
+                      <motion.div
+                        layout
                         key="card-wrapper-B"
                         className={`flex-1 w-full h-auto flex flex-col ${state.swappedSides ? 'order-first' : 'order-last'}`}
                         transition={{ type: "spring", stiffness: 250, damping: 25 }}
@@ -552,14 +548,14 @@ function App() {
                             isLocked={interactingTeam !== null && interactingTeam !== 'B'}
                             onInteractionStart={handleInteractionStartB}
                             onInteractionEnd={handleInteractionEnd}
-                            config={state.config} 
+                            config={state.config}
                         />
                       </motion.div>
                     </LayoutGroup>
                  )}
-    
+
                  {isFullscreen && (
-                     <button 
+                     <button
                         onClick={toggleFullscreen}
                         className="absolute top-[calc(env(safe-area-inset-top)+1rem)] right-[calc(env(safe-area-inset-right)+1rem)] z-[60] p-3 rounded-full bg-black/20 text-white/30 hover:text-white hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all active:scale-95"
                      >
@@ -569,15 +565,18 @@ function App() {
               </div>
           </main>
 
-          <div 
+          {/* MUDANÇA 3: Adicionado pb-[calc(env(...)+0.5rem)] para garantir que a barra Controls fique acima da barra de navegação. */}
+          <div
             className={`
-                flex-none w-full z-50 flex justify-center pb-2 pt-2
+                flex-none w-full z-50 flex justify-center pt-2
                 transition-all duration-500 overflow-hidden
-                ${isFullscreen ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-40 opacity-100 pointer-events-auto'}
+                ${isFullscreen
+                    ? 'max-h-0 opacity-0 pointer-events-none'
+                    : 'max-h-40 opacity-100 pointer-events-auto pb-[calc(env(safe-area-inset-bottom)+0.5rem)]'}
                 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
             `}
           >
-              <Controls 
+              <Controls
                   onUndo={handleUndo}
                   canUndo={game.canUndo}
                   onSwap={toggleSwap}
@@ -590,7 +589,7 @@ function App() {
           </div>
 
           {isFullscreen && (
-            <FloatingControlBar 
+            <FloatingControlBar
                 onUndo={handleUndo}
                 canUndo={game.canUndo}
                 onSwap={toggleSwap}
@@ -599,7 +598,7 @@ function App() {
             />
           )}
 
-          <FullscreenMenuDrawer 
+          <FullscreenMenuDrawer
              isOpen={showFullscreenMenu}
              onClose={closeMenu}
              onOpenSettings={openSettings}
@@ -610,7 +609,7 @@ function App() {
 
           <Suspense fallback={<SuspenseLoader />}>
             {tutorial.showTutorial && (
-              <TutorialModal 
+              <TutorialModal
                 isOpen={tutorial.showTutorial}
                 onClose={tutorial.completeTutorial}
                 onInstall={pwa.promptInstall}
@@ -621,8 +620,8 @@ function App() {
             )}
 
             {showSettings && (
-              <SettingsModal 
-                isOpen={showSettings} 
+              <SettingsModal
+                isOpen={showSettings}
                 onClose={closeSettings}
                 config={state.config}
                 onSave={applySettings}
@@ -635,7 +634,7 @@ function App() {
             )}
 
             {showManager && (
-              <TeamManagerModal 
+              <TeamManagerModal
                 isOpen={showManager}
                 onClose={closeManager}
                 courtA={state.teamARoster}
@@ -661,21 +660,21 @@ function App() {
                 onCommitDeletions={commitDeletions}
                 deletedCount={game.deletedCount}
                 profiles={game.profiles}
-                upsertProfile={upsertProfile} 
+                upsertProfile={upsertProfile}
                 deleteProfile={deleteProfile}
                 onSortTeam={sortTeam}
               />
             )}
 
             {showHistory && (
-              <HistoryModal 
+              <HistoryModal
                 isOpen={showHistory}
                 onClose={closeHistory}
               />
             )}
 
             {state.isMatchOver && (
-              <MatchOverModal 
+              <MatchOverModal
                 isOpen={state.isMatchOver}
                 state={state}
                 onRotate={rotateTeams}
@@ -685,7 +684,7 @@ function App() {
             )}
 
             {showResetConfirm && (
-              <ConfirmationModal 
+              <ConfirmationModal
                 isOpen={showResetConfirm}
                 onClose={closeReset}
                 onConfirm={resetMatch}

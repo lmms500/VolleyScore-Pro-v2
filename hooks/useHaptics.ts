@@ -1,13 +1,12 @@
-
 import { useCallback } from 'react';
 
 type ImpactStyle = 'light' | 'medium' | 'heavy';
 type NotificationType = 'success' | 'warning' | 'error';
 
 export const useHaptics = (enabled: boolean = true) => {
-  
-  const trigger = useCallback((pattern: number | number[]) => {
-    if (!enabled) return;
+
+const trigger = useCallback((pattern: number | number[]) => {
+if (!enabled) return;
     
     // Robust execution: try/catch prevents crashes on unsupported devices/browsers
     // while allowing it to fire on Android/Chrome where `vibrate` exists.

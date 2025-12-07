@@ -130,6 +130,42 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const controlOrientation = async () => {
+      if (!Capacitor.isNativePlatform()) return;
+
+      if (isFullscreen) {
+        try {
+          await ScreenOrientation.lock({ orientation: 'landscape' });
+        } catch (e) {
+          console.error('Failed to lock screen to landscape', e);
+        }
+      } else {
+        try {
+          await ScreenOrientation.unlock();
+          await ScreenOrientation.lock({ orientation: 'portrait-primary' });
+        } catch (e) {
+          console.error('Failed to reset screen to portrait', e);
+        }
+      }
+    };
+
+    controlOrientation();
+
+    return () => {
+      if (Capacitor.isNativePlatform()) {
+        (async () => {
+          try {
+            await ScreenOrientation.unlock();
+            await ScreenOrientation.lock({ orientation: 'portrait-primary' });
+          } catch (e) {
+            // Ignore errors on unmount
+          }
+        })();
+      }
+    };
+  }, [isFullscreen]);
+
+  useEffect(() => {
     const setsChanged = state.setsA > prevSetsRef.current.a || state.setsB > prevSetsRef.current.b;
     if (setsChanged && !state.isMatchOver) {
         audio.playSetWin();

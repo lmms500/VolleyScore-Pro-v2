@@ -1,4 +1,4 @@
-"""import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { GameState, TeamId, SetHistory, GameConfig, Team, Player, RotationReport, SkillType, ActionLog } from '../types';
 import { DEFAULT_CONFIG, MIN_LEAD_TO_WIN, SETS_TO_WIN_MATCH } from '../constants';
 import { usePlayerQueue } from './usePlayerQueue';
@@ -94,7 +94,7 @@ export const useVolleyGame = () => {
           }
 
           if(!Array.isArray(savedState.queue)) savedState.queue = [];
-          if(!savedState.actionLog) savedState.actionLog = [];
+          if(!Array.isArray(savedState.actionLog)) savedState.actionLog = [];
           
           // Critical Fix: Ensure matchLog exists, or reconstruct/init it
           if(!savedState.matchLog) savedState.matchLog = [...savedState.actionLog];
@@ -494,4 +494,3 @@ export const useVolleyGame = () => {
     state, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, setServer, useTimeout, applySettings, isMatchActive, rotateTeams, queueManager, isTieBreak, statusA, statusB, pointsToWinCurrentSet, setsNeededToWin, isDeuce, toggleFullscreen, isFullscreen
   ]);
 };
-""

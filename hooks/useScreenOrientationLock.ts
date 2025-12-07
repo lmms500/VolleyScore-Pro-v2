@@ -2,45 +2,29 @@ import { useEffect } from 'react';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { Capacitor } from '@capacitor/core';
 
-/**
- * Este hook gerencia o bloqueio de orientação da tela em plataformas nativas.
- * Ele pode ser desativado para permitir que outros componentes controlem a orientação.
- *
- * @param shouldLock Condição booleana para ativar o bloqueio para 'portrait'.
- *                   Se `false`, o hook não executa nenhuma ação de bloqueio.
- */
-export const useScreenOrientationLock = (shouldLock: boolean) => {
-  const lock = async () => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    try {
-      // Força o bloqueio para a orientação padrão (retrato)
-      await ScreenOrientation.lock({ orientation: 'portrait-primary' });
-    } catch (error) {
-      console.error('Falha ao bloquear a orientação da tela', error);
-    }
-  };
-
-  const unlock = async () => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    try {
-      await ScreenOrientation.unlock();
-    } catch (error) {
-      console.error('Falha ao desbloquear a orientação da tela', error);
-    }
-  };
-
+export const useScreenOrientationLock = (isLandscape: boolean) => {
   useEffect(() => {
-    // Só executa o bloqueio se a condição `shouldLock` for verdadeira
-    if (shouldLock) {
-      lock();
-    }
+    if (!Capacitor.isNativePlatform()) return;
 
-    // A função de limpeza desbloqueia a orientação ao desmontar ou quando a condição muda.
-    // Isso é crucial para não deixar a tela travada permanentemente.
-    return () => {
-      unlock();
+    const updateOrientation = async () => {
+      try {
+        if (isLandscape) {
+          // FORÇA a paisagem (permitindo virar para os dois lados)
+          await ScreenOrientation.lock({ orientation: 'landscape' });
+        } else {
+          // FORÇA o retrato
+          await ScreenOrientation.lock({ orientation: 'portrait' });
+        }
+      } catch (error) {
+        console.error('Erro ao alternar orientação:', error);
+      }
     };
-  }, [shouldLock]); // O efeito é reavaliado sempre que `shouldLock` mudar
+
+    updateOrientation();
+    
+    // O cleanup não é estritamente necessário aqui, pois a orientação
+    // será redefinida na próxima vez que o estado isFullscreen mudar.
+    // Deixar em branco evita um "piscar" de orientação ao desmontar componentes.
+    return () => {};
+  }, [isLandscape]);
 };

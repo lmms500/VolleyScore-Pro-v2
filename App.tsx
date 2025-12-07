@@ -114,7 +114,7 @@ function App() {
   });
 
   // Bloqueio de orientação condicional
-  useScreenOrientationLock(!isFullscreen);
+  useScreenOrientationLock(isFullscreen);
 
   useEffect(() => {
     const initializeNativeSettings = async () => {

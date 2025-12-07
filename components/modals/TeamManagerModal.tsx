@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -117,7 +116,7 @@ const ColorPicker = memo(({
                                     ? 'ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ring-slate-400 dark:ring-slate-500 shadow-md scale-110 opacity-100' 
                                     : isTaken
                                         ? 'opacity-20 grayscale cursor-not-allowed scale-90 border border-black/10'
-                                        : 'hover:scale-110 opacity-100 cursor-pointer shadow-sm hover:shadow-md'
+                                        : 'hover:scale-110 opacity-60 hover:opacity-100 cursor-pointer'
                                 }
                             `}
                             title={isTaken ? 'Color taken' : color.charAt(0).toUpperCase() + color.slice(1)}
@@ -345,7 +344,7 @@ const ProfileCard = memo((({
              </div>
         </div>
     );
-});
+}));
 
 // React.memo to prevent re-renders of PlayerCard unless props change
 const PlayerCard = memo(({ 
@@ -694,8 +693,7 @@ const BatchInputSection = memo(({ onGenerate }: { onGenerate: (names: string[]) 
     const [rawNames, setRawNames] = useState('');
 
     const handleGenerate = () => {
-        const names = rawNames.split('
-').map(n => n.trim()).filter(n => n);
+        const names = rawNames.split('\n').map(n => n.trim()).filter(n => n);
         if (names.length > 0) {
             onGenerate(names);
             setRawNames('');
@@ -778,8 +776,8 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   // OPTIMIZATION: Memoize filtering logic
   const filteredProfiles = useMemo(() => {
       return Array.from(props.profiles.values())
-          .filter((p: PlayerProfile) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-          .sort((a: PlayerProfile, b: PlayerProfile) => a.name.localeCompare(b.name));
+          .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+          .sort((a, b) => a.name.localeCompare(b.name));
   }, [props.profiles, searchTerm]);
 
   // --- DND HANDLERS ---

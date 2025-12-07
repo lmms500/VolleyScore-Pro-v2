@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
@@ -45,6 +45,13 @@ const vibrate = (pattern: number | number[]) => {
         navigator.vibrate(pattern);
     }
 };
+
+// Simple SuspenseLoader component
+const SuspenseLoader: React.FC = () => (
+  <div className="h-screen flex items-center justify-center bg-slate-100 dark:bg-[#020617]">
+    <Loader2 className="animate-spin text-indigo-500" size={48} />
+  </div>
+);
 
 function App() {
   const game = useVolleyGame();
@@ -253,22 +260,7 @@ function App() {
     setIsFullscreen(prev => !prev);
   }, [audio]);
   
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-        const isFull = !!document.fullscreenElement;
-        setIsFullscreen(isFull);
-        if (!isFull) {
-            lockOrientation('portrait');
-        } else {
-            lockOrientation('landscape');
-        }
-    };
-    
-    lockOrientation('portrait');
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, [lockOrientation]);
+  // Removed the problematic useEffect that was manually calling lockOrientation
 
   const toggleTimer = useCallback(() => {
     audio.playTap();
@@ -333,7 +325,7 @@ function App() {
   const closeMenu = useCallback(() => setShowFullscreenMenu(false), []);
   const openMenu = useCallback(() => { audio.playTap(); vibrate(10); setShowFullscreenMenu(true); }, [audio]);
 
-  if (!isLoaded) return <div className="h-screen flex items-center justify-center bg-slate-100 dark:bg-[#020617]"><Loader2 className="animate-spin text-indigo-500" size={48}/></div>;
+  if (!isLoaded) return <SuspenseLoader />;
 
   const setsLeft = state.swappedSides ? state.setsB : state.setsA;
   const setsRight = state.swappedSides ? state.setsA : state.setsB;
@@ -456,8 +448,7 @@ function App() {
                   w-full h-full overflow-hidden
                   ${isFullscreen 
                      ? 'fixed inset-0 z-10 p-0 border-none m-0 block' 
-                     : 'flex flex-col landscape:flex-row md:flex-row gap-2 md:gap-4'
-                  }
+                     : 'flex flex-col landscape:flex-row md:flex-row gap-2 md:gap-4'}
               `}>
                  
                  {isFullscreen ? (

@@ -80,6 +80,7 @@ export type ActionLog =
       prevScoreA: number;
       prevScoreB: number;
       prevServingTeam: TeamId | null;
+      prevInSuddenDeath?: boolean;
       timestamp?: number;
       // Scout Metadata (Explicitly typed)
       playerId?: string; 

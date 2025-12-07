@@ -102,9 +102,12 @@ function App() {
   const savedMatchIdRef = useRef<string | null>(null);
   const audio = useGameAudio(state.config);
   const prevSetsRef = useRef({ a: 0, b: 0 });
+  
+  // Track Status to detect transition into Critical States (Set/Match Point/Sudden Death)
   const prevStatusRef = useRef({ 
       setPointA: false, matchPointA: false, 
-      setPointB: false, matchPointB: false 
+      setPointB: false, matchPointB: false,
+      inSuddenDeath: false
   });
 
   // Bloqueio de orientação condicional
@@ -121,14 +124,14 @@ function App() {
           // 2. Configura StatusBar
           await StatusBar.setOverlaysWebView({ overlay: true });
           await StatusBar.setStyle({ style: Style.Dark });
-          
+
           // 3. Garante que a status bar está visível antes de esconder a splash
           await StatusBar.show();
-          
+
           // 4. Pequeno delay para garantir que o layout renderizou antes de sumir com a splash
           setTimeout(async () => {
-              await SplashScreen.hide({ fadeOutDuration: 300 }); 
-          }, 150); 
+              await SplashScreen.hide({ fadeOutDuration: 300 });
+          }, 150);
 
         } catch (error) {
           console.error("Erro na inicialização nativa:", error);
@@ -177,6 +180,7 @@ function App() {
     }
   }, [state.isMatchOver, state.matchWinner, state.setsA, state.setsB, historyStore, audio, state.matchDurationSeconds, state.teamAName, state.teamBName, state.teamARoster, state.teamBRoster, state.history, state.matchLog, state.config]);
 
+  // Wrapper for Undo
   const handleUndo = useCallback(() => {
     if (state.isMatchOver && savedMatchIdRef.current) {
         historyStore.deleteMatch(savedMatchIdRef.current);
@@ -187,6 +191,7 @@ function App() {
     vibrate(30); 
   }, [state.isMatchOver, undo, historyStore, audio]);
 
+  // Handle Beach Switch Alert
   useEffect(() => {
       if (state.pendingSideSwitch) {
           audio.playWhistle();
@@ -194,19 +199,26 @@ function App() {
       }
   }, [state.pendingSideSwitch, audio]);
 
+  // Handle Critical Moments (Audio Transition)
   useEffect(() => {
       const current = {
           setPointA: game.isSetPointA,
           matchPointA: game.isMatchPointA,
           setPointB: game.isSetPointB,
-          matchPointB: game.isMatchPointB
+          matchPointB: game.isMatchPointB,
+          inSuddenDeath: state.inSuddenDeath
       };
+      
       const prev = prevStatusRef.current;
 
       const enteredMatchPoint = (current.matchPointA && !prev.matchPointA) || (current.matchPointB && !prev.matchPointB);
       const enteredSetPoint = (current.setPointA && !prev.setPointA && !current.matchPointA) || (current.setPointB && !prev.setPointB && !current.matchPointB);
+      const enteredSuddenDeath = current.inSuddenDeath && !prev.inSuddenDeath;
 
-      if (enteredMatchPoint) {
+      if (enteredSuddenDeath) {
+          audio.playSuddenDeath();
+          vibrate([50, 100, 50, 100, 50, 100]); // Dramatic vibration
+      } else if (enteredMatchPoint) {
           audio.playMatchPointAlert();
           vibrate([50, 50, 50, 50]); 
       } else if (enteredSetPoint) {
@@ -215,8 +227,9 @@ function App() {
       }
 
       prevStatusRef.current = current;
-  }, [game.isMatchPointA, game.isMatchPointB, game.isSetPointA, game.isSetPointB, audio]);
+  }, [game.isMatchPointA, game.isMatchPointB, game.isSetPointA, game.isSetPointB, state.inSuddenDeath, audio]);
 
+  // Fullscreen Logic
   const visualLeftScoreEl = state.swappedSides ? scoreElB : scoreElA;
   const visualRightScoreEl = state.swappedSides ? scoreElA : scoreElB;
 
@@ -240,22 +253,43 @@ function App() {
     setIsFullscreen(prev => !prev);
   }, [audio]);
   
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+        const isFull = !!document.fullscreenElement;
+        setIsFullscreen(isFull);
+        if (!isFull) {
+            lockOrientation('portrait');
+        } else {
+            lockOrientation('landscape');
+        }
+    };
+    
+    lockOrientation('portrait');
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [lockOrientation]);
+
   const toggleTimer = useCallback(() => {
     audio.playTap();
     vibrate(10);
     game.setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
   }, [game.setState, audio]);
 
+  // Interaction Handlers
   const handleInteractionStartA = useCallback(() => setInteractingTeam('A'), []);
   const handleInteractionStartB = useCallback(() => setInteractingTeam('B'), []);
   const handleInteractionEnd = useCallback(() => setInteractingTeam(null), []);
   
+  // --- UPDATED HANDLERS FOR SCOUT MODE & AUDIO & HAPTICS ---
   const handleAddA = useCallback((teamId: TeamId, playerId?: string, skill?: any) => {
     const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
+    
     if (!playerId && !state.config.enablePlayerStats) {
          audio.playScore(); 
          vibrate(15); 
     }
+    
     addPoint('A', metadata);
   }, [addPoint, state.config.enablePlayerStats, audio]);
 
@@ -286,6 +320,7 @@ function App() {
   const handleTimeoutA = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('A'); }, [useTimeout, audio]);
   const handleTimeoutB = useCallback(() => { audio.playWhistle(); vibrate(50); useTimeout('B'); }, [useTimeout, audio]);
 
+  // Modal Open Wrappers with Sound & Haptic
   const openSettings = useCallback(() => { audio.playTap(); vibrate(10); setShowSettings(true); }, [audio]);
   const openManager = useCallback(() => { audio.playTap(); vibrate(10); setShowManager(true); }, [audio]);
   const openHistory = useCallback(() => { audio.playTap(); vibrate(10); setShowHistory(true); }, [audio]);
@@ -413,7 +448,7 @@ function App() {
                 />
               </>
           )}
-          
+
           {/* O padding p-4 (16px) garante uma margem de segurança essencial para evitar que o conteúdo seja obstruído por notches, ilhas dinâmicas ou barras de navegação. */}
           <main className="relative flex-1 z-10 flex flex-col justify-center items-center min-h-0 p-4 overflow-hidden">
               {/* FIX: Removed 'transition-all duration-500' and 'overflow-visible' */}
@@ -548,6 +583,7 @@ function App() {
                 flex-none w-full z-50 flex justify-center pb-2 pt-2
                 transition-all duration-500 overflow-hidden
                 ${isFullscreen ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-40 opacity-100 pointer-events-auto'}
+                pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
             `}
           >
               <Controls 
@@ -581,7 +617,7 @@ function App() {
              onExitFullscreen={toggleFullscreen}
           />
 
-          <>
+          <Suspense fallback={<SuspenseLoader />}>
             {tutorial.showTutorial && (
               <TutorialModal 
                 isOpen={tutorial.showTutorial}
@@ -666,7 +702,7 @@ function App() {
                 message="Are you sure you want to reset the match? All scores and history will be lost."
               />
             )}
-          </>
+          </Suspense>
         </div>
       </LayoutProvider>
     </ErrorBoundary>

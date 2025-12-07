@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { GameState, TeamId, SetHistory, GameConfig, Team, Player, RotationReport, SkillType, ActionLog } from '../types';
 import { DEFAULT_CONFIG, MIN_LEAD_TO_WIN, SETS_TO_WIN_MATCH } from '../constants';
-import { usePlayerQueue } from './usePlayerQueue';
+import { usePlayerQueue } from './usePlayerQueue'; 
 import { SecureStorage } from '../services/SecureStorage';
 import { sanitizeInput, isValidScoreOperation, isValidTimeoutRequest } from '../utils/security';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
@@ -34,7 +34,7 @@ const INITIAL_STATE: GameState = {
   isTimerRunning: false,
   teamARoster: { id: 'A', name: 'Home', color: 'indigo', players: [] },
   teamBRoster: { id: 'B', name: 'Guest', color: 'rose', players: [] },
-  queue: [],
+  queue: [], 
   rotationReport: null
 };
 
@@ -71,7 +71,7 @@ export const useVolleyGame = () => {
               teamARoster: courtA,
               teamBRoster: courtB,
               queue: queue,
-              rotationReport: reportToUse,
+              rotationReport: reportToUse, 
               teamAName: sanitizeInput(courtA.name),
               teamBName: sanitizeInput(courtB.name)
           };
@@ -84,7 +84,7 @@ export const useVolleyGame = () => {
       try {
         const savedState = await SecureStorage.load<GameState>(STORAGE_KEY);
         
-        if (savedState) {
+        if (savedState) { 
           // Migrate legacy config if needed
           if(!savedState.config) savedState.config = DEFAULT_CONFIG;
           else {
@@ -94,10 +94,10 @@ export const useVolleyGame = () => {
           }
 
           if(!Array.isArray(savedState.queue)) savedState.queue = [];
-          if(!Array.isArray(savedState.actionLog)) savedState.actionLog = [];
+          if(!savedState.actionLog) savedState.actionLog = [];
           
           // Critical Fix: Ensure matchLog exists, or reconstruct/init it
-          if(!savedState.matchLog) savedState.matchLog = [...savedState.actionLog];
+          if(!savedState.matchLog) savedState.matchLog = [...savedState.actionLog]; 
           
           // Migration: Ensure color exists on legacy saves
           if (savedState.teamARoster && !savedState.teamARoster.color) savedState.teamARoster.color = 'indigo';
@@ -111,7 +111,7 @@ export const useVolleyGame = () => {
           
           if ((savedState as any).lastSnapshot) delete (savedState as any).lastSnapshot;
 
-          setState(savedState);
+          setState(savedState); 
         }
       } catch (e) {
         console.error("Failed to load game state, resetting to default.", e);
@@ -139,30 +139,6 @@ export const useVolleyGame = () => {
     }
     return () => clearInterval(interval);
   }, [state.isTimerRunning, state.isMatchOver]);
-    
-    const toggleFullscreen = useCallback(async () => {
-        setIsFullscreen(prev => !prev);
-    }, []);
-
-    useEffect(() => {
-        const manageNativeFeatures = async () => {
-            if (!Capacitor.isNativePlatform()) return;
-
-            try {
-                if (isFullscreen) {
-                    await StatusBar.hide();
-                    await ScreenOrientation.lock({ orientation: 'landscape' });
-                } else {
-                    await StatusBar.show();
-                    await ScreenOrientation.lock({ orientation: 'portrait' });
-                }
-            } catch (error) {
-                console.warn('Could not manage screen orientation or status bar:', error);
-            }
-        };
-
-        manageNativeFeatures();
-    }, [isFullscreen]);
 
   // --- SCORE LOGIC ---
   const isTieBreak = state.config.hasTieBreak && state.currentSet === state.config.maxSets;
@@ -223,14 +199,14 @@ export const useVolleyGame = () => {
            else if (newScoreB >= target && newScoreB >= newScoreA + MIN_LEAD_TO_WIN) setWinner = 'B';
       }
 
-      const newAction: ActionLog = {
-        type: 'POINT',
+      const newAction: ActionLog = { 
+        type: 'POINT', 
         team,
         prevScoreA: prev.scoreA,
         prevScoreB: prev.scoreB,
         prevServingTeam: prev.servingTeam,
         timestamp: Date.now(),
-        ...(metadata || {})
+        ...(metadata || {})   
       };
       
       if (setWinner) {
@@ -249,32 +225,32 @@ export const useVolleyGame = () => {
           const snapshotState = { ...prev };
 
           return {
-              ...prev,
+              ...prev, 
               scoreA: matchWinner ? newScoreA : 0, scoreB: matchWinner ? newScoreB : 0, setsA: newSetsA, setsB: newSetsB,
-              history: [...prev.history, historyEntry], currentSet: matchWinner ? prev.currentSet : prev.currentSet + 1,
-              matchWinner: matchWinner,
-              isMatchOver: !!matchWinner,
-              rotationReport: previewReport,
-              servingTeam: null, isTimerRunning: matchWinner ? false : true, timeoutsA: 0, timeoutsB: 0,
+              history: [...prev.history, historyEntry], currentSet: matchWinner ? prev.currentSet : prev.currentSet + 1, 
+              matchWinner: matchWinner, 
+              isMatchOver: !!matchWinner, 
+              rotationReport: previewReport, 
+              servingTeam: null, isTimerRunning: matchWinner ? false : true, timeoutsA: 0, timeoutsB: 0, 
               inSuddenDeath: false,
-              pendingSideSwitch: false,
-              actionLog: [],
-              matchLog: [...prev.matchLog, newAction],
+              pendingSideSwitch: false, 
+              actionLog: [], 
+              matchLog: [...prev.matchLog, newAction], 
               lastSnapshot: snapshotState
           };
       }
       
-      return {
-          ...prev,
-          scoreA: newScoreA,
-          scoreB: newScoreB,
-          servingTeam: team,
-          isTimerRunning: true,
+      return { 
+          ...prev, 
+          scoreA: newScoreA, 
+          scoreB: newScoreB, 
+          servingTeam: team, 
+          isTimerRunning: true, 
           inSuddenDeath: prev.inSuddenDeath || enteringSuddenDeath,
           pendingSideSwitch: triggerSideSwitch,
           actionLog: [...prev.actionLog, newAction],
-          matchLog: [...prev.matchLog, newAction],
-          lastSnapshot: undefined
+          matchLog: [...prev.matchLog, newAction], 
+          lastSnapshot: undefined 
       };
     });
   }, [queueManager]);
@@ -285,11 +261,11 @@ export const useVolleyGame = () => {
         const currentScore = team === 'A' ? prev.scoreA : prev.scoreB;
         if (currentScore <= 0) return prev;
         
-        return {
-            ...prev,
-            scoreA: team === 'A' ? Math.max(0, prev.scoreA - 1) : prev.scoreA,
+        return { 
+            ...prev, 
+            scoreA: team === 'A' ? Math.max(0, prev.scoreA - 1) : prev.scoreA, 
             scoreB: team === 'B' ? Math.max(0, prev.scoreB - 1) : prev.scoreB,
-            pendingSideSwitch: false
+            pendingSideSwitch: false 
         };
     });
   }, []);
@@ -305,17 +281,17 @@ export const useVolleyGame = () => {
       if (team === 'A') newTimeoutsA++;
       if (team === 'B') newTimeoutsB++;
 
-      const newAction: ActionLog = {
-        type: 'TIMEOUT',
+      const newAction: ActionLog = { 
+        type: 'TIMEOUT', 
         team,
         prevTimeoutsA: prev.timeoutsA,
         prevTimeoutsB: prev.timeoutsB,
         timestamp: Date.now()
       };
 
-      return {
-          ...prev,
-          timeoutsA: newTimeoutsA,
+      return { 
+          ...prev, 
+          timeoutsA: newTimeoutsA, 
           timeoutsB: newTimeoutsB,
           actionLog: [...prev.actionLog, newAction],
           matchLog: [...prev.matchLog, newAction],
@@ -324,7 +300,7 @@ export const useVolleyGame = () => {
     });
   }, []);
 
-  const undo = useCallback(() => {
+  const undo = useCallback(() => { 
     setState(prev => {
         if (prev.lastSnapshot) {
             console.log("Restoring snapshot (Undo Match/Set Win)");
@@ -338,7 +314,7 @@ export const useVolleyGame = () => {
             return prev.lastSnapshot;
         }
 
-        if (prev.isMatchOver) return prev;
+        if (prev.isMatchOver) return prev; 
         if (prev.actionLog.length === 0) return prev;
 
         const newLog = [...prev.actionLog];
@@ -367,7 +343,8 @@ export const useVolleyGame = () => {
                 matchLog: newMatchLog,
                 scoreA: lastAction.prevScoreA,
                 scoreB: lastAction.prevScoreB,
-                servingTeam: lastAction.prevServingTeam,
+                servingTeam: lastAction.prevServingTeam, 
+                inSuddenDeath: lastAction.prevInSuddenDeath ?? prev.inSuddenDeath,
                 pendingSideSwitch: false,
                 lastSnapshot: undefined
             };
@@ -375,24 +352,24 @@ export const useVolleyGame = () => {
 
         return prev;
     });
-  }, [queueManager]);
+  }, [queueManager]); 
 
   const resetMatch = useCallback(() => {
-      setState(prev => ({
-          ...INITIAL_STATE,
-          teamAName: prev.teamAName,
-          teamBName: prev.teamBName,
-          teamARoster: prev.teamARoster,
-          teamBRoster: prev.teamBRoster,
-          queue: prev.queue,
-          config: prev.config
+      setState(prev => ({ 
+          ...INITIAL_STATE, 
+          teamAName: prev.teamAName, 
+          teamBName: prev.teamBName, 
+          teamARoster: prev.teamARoster, 
+          teamBRoster: prev.teamBRoster, 
+          queue: prev.queue, 
+          config: prev.config 
       }));
   }, []);
 
-  const toggleSides = useCallback(() => setState(prev => ({
-      ...prev,
+  const toggleSides = useCallback(() => setState(prev => ({ 
+      ...prev, 
       swappedSides: !prev.swappedSides,
-      pendingSideSwitch: false
+      pendingSideSwitch: false 
   })), []);
   
   const setServer = useCallback((team: TeamId) => {
@@ -406,9 +383,9 @@ export const useVolleyGame = () => {
                 ...INITIAL_STATE,
                 teamAName: prev.teamAName,
                 teamBName: prev.teamBName,
-                teamARoster: prev.teamARoster,
-                teamBRoster: prev.teamBRoster,
-                queue: prev.queue,
+                teamARoster: prev.teamARoster, 
+                teamBRoster: prev.teamBRoster, 
+                queue: prev.queue, 
                 config: newConfig
               };
           }
@@ -420,19 +397,17 @@ export const useVolleyGame = () => {
     if (!state.matchWinner) return;
     queueManager.rotateTeams(state.matchWinner, state.rotationReport);
     setState(prev => ({
-        ...prev,
-        scoreA: 0, scoreB: 0, setsA: 0, setsB: 0, currentSet: 1, history: [],
-        actionLog: [], matchLog: [],
+        ...prev, 
+        scoreA: 0, scoreB: 0, setsA: 0, setsB: 0, currentSet: 1, history: [], 
+        actionLog: [], matchLog: [], 
         isMatchOver: false, matchWinner: null, servingTeam: null, timeoutsA: 0, timeoutsB: 0, inSuddenDeath: false, matchDurationSeconds: 0, isTimerRunning: false,
     }));
   }, [state.matchWinner, state.rotationReport, queueManager]);
 
   // OPTIMIZATION: Memoize return object to keep function references stable for child components
   return useMemo(() => ({
-    state, setState, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, setServer, useTimeout, applySettings,
-    toggleFullscreen,
-    isFullscreen,
-    canUndo: state.actionLog.length > 0 || !!state.lastSnapshot,
+    state, setState, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, setServer, useTimeout, applySettings, 
+    canUndo: state.actionLog.length > 0 || !!state.lastSnapshot, 
     isMatchActive,
     generateTeams: queueManager.generateTeams,
     rotateTeams,
@@ -468,6 +443,6 @@ export const useVolleyGame = () => {
     setsNeededToWin,
     isDeuce
   }), [
-    state, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, setServer, useTimeout, applySettings, isMatchActive, rotateTeams, queueManager, isTieBreak, statusA, statusB, pointsToWinCurrentSet, setsNeededToWin, isDeuce, toggleFullscreen, isFullscreen
+    state, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, setServer, useTimeout, applySettings, isMatchActive, rotateTeams, queueManager, isTieBreak, statusA, statusB, pointsToWinCurrentSet, setsNeededToWin, isDeuce
   ]);
 };

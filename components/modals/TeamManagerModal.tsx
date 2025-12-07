@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -116,7 +117,7 @@ const ColorPicker = memo(({
                                     ? 'ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ring-slate-400 dark:ring-slate-500 shadow-md scale-110 opacity-100' 
                                     : isTaken
                                         ? 'opacity-20 grayscale cursor-not-allowed scale-90 border border-black/10'
-                                        : 'hover:scale-110 opacity-60 hover:opacity-100 cursor-pointer'
+                                        : 'hover:scale-110 opacity-100 cursor-pointer shadow-sm hover:shadow-md'
                                 }
                             `}
                             title={isTaken ? 'Color taken' : color.charAt(0).toUpperCase() + color.slice(1)}
@@ -777,8 +778,8 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   // OPTIMIZATION: Memoize filtering logic
   const filteredProfiles = useMemo(() => {
       return Array.from(props.profiles.values())
-          .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .filter((p: PlayerProfile) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+          .sort((a: PlayerProfile, b: PlayerProfile) => a.name.localeCompare(b.name));
   }, [props.profiles, searchTerm]);
 
   // --- DND HANDLERS ---

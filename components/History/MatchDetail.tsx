@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Match } from '../../stores/historyStore';
 import { Player, SkillType, SetHistory, TeamColor } from '../../types';
@@ -260,7 +259,7 @@ interface CalculatedStat {
     ace: number;
 }
 
-const PlayerStatRow = ({ stats, isMVP, rank, themeA, themeB }: { stats: CalculatedStat, isMVP: boolean, rank: number, themeA: any, themeB: any }) => {
+const PlayerStatRow: React.FC<{ stats: CalculatedStat, isMVP: boolean, rank: number, themeA: any, themeB: any }> = ({ stats, isMVP, rank, themeA, themeB }) => {
     if (stats.total === 0) return null;
 
     const theme = stats.team === 'A' ? themeA : (stats.team === 'B' ? themeB : { text: 'text-slate-400', textDark: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/20' });

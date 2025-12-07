@@ -146,14 +146,15 @@ export const stampVariants: Variants = {
   }
 };
 
-// Vignette Pulse (Sudden Death)
+// Vignette Pulse (Sudden Death) - Aggressive Red Flash
 export const vignettePulse: Variants = {
   hidden: { opacity: 0 },
   pulse: {
-    opacity: [0, 1, 0.6, 1],
+    opacity: [0.1, 1],
     transition: {
-      duration: 2.5,
+      duration: 0.6,
       repeat: Infinity,
+      repeatType: "reverse",
       ease: "easeInOut"
     }
   }

@@ -350,6 +350,61 @@ export const useGameAudio = (config: GameConfig) => {
     });
   }, [config.enableSound, getContext]);
 
+  // 9. Sudden Death (Deep Impact + Tension Drone)
+  const playSuddenDeath = useCallback(() => {
+    if (!config.enableSound) return;
+    const ctx = getContext();
+    if (!ctx || !masterGainRef.current) return;
+
+    const t = ctx.currentTime;
+
+    // Sub-bass impact
+    const subOsc = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(150, t);
+    subOsc.frequency.exponentialRampToValueAtTime(40, t + 1);
+    
+    subGain.gain.setValueAtTime(0.8, t);
+    subGain.gain.exponentialRampToValueAtTime(0.01, t + 1.5);
+
+    // Tension Dissonance
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const tensionGain = ctx.createGain();
+    
+    osc1.type = 'sawtooth';
+    osc2.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(100, t);
+    osc2.frequency.setValueAtTime(105, t); // Dissonant interval
+
+    // Filter to darken the saw
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(400, t);
+    filter.frequency.linearRampToValueAtTime(100, t + 2);
+
+    tensionGain.gain.setValueAtTime(0, t);
+    tensionGain.gain.linearRampToValueAtTime(0.15, t + 0.1);
+    tensionGain.gain.linearRampToValueAtTime(0, t + 3);
+
+    subOsc.connect(subGain);
+    subGain.connect(masterGainRef.current!);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(tensionGain);
+    tensionGain.connect(masterGainRef.current!);
+
+    subOsc.start(t);
+    osc1.start(t);
+    osc2.start(t);
+    
+    subOsc.stop(t + 2);
+    osc1.stop(t + 3);
+    osc2.stop(t + 3);
+  }, [config.enableSound, getContext]);
+
   return {
     playTap,
     playScore,
@@ -358,6 +413,7 @@ export const useGameAudio = (config: GameConfig) => {
     playSetPointAlert,
     playMatchPointAlert,
     playSetWin,
-    playMatchWin
+    playMatchWin,
+    playSuddenDeath
   };
 };

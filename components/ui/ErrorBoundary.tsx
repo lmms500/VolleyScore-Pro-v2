@@ -1,5 +1,3 @@
-
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 import { Button } from './Button';
@@ -39,12 +37,13 @@ const ErrorContent: React.FC<{ error: Error | null, onReload: () => void }> = ({
 };
 
 export class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: null
+  };
+
   constructor(props: Props) {
     super(props);
-    this.state = {
-      hasError: false,
-      error: null
-    };
   }
 
   public static getDerivedStateFromError(error: Error): State {

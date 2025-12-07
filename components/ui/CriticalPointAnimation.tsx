@@ -1,7 +1,9 @@
-import React from 'react';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
 
-interface CriticalPointOverlayProps {
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { vignettePulse } from '../../utils/animations';
+
+interface SuddenDeathOverlayProps {
   active: boolean;
 }
 
@@ -20,57 +22,21 @@ const flashVariants: Variants = {
 
 /**
  * Global animated overlay for Sudden Death scenarios.
- * Creates an intense, unmissable red flash to signify a critical moment.
+ * Creates a "breathing" intense red vignette around the screen edges.
  */
-export const SuddenDeathOverlay: React.FC<CriticalPointOverlayProps> = ({ active }) => {
+export const SuddenDeathOverlay: React.FC<SuddenDeathOverlayProps> = ({ active }) => {
   return (
     <AnimatePresence>
       {active && (
         <motion.div
           className="fixed inset-0 z-[5] pointer-events-none"
           initial="hidden"
-          animate="visible"
+          animate="pulse"
           exit="hidden"
-          variants={flashVariants}
+          variants={vignettePulse}
           style={{
-            // Use a saturated, vibrant red with a wider gradient for impact
-            background: 'radial-gradient(circle, transparent 40%, #EF4444 110%)',
-          }}
-        />
-      )}
-    </AnimatePresence>
-  );
-};
-
-const pulseVariants: Variants = {
-  hidden: { opacity: 0, scale: 1 },
-  visible: {
-    opacity: [0, 0.5, 0], // Softer pulse effect
-    scale: [1, 1.05, 1],
-    transition: {
-      duration: 1.5,
-      ease: 'easeInOut',
-      repeat: Infinity,
-    }
-  }
-};
-
-/**
- * Softer pulse for Match Point scenarios. Less intrusive than Sudden Death.
- */
-export const MatchPointOverlay: React.FC<CriticalPointOverlayProps> = ({ active }) => {
-  return (
-    <AnimatePresence>
-      {active && (
-        <motion.div
-          className="fixed inset-0 z-[5] pointer-events-none"
-          initial="hidden"
-          animate="visible"
-          exit="hidden"
-          variants={pulseVariants}
-          style={{
-            // Using a less intense amber/orange color for match point
-            background: 'radial-gradient(circle, transparent 65%, #F59E0B 100%)',
+            background: 'radial-gradient(circle, transparent 50%, rgba(220, 20, 60, 0.1) 85%, rgba(255, 0, 0, 0.5) 100%)',
+            boxShadow: 'inset 0 0 100px 30px rgba(255, 0, 0, 0.6), inset 0 0 20px 10px rgba(255, 0, 0, 0.9)'
           }}
         />
       )}

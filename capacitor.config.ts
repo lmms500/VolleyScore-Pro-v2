@@ -9,14 +9,13 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      backgroundColor: "#020617", // Cor exata do bg-slate-950
-      launchShowDuration: 1500,   // Tempo curto para parecer rápido
-      launchAutoHide: true,
-      showSpinner: false,         // Remove o spinner de carregamento nativo
+      backgroundColor: "#020617",
+      launchShowDuration: 2000, // Segurança máxima
+      launchAutoHide: false,    // <--- MUDANÇA CRÍTICA: Nós controlamos a saída agora
+      showSpinner: false,
       androidScaleType: "CENTER_CROP",
       splashFullScreen: true,
       splashImmersive: true,
-      layoutName: "launch_screen",
     }
   }
 };

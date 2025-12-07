@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
+// Adicione a importação do SplashScreen
+import { SplashScreen } from '@capacitor/splash-screen';
+import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
@@ -108,19 +111,32 @@ function App() {
   // Bloqueio de orientação condicional
   useScreenOrientationLock(isFullscreen);
 
+  // useEffect de Inicialização OTIMIZADO
   useEffect(() => {
-    const initializeNativeSettings = async () => {
+    const initializeApp = async () => {
       if (Capacitor.isNativePlatform()) {
         try {
+          // 1. Configura StatusBar (transparente para imersão total)
           await StatusBar.setOverlaysWebView({ overlay: true });
           await StatusBar.setStyle({ style: Style.Dark });
+          
+          // 2. Trava a orientação inicial via JS também (segurança dupla)
+          await ScreenOrientation.lock({ orientation: 'portrait' });
+          
+          // 3. Pequeno delay artificial para garantir que o layout 'pintou' (remove o flash branco/preto)
+          setTimeout(async () => {
+              await SplashScreen.hide({ fadeOutDuration: 300 }); // Fade suave
+          }, 150); 
+
         } catch (error) {
-          console.error("Falha ao configurar o ambiente nativo:", error);
+          console.error("Erro na inicialização nativa:", error);
+          // Em caso de erro, esconde a splash para não travar o app
+          await SplashScreen.hide();
         }
       }
     };
 
-    initializeNativeSettings();
+    initializeApp();
   }, []);
 
   useEffect(() => {

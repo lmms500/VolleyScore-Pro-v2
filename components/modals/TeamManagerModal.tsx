@@ -111,7 +111,7 @@ const ColorPicker = memo(({
                             disabled={isTaken}
                             className={`
                                 relative w-6 h-6 rounded-full transition-all flex items-center justify-center shrink-0
-                                ${theme.bg.replace('/10', '')}
+                                ${theme.solid}
                                 ${isSelected 
                                     ? 'ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ring-slate-400 dark:ring-slate-500 shadow-md scale-110 opacity-100' 
                                     : isTaken
@@ -263,7 +263,7 @@ const EditableNumber = memo(({ number, onSave }: { number?: string; onSave: (val
 
 // --- PROFILE CARD COMPONENT ---
 
-const ProfileCard = memo(({
+const ProfileCard = memo((({
     profile,
     onUpdate,
     onDelete,
@@ -693,7 +693,8 @@ const BatchInputSection = memo(({ onGenerate }: { onGenerate: (names: string[]) 
     const [rawNames, setRawNames] = useState('');
 
     const handleGenerate = () => {
-        const names = rawNames.split('\n').map(n => n.trim()).filter(n => n);
+        const names = rawNames.split('
+').map(n => n.trim()).filter(n => n);
         if (names.length > 0) {
             onGenerate(names);
             setRawNames('');

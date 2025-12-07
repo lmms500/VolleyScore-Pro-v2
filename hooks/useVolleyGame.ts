@@ -141,50 +141,27 @@ export const useVolleyGame = () => {
   }, [state.isTimerRunning, state.isMatchOver]);
     
     const toggleFullscreen = useCallback(async () => {
-        // 1. Se for Web (PC/Navegador), usa API padrão do HTML5
-        if (!Capacitor.isNativePlatform()) {
-          if (!document.fullscreenElement) {
-            await document.documentElement.requestFullscreen().catch(() => {});
-            setIsFullscreen(true);
-          } else {
-            await document.exitFullscreen().catch(() => {});
-            setIsFullscreen(false);
-          }
-          return;
-        }
+        setIsFullscreen(prev => !prev);
+    }, []);
 
-        // 2. Se for App Nativo (Android/iOS)
-        try {
-          if (!isFullscreen) {
-            // --- ENTRAR EM FULLSCREEN (MODO JOGO) ---
-            
-            // Esconde a barra de status (topo) para garantir imersão
-            await StatusBar.hide();
+    useEffect(() => {
+        const manageNativeFeatures = async () => {
+            if (!Capacitor.isNativePlatform()) return;
 
-            // Trava em PAISAGEM (Landscape)
-            // A opção 'landscape' permite que o sensor gire entre esquerda/direita (180 graus)
-            // mas impede que fique em pé (retrato)
-            await ScreenOrientation.lock({ orientation: 'landscape' });
-            
-            setIsFullscreen(true);
+            try {
+                if (isFullscreen) {
+                    await StatusBar.hide();
+                    await ScreenOrientation.lock({ orientation: 'landscape' });
+                } else {
+                    await StatusBar.show();
+                    await ScreenOrientation.lock({ orientation: 'portrait' });
+                }
+            } catch (error) {
+                console.warn('Could not manage screen orientation or status bar:', error);
+            }
+        };
 
-          } else {
-            // --- SAIR DO FULLSCREEN (MODO NORMAL) ---
-            
-            // Mostra a barra de status de volta
-            await StatusBar.show();
-
-            // Trava de volta em RETRATO (Portrait)
-            // Isso força o celular a ficar em pé imediatamente
-            await ScreenOrientation.lock({ orientation: 'portrait' });
-            
-            setIsFullscreen(false);
-          }
-        } catch (error) {
-          console.warn('Erro ao alternar fullscreen/orientação:', error);
-          // Fallback: se der erro (ex: dispositivo não suporta lock), apenas muda o estado visual
-          setIsFullscreen((prev) => !prev);
-        }
+        manageNativeFeatures();
     }, [isFullscreen]);
 
   // --- SCORE LOGIC ---

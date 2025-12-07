@@ -1,17 +1,16 @@
 import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { useImmersiveStore } from '../stores/immersiveStore';
 
 /**
  * Hook para gerenciar os efeitos colaterais do modo imersivo.
- * Controla a visibilidade da status bar e a orientação da tela em resposta ao estado global.
+ * Controla a visibilidade da status bar em resposta ao estado global.
  */
 export const useImmersiveMode = () => {
   const { isImmersive } = useImmersiveStore();
 
-  // Efeito que reage à mudança do estado isImmersive para controlar a orientação e a status bar.
+  // Efeito que reage à mudança do estado isImmersive para controlar a status bar.
   useEffect(() => {
     // Esta funcionalidade é apenas para plataformas nativas.
     if (!Capacitor.isNativePlatform()) {
@@ -21,18 +20,15 @@ export const useImmersiveMode = () => {
     const manageImmersiveState = async () => {
       try {
         if (isImmersive) {
-          // Ativa o modo "edge-to-edge" e bloqueia a orientação para paisagem.
+          // Ativa o modo "edge-to-edge".
           await StatusBar.setOverlaysWebView({ overlay: true });
-          await ScreenOrientation.lock({ orientation: 'landscape' });
         } else {
-          // Desativa o modo "edge-to-edge" e desbloqueia a orientação.
+          // Desativa o modo "edge-to-edge".
           await StatusBar.setOverlaysWebView({ overlay: false });
-          await ScreenOrientation.unlock();
-          await ScreenOrientation.lock({ orientation: 'portrait' });
         }
       } catch (error) {
         // O erro é esperado no navegador, onde estas APIs não estão disponíveis.
-        console.info('API de orientação/status bar não disponível na web, ignorando erro.', error);
+        console.info('API de status bar não disponível na web, ignorando erro.', error);
       }
     };
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
-// Adicione a importação do SplashScreen
 import { SplashScreen } from '@capacitor/splash-screen';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -19,7 +18,7 @@ import { FloatingTopBar } from './components/Fullscreen/FloatingTopBar';
 import { FullscreenMenuDrawer } from './components/Fullscreen/FullscreenMenuDrawer';
 import { LayoutProvider } from './contexts/LayoutContext';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
-import { SuddenDeathOverlay } from './components/ui/CriticalPointAnimation';
+import { SuddenDeathOverlay, MatchPointOverlay } from './components/ui/CriticalPointAnimation';
 import { BackgroundGlow } from './components/ui/BackgroundGlow';
 import { ReloadPrompt } from './components/ui/ReloadPrompt';
 import { InstallReminder } from './components/ui/InstallReminder';
@@ -116,21 +115,23 @@ function App() {
     const initializeApp = async () => {
       if (Capacitor.isNativePlatform()) {
         try {
-          // 1. Configura StatusBar (transparente para imersão total)
+          // 1. Força retrato IMEDIATAMENTE para evitar a "dança" da tela
+          await ScreenOrientation.lock({ orientation: 'portrait' });
+
+          // 2. Configura StatusBar
           await StatusBar.setOverlaysWebView({ overlay: true });
           await StatusBar.setStyle({ style: Style.Dark });
           
-          // 2. Trava a orientação inicial via JS também (segurança dupla)
-          await ScreenOrientation.lock({ orientation: 'portrait' });
+          // 3. Garante que a status bar está visível antes de esconder a splash
+          await StatusBar.show();
           
-          // 3. Pequeno delay artificial para garantir que o layout 'pintou' (remove o flash branco/preto)
+          // 4. Pequeno delay para garantir que o layout renderizou antes de sumir com a splash
           setTimeout(async () => {
-              await SplashScreen.hide({ fadeOutDuration: 300 }); // Fade suave
+              await SplashScreen.hide({ fadeOutDuration: 300 }); 
           }, 150); 
 
         } catch (error) {
           console.error("Erro na inicialização nativa:", error);
-          // Em caso de erro, esconde a splash para não travar o app
           await SplashScreen.hide();
         }
       }
@@ -165,7 +166,7 @@ function App() {
         setsB: state.setsB,
         winner: state.matchWinner,
         sets: state.history,
-        actionLog: state.matchLog, 
+        actionLog: state.matchLog,
         config: state.config
       });
       savedMatchIdRef.current = newId;
@@ -310,6 +311,7 @@ function App() {
   
   const isServingLeft = state.swappedSides ? state.servingTeam === 'B' : state.servingTeam === 'A';
   const isServingRight = state.swappedSides ? state.servingTeam === 'A' : state.servingTeam === 'B';
+  const isMatchPoint = game.isMatchPointA || game.isMatchPointB;
 
   return (
     <ErrorBoundary>
@@ -324,6 +326,7 @@ function App() {
           />
 
           <SuddenDeathOverlay active={state.inSuddenDeath} />
+          <MatchPointOverlay active={isMatchPoint && !state.inSuddenDeath} />
           <ReloadPrompt />
           
           <InstallReminder 
@@ -410,10 +413,12 @@ function App() {
                 />
               </>
           )}
-
-          <main className="relative flex-1 z-10 flex flex-col justify-center items-center min-h-0 p-2 overflow-hidden">
+          
+          {/* O padding p-4 (16px) garante uma margem de segurança essencial para evitar que o conteúdo seja obstruído por notches, ilhas dinâmicas ou barras de navegação. */}
+          <main className="relative flex-1 z-10 flex flex-col justify-center items-center min-h-0 p-4 overflow-hidden">
+              {/* FIX: Removed 'transition-all duration-500' and 'overflow-visible' */}
               <div className={`
-                  transition-all duration-500 overflow-visible w-full h-full
+                  w-full h-full overflow-hidden
                   ${isFullscreen 
                      ? 'fixed inset-0 z-10 p-0 border-none m-0 block' 
                      : 'flex flex-col landscape:flex-row md:flex-row gap-2 md:gap-4'
@@ -428,7 +433,7 @@ function App() {
                           score={state.scoreA}
                           isServing={state.servingTeam === 'A'}
                           onAdd={handleAddA}
-                          onSubtract={handleSubA} 
+                          onSubtract={handleSubA}
                           isMatchPoint={game.isMatchPointA}
                           isSetPoint={game.isSetPointA}
                           isDeuce={game.isDeuce}
@@ -517,7 +522,7 @@ function App() {
                             isDeuce={game.isDeuce}
                             inSuddenDeath={state.inSuddenDeath}
                             setsNeededToWin={game.setsNeededToWin}
-                            colorTheme={colorB} 
+                            colorTheme={colorB}
                             isLocked={interactingTeam !== null && interactingTeam !== 'B'}
                             onInteractionStart={handleInteractionStartB}
                             onInteractionEnd={handleInteractionEnd}

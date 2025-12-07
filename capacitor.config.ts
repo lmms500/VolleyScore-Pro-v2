@@ -10,12 +10,12 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       backgroundColor: "#020617",
-      launchShowDuration: 2000, // Segurança máxima
-      launchAutoHide: false,    // <--- MUDANÇA CRÍTICA: Nós controlamos a saída agora
+      launchShowDuration: 2000,
+      launchAutoHide: false,
       showSpinner: false,
       androidScaleType: "CENTER_CROP",
       splashFullScreen: true,
-      splashImmersive: true,
+      splashImmersive: false, // <--- CHANGED: Must be false to prevent orientation jump
     }
   }
 };

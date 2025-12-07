@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { vignettePulse } from '../../utils/animations';
@@ -8,7 +9,7 @@ interface SuddenDeathOverlayProps {
 
 /**
  * Global animated overlay for Sudden Death scenarios.
- * Creates a "breathing" red vignette around the screen edges.
+ * Creates a "breathing" intense red vignette around the screen edges.
  */
 export const SuddenDeathOverlay: React.FC<SuddenDeathOverlayProps> = ({ active }) => {
   return (
@@ -21,7 +22,8 @@ export const SuddenDeathOverlay: React.FC<SuddenDeathOverlayProps> = ({ active }
           exit="hidden"
           variants={vignettePulse}
           style={{
-            background: 'radial-gradient(circle, transparent 60%, rgba(225, 29, 72, 0.15) 100%)',
+            background: 'radial-gradient(circle, transparent 40%, rgba(220, 20, 60, 0.4) 85%, rgba(255, 0, 0, 0.6) 100%)',
+            boxShadow: 'inset 0 0 80px 20px rgba(255, 0, 0, 0.4)'
           }}
         />
       )}

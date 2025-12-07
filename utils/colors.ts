@@ -1,3 +1,4 @@
+
 import { TeamColor } from '../types';
 
 interface ColorTheme {
@@ -11,92 +12,100 @@ interface ColorTheme {
     crown: string;          // Icon color (Winner crown)
     ring: string;           // Focus rings
     gradient: string;       // Subtle gradient for cards
+    solid: string;          // Solid color for pickers/dots
 }
 
 export const TEAM_COLORS: Record<string, ColorTheme> = {
     indigo: {
-        text: 'text-indigo-600',
+        text: 'text-indigo-700',
         textDark: 'dark:text-indigo-300',
-        bg: 'bg-indigo-500/10',
+        bg: 'bg-indigo-500/20',
         bgDark: 'dark:bg-indigo-500/20',
-        border: 'border-indigo-500/30',
+        border: 'border-indigo-500/40',
         halo: 'bg-indigo-500',
         glow: 'shadow-[0_0_15px_rgba(99,102,241,0.5)]',
         crown: 'text-indigo-500',
         ring: 'ring-indigo-500',
-        gradient: 'from-indigo-500/10 to-transparent'
+        gradient: 'from-indigo-500/15 to-transparent',
+        solid: 'bg-indigo-500'
     },
     rose: {
-        text: 'text-rose-600',
+        text: 'text-rose-700',
         textDark: 'dark:text-rose-300',
-        bg: 'bg-rose-500/10',
+        bg: 'bg-rose-500/20',
         bgDark: 'dark:bg-rose-500/20',
-        border: 'border-rose-500/30',
+        border: 'border-rose-500/40',
         halo: 'bg-rose-500',
         glow: 'shadow-[0_0_15px_rgba(244,63,94,0.5)]',
         crown: 'text-rose-500',
         ring: 'ring-rose-500',
-        gradient: 'from-rose-500/10 to-transparent'
+        gradient: 'from-rose-500/15 to-transparent',
+        solid: 'bg-rose-500'
     },
     emerald: {
-        text: 'text-emerald-600',
+        text: 'text-emerald-700',
         textDark: 'dark:text-emerald-300',
-        bg: 'bg-emerald-500/10',
+        bg: 'bg-emerald-500/20',
         bgDark: 'dark:bg-emerald-500/20',
-        border: 'border-emerald-500/30',
+        border: 'border-emerald-500/40',
         halo: 'bg-emerald-500',
         glow: 'shadow-[0_0_15px_rgba(16,185,129,0.5)]',
         crown: 'text-emerald-500',
         ring: 'ring-emerald-500',
-        gradient: 'from-emerald-500/10 to-transparent'
+        gradient: 'from-emerald-500/15 to-transparent',
+        solid: 'bg-emerald-500'
     },
     sky: {
-        text: 'text-sky-600',
+        text: 'text-sky-700',
         textDark: 'dark:text-sky-300',
-        bg: 'bg-sky-500/10',
+        bg: 'bg-sky-500/20',
         bgDark: 'dark:bg-sky-500/20',
-        border: 'border-sky-500/30',
+        border: 'border-sky-500/40',
         halo: 'bg-sky-500',
         glow: 'shadow-[0_0_15px_rgba(14,165,233,0.5)]',
         crown: 'text-sky-500',
         ring: 'ring-sky-500',
-        gradient: 'from-sky-500/10 to-transparent'
+        gradient: 'from-sky-500/15 to-transparent',
+        solid: 'bg-sky-500'
     },
     violet: {
-        text: 'text-violet-600',
+        text: 'text-violet-700',
         textDark: 'dark:text-violet-300',
-        bg: 'bg-violet-500/10',
+        bg: 'bg-violet-500/20',
         bgDark: 'dark:bg-violet-500/20',
-        border: 'border-violet-500/30',
+        border: 'border-violet-500/40',
         halo: 'bg-violet-500',
         glow: 'shadow-[0_0_15px_rgba(139,92,246,0.5)]',
         crown: 'text-violet-500',
         ring: 'ring-violet-500',
-        gradient: 'from-violet-500/10 to-transparent'
+        gradient: 'from-violet-500/15 to-transparent',
+        solid: 'bg-violet-500'
     },
     slate: {
-        text: 'text-slate-600',
+        text: 'text-slate-700',
         textDark: 'dark:text-slate-300',
-        bg: 'bg-slate-500/10',
+        bg: 'bg-slate-500/20',
         bgDark: 'dark:bg-slate-500/20',
-        border: 'border-slate-500/30',
+        border: 'border-slate-500/40',
         halo: 'bg-slate-500',
         glow: 'shadow-[0_0_15px_rgba(100,116,139,0.5)]',
         crown: 'text-slate-500',
         ring: 'ring-slate-500',
-        gradient: 'from-slate-500/10 to-transparent'
+        gradient: 'from-slate-500/15 to-transparent',
+        solid: 'bg-slate-500'
     },
     fuchsia: {
-        text: 'text-fuchsia-600',
+        text: 'text-fuchsia-700',
         textDark: 'dark:text-fuchsia-300',
-        bg: 'bg-fuchsia-500/10',
+        bg: 'bg-fuchsia-500/20',
         bgDark: 'dark:bg-fuchsia-500/20',
-        border: 'border-fuchsia-500/30',
+        border: 'border-fuchsia-500/40',
         halo: 'bg-fuchsia-500',
         glow: 'shadow-[0_0_15px_rgba(217,70,239,0.5)]',
         crown: 'text-fuchsia-500',
         ring: 'ring-fuchsia-500',
-        gradient: 'from-fuchsia-500/10 to-transparent'
+        gradient: 'from-fuchsia-500/15 to-transparent',
+        solid: 'bg-fuchsia-500'
     }
 };
 
@@ -130,14 +139,15 @@ export const resolveTheme = (color: TeamColor | undefined): ColorTheme => {
     return {
         text: `text-[${safeColor}]`,
         textDark: `dark:text-[${safeColor}]`,
-        bg: `bg-[${safeColor}]/10`,
+        bg: `bg-[${safeColor}]/20`,
         bgDark: `dark:bg-[${safeColor}]/20`,
-        border: `border-[${safeColor}]/30`,
+        border: `border-[${safeColor}]/40`,
         halo: `bg-[${safeColor}]`,
         glow: `shadow-[0_0_15px_${safeColor}80]`,
         crown: `text-[${safeColor}]`,
         ring: `ring-[${safeColor}]`,
-        gradient: `from-[${safeColor}]/10 to-transparent`
+        gradient: `from-[${safeColor}]/15 to-transparent`,
+        solid: `bg-[${safeColor}]`
     };
 };
 

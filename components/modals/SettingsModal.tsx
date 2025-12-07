@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameConfig } from '../../types';
@@ -23,7 +23,7 @@ interface SettingsModalProps {
   isMatchActive: boolean;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ 
+export const SettingsModal: React.FC<SettingsModalProps> = memo(({ 
     isOpen, onClose, config, onSave, isMatchActive
 }) => {
   const [localConfig, setLocalConfig] = useState<GameConfig>(config);
@@ -89,7 +89,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const showUpdateAvailable = needRefresh || remoteCheckStatus === 'available';
 
   // --- SMART RESET LOGIC ---
-  const structuralKeys: (keyof GameConfig)[] = ['maxSets', 'pointsPerSet', 'hasTieBreak', 'tieBreakPoints', 'deuceType', 'mode'];
+  const structuralKeys: (keyof GameConfig)[] = ['maxSets', 'pointsPerSet', 'hasTieBreak', 'tieBreakPoints', 'mode'];
   const requiresReset = isMatchActive && structuralKeys.some(key => localConfig[key] !== config[key]);
 
   const handleSave = () => {
@@ -410,4 +410,4 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       </div>
     </Modal>
   );
-};
+});

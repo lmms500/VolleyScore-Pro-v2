@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { useVolleyGame } from './hooks/useVolleyGame';
@@ -30,27 +30,19 @@ import { motion, LayoutGroup, AnimatePresence } from 'framer-motion';
 import { v4 as uuidv4 } from 'uuid';
 import { useScreenOrientationLock } from './hooks/useScreenOrientationLock';
 
-// LAZY LOADED CHUNKS
-const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
-const TeamManagerModal = lazy(() => import('./components/modals/TeamManagerModal').then(module => ({ default: module.TeamManagerModal })));
-const MatchOverModal = lazy(() => import('./components/modals/MatchOverModal').then(module => ({ default: module.MatchOverModal })));
-const ConfirmationModal = lazy(() => import('./components/modals/ConfirmationModal').then(module => ({ default: module.ConfirmationModal })));
-const HistoryModal = lazy(() => import('./components/modals/HistoryModal').then(module => ({ default: module.HistoryModal })));
-const TutorialModal = lazy(() => import('./components/modals/TutorialModal').then(module => ({ default: module.TutorialModal })));
+// MODAL IMPORTS (EAGER)
+import { SettingsModal } from './components/modals/SettingsModal';
+import { TeamManagerModal } from './components/modals/TeamManagerModal';
+import { MatchOverModal } from './components/modals/MatchOverModal';
+import { ConfirmationModal } from './components/modals/ConfirmationModal';
+import { HistoryModal } from './components/modals/HistoryModal';
+import { TutorialModal } from './components/modals/TutorialModal';
 
 const vibrate = (pattern: number | number[]) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(pattern);
     }
 };
-
-const SuspenseLoader = () => (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm">
-    <div className="bg-white/80 dark:bg-black/80 p-4 rounded-full shadow-lg border border-white/20">
-      <Loader2 className="animate-spin text-indigo-500" size={32} />
-    </div>
-  </div>
-);
 
 function App() {
   const game = useVolleyGame();
@@ -568,7 +560,7 @@ function App() {
              onExitFullscreen={toggleFullscreen}
           />
 
-          <Suspense fallback={<SuspenseLoader />}>
+          <>
             {tutorial.showTutorial && (
               <TutorialModal 
                 isOpen={tutorial.showTutorial}
@@ -653,7 +645,7 @@ function App() {
                 message="Are you sure you want to reset the match? All scores and history will be lost."
               />
             )}
-          </Suspense>
+          </>
         </div>
       </LayoutProvider>
     </ErrorBoundary>

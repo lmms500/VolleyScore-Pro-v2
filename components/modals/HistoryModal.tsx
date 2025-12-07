@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { HistoryList } from '../History/HistoryList';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -8,7 +8,7 @@ interface HistoryModalProps {
   onClose: () => void;
 }
 
-export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose }) => {
+export const HistoryModal: React.FC<HistoryModalProps> = memo(({ isOpen, onClose }) => {
   const { t } = useTranslation();
 
   return (
@@ -23,4 +23,4 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose }) =
         </div>
     </Modal>
   );
-};
+});

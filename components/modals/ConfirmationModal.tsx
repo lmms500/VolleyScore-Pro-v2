@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { AlertTriangle } from 'lucide-react';
@@ -12,7 +12,7 @@ interface ConfirmationModalProps {
   message: string;
 }
 
-export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, title, message }) => {
+export const ConfirmationModal: React.FC<ConfirmationModalProps> = memo(({ isOpen, onClose, onConfirm, title, message }) => {
   const { t } = useTranslation();
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('confirm.reset.title')} maxWidth="max-w-sm">
@@ -36,4 +36,4 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, on
       </div>
     </Modal>
   );
-};
+});

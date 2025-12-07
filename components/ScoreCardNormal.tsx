@@ -217,10 +217,10 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                         col-start-1 row-start-1
                         rounded-full pointer-events-none z-0 aspect-square
                         blur-[60px] md:blur-[80px] will-change-[transform,opacity]
+                        mix-blend-multiply dark:mix-blend-screen
                         ${haloColorClass}
                     `}
                     style={{ 
-                        mixBlendMode: 'screen',
                         width: 'auto',
                         height: '70%', 
                         minHeight: '100px',
@@ -228,9 +228,8 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                     }}
                     initial={false}
                     animate={{ 
-                        opacity: isCritical ? [0.4, 0.8, 0.4] : (isServing ? 0.35 : 0),
+                        opacity: isCritical ? [0.4, 0.8, 0.4] : (isServing ? 0.5 : 0),
                         scale: isCritical ? [1, 1.15, 1] : 1,
-                        // Removed dynamic filter animation to prevent "solid circle" glitch on re-mount
                     }}
                     transition={{ 
                         duration: isCritical ? 2 : 0.5, 

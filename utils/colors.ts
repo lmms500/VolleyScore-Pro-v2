@@ -17,7 +17,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
     indigo: {
         text: 'text-indigo-600',
         textDark: 'dark:text-indigo-300',
-        bg: 'bg-indigo-500/10',
+        bg: 'bg-indigo-500/20',
         bgDark: 'dark:bg-indigo-500/20',
         border: 'border-indigo-500/30',
         halo: 'bg-indigo-500',
@@ -29,7 +29,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
     rose: {
         text: 'text-rose-600',
         textDark: 'dark:text-rose-300',
-        bg: 'bg-rose-500/10',
+        bg: 'bg-rose-500/20',
         bgDark: 'dark:bg-rose-500/20',
         border: 'border-rose-500/30',
         halo: 'bg-rose-500',
@@ -41,7 +41,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
     emerald: {
         text: 'text-emerald-600',
         textDark: 'dark:text-emerald-300',
-        bg: 'bg-emerald-500/10',
+        bg: 'bg-emerald-500/20',
         bgDark: 'dark:bg-emerald-500/20',
         border: 'border-emerald-500/30',
         halo: 'bg-emerald-500',
@@ -53,7 +53,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
     sky: {
         text: 'text-sky-600',
         textDark: 'dark:text-sky-300',
-        bg: 'bg-sky-500/10',
+        bg: 'bg-sky-500/20',
         bgDark: 'dark:bg-sky-500/20',
         border: 'border-sky-500/30',
         halo: 'bg-sky-500',
@@ -65,7 +65,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
     violet: {
         text: 'text-violet-600',
         textDark: 'dark:text-violet-300',
-        bg: 'bg-violet-500/10',
+        bg: 'bg-violet-500/20',
         bgDark: 'dark:bg-violet-500/20',
         border: 'border-violet-500/30',
         halo: 'bg-violet-500',
@@ -77,7 +77,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
     slate: {
         text: 'text-slate-600',
         textDark: 'dark:text-slate-300',
-        bg: 'bg-slate-500/10',
+        bg: 'bg-slate-500/20',
         bgDark: 'dark:bg-slate-500/20',
         border: 'border-slate-500/30',
         halo: 'bg-slate-500',
@@ -89,7 +89,7 @@ export const TEAM_COLORS: Record<string, ColorTheme> = {
     fuchsia: {
         text: 'text-fuchsia-600',
         textDark: 'dark:text-fuchsia-300',
-        bg: 'bg-fuchsia-500/10',
+        bg: 'bg-fuchsia-500/20',
         bgDark: 'dark:bg-fuchsia-500/20',
         border: 'border-fuchsia-500/30',
         halo: 'bg-fuchsia-500',
@@ -130,7 +130,7 @@ export const resolveTheme = (color: TeamColor | undefined): ColorTheme => {
     return {
         text: `text-[${safeColor}]`,
         textDark: `dark:text-[${safeColor}]`,
-        bg: `bg-[${safeColor}]/10`,
+        bg: `bg-[${safeColor}]/20`,
         bgDark: `dark:bg-[${safeColor}]/20`,
         border: `border-[${safeColor}]/30`,
         halo: `bg-[${safeColor}]`,

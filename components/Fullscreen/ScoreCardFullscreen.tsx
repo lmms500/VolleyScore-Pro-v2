@@ -77,7 +77,7 @@ const ScoreNumberDisplay = memo(({
                         }
                         : { 
                             scale: 1, 
-                            opacity: isServing ? 0.3 : 0
+                            opacity: isServing ? 0.5 : 0
                         }
                 }
                 transition={
@@ -215,11 +215,12 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
                 className={`
                     flex items-center justify-center w-full h-full
                     transition-transform duration-150
+                    px-4
                     ${isPressed ? 'scale-95' : 'scale-100'}
                     will-change-transform
                 `}
                 style={{ 
-                    fontSize: 'clamp(8rem, 28vmax, 22rem)',
+                    fontSize: 'clamp(8rem, 26vmax, 20rem)',
                     lineHeight: 0.8
                 }}
             >

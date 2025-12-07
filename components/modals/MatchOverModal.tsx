@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom'; // Import createPortal
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -20,7 +20,7 @@ interface MatchOverModalProps {
   onUndo: () => void;
 }
 
-export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, onRotate, onReset, onUndo }) => {
+export const MatchOverModal: React.FC<MatchOverModalProps> = memo(({ isOpen, state, onRotate, onReset, onUndo }) => {
   const { t } = useTranslation();
   const [showLogs, setShowLogs] = useState(false);
   const [renderShareCard, setRenderShareCard] = useState(false);
@@ -266,4 +266,4 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = ({ isOpen, state, o
       </Modal>
     </>
   );
-};
+});

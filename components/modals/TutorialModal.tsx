@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useTranslation } from '../../contexts/LanguageContext';
@@ -30,7 +30,7 @@ const Slide = ({ title, desc, icon: Icon, color, children }: any) => (
   </div>
 );
 
-export const TutorialModal: React.FC<TutorialModalProps> = ({ 
+export const TutorialModal: React.FC<TutorialModalProps> = memo(({ 
   isOpen, onClose, onInstall, canInstall, isIOS, isStandalone 
 }) => {
   const { t } = useTranslation();
@@ -195,4 +195,4 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
       </div>
     </Modal>
   );
-};
+});

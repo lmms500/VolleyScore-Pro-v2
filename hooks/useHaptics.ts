@@ -1,53 +1,82 @@
+/**
+ * useHaptics Hook
+ * 
+ * Hook para feedback tátil usando o serviço nativo NativeHaptics.
+ * Fornece abstração de alto nível com controle de enable/disable.
+ * 
+ * @module hooks/useHaptics
+ */
+
 import { useCallback } from 'react';
+import { NativeHaptics, ImpactStyle, NotificationType } from '../services/NativeHaptics';
 
-type ImpactStyle = 'light' | 'medium' | 'heavy';
-type NotificationType = 'success' | 'warning' | 'error';
+type ImpactStyleAlias = 'light' | 'medium' | 'heavy';
+type NotificationTypeAlias = 'success' | 'warning' | 'error';
 
+/**
+ * Hook de feedback tátil com suporte a Capacitor Haptics nativo.
+ * 
+ * @param enabled Se false, desabilita todo feedback tátil
+ * @returns Objeto com métodos impact, notification e trigger
+ * 
+ * @example
+ * ```tsx
+ * const haptics = useHaptics(config.enableSound);
+ * 
+ * // Feedback de toque leve
+ * haptics.impact('light');
+ * 
+ * // Feedback de sucesso
+ * haptics.notification('success');
+ * 
+ * // Vibração customizada
+ * haptics.trigger(50);
+ * ```
+ */
 export const useHaptics = (enabled: boolean = true) => {
-
-const trigger = useCallback((pattern: number | number[]) => {
-if (!enabled) return;
-    
-    // Robust execution: try/catch prevents crashes on unsupported devices/browsers
-    // while allowing it to fire on Android/Chrome where `vibrate` exists.
-    try {
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            navigator.vibrate(pattern);
-        }
-    } catch (e) {
-        // Ignore errors (e.g. if blocked by user settings)
-    }
+  /**
+   * Gera vibração customizada usando padrão simples ou complexo.
+   * 
+   * @param pattern Duração em ms ou array [vibra, pausa, vibra, ...]
+   */
+  const trigger = useCallback((pattern: number | number[]) => {
+    if (!enabled) return;
+    NativeHaptics.vibrate(pattern);
   }, [enabled]);
 
-  // Mimic iOS UIImpactFeedbackGenerator styles using Vibrate API patterns
-  const impact = useCallback((style: ImpactStyle) => {
-    switch (style) {
-      case 'light':
-        trigger(10); // Crisp, extremely short tick
-        break;
-      case 'medium':
-        trigger(20); // Standard tap
-        break;
-      case 'heavy':
-        trigger(40); // Solid thud
-        break;
-    }
-  }, [trigger]);
+  /**
+   * Gera feedback tátil de impacto (ideal para toques em botões).
+   * 
+   * @param style Intensidade: 'light', 'medium' ou 'heavy'
+   */
+  const impact = useCallback((style: ImpactStyleAlias) => {
+    if (!enabled) return;
+    
+    const styleMap = {
+      light: ImpactStyle.Light,
+      medium: ImpactStyle.Medium,
+      heavy: ImpactStyle.Heavy,
+    };
+    
+    NativeHaptics.impact(styleMap[style]);
+  }, [enabled]);
 
-  // Mimic iOS UINotificationFeedbackGenerator styles
-  const notification = useCallback((type: NotificationType) => {
-    switch (type) {
-      case 'success':
-        trigger([10, 50, 20]); // Da-da-dump (Short-Pause-Short)
-        break;
-      case 'warning':
-        trigger([30, 50, 30]); // Quick double pulse
-        break;
-      case 'error':
-        trigger([50, 100, 50, 100, 50]); // Long buzz series
-        break;
-    }
-  }, [trigger]);
+  /**
+   * Gera feedback tátil de notificação (ideal para alertas e conclusões).
+   * 
+   * @param type Tipo: 'success', 'warning' ou 'error'
+   */
+  const notification = useCallback((type: NotificationTypeAlias) => {
+    if (!enabled) return;
+    
+    const typeMap = {
+      success: NotificationType.Success,
+      warning: NotificationType.Warning,
+      error: NotificationType.Error,
+    };
+    
+    NativeHaptics.notification(typeMap[type]);
+  }, [enabled]);
 
   return { impact, notification, trigger };
 };

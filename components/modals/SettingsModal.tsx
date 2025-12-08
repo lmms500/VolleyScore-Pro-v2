@@ -2,7 +2,7 @@ import React, { useState, useEffect, memo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { GameConfig } from '../../types';
-import { Check, Trophy, Sun, Zap, Download, Moon, AlertTriangle, Volume2, Umbrella, Activity, Globe, Scale, ToggleLeft, ToggleRight, RefreshCw, CloudDownload, Smartphone, ArrowRight } from 'lucide-react';
+import { Check, Trophy, Sun, Zap, Download, Moon, AlertTriangle, Volume2, Umbrella, Activity, Globe, Scale, ToggleLeft, ToggleRight, RefreshCw, CloudDownload, Smartphone, ArrowRight, Mic } from 'lucide-react';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useServiceWorker } from '../../hooks/useServiceWorker';
@@ -386,6 +386,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = memo(({
                         className={`w-10 h-6 rounded-full p-1 transition-colors ${localConfig.enableSound ? 'bg-emerald-500' : 'bg-black/10 dark:bg-white/10'}`}
                     >
                         <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${localConfig.enableSound ? 'translate-x-4' : ''}`} />
+                    </button>
+                 </div>
+
+                 {/* Voice Control Toggle */}
+                 <div className="flex items-center justify-between border-t border-black/5 dark:border-white/5 pt-3">
+                    <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                        <Mic size={16} className="text-rose-500" />
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold">Controlo por Voz</span>
+                            <span className="text-[10px] text-slate-400">Beta: "Ponto Casa", "Desfazer"...</span>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => setLocalConfig(prev => ({...prev, enableVoiceControl: !prev.enableVoiceControl}))}
+                        className={`w-10 h-6 rounded-full p-1 transition-colors ${localConfig.enableVoiceControl ? 'bg-rose-500' : 'bg-black/10 dark:bg-white/10'}`}
+                    >
+                        <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${localConfig.enableVoiceControl ? 'translate-x-4' : ''}`} />
                     </button>
                  </div>
 

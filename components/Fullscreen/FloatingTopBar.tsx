@@ -1,10 +1,36 @@
-
 import React, { memo } from 'react';
-import { Volleyball, Timer, Skull, TrendingUp, Zap, Crown } from 'lucide-react';
+import { Timer, Skull, TrendingUp, Zap, Crown } from 'lucide-react'; // Volleyball removido
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { resolveTheme } from '../../utils/colors';
 import { TeamColor } from '../../types';
+
+// --- NOVO ÍCONE DE VÔLEI V2 (Padrão de Ondas/Painéis Curvos) ---
+const VolleyballIcon = ({ size = 24, strokeWidth = 2, className, ...props }: any) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    {...props}
+  >
+    {/* Círculo Externo */}
+    <circle cx="12" cy="12" r="10" />
+    
+    {/* Padrão de linhas curvas internas características do vôlei */}
+    <path d="M2 12c5-3 15-3 20 0" /> {/* Curva horizontal superior */}
+    <path d="M12 2c3 5 3 15 0 20" /> {/* Curva vertical esquerda */}
+    <path d="M22 12c-5 3-15 3-20 0" /> {/* Curva horizontal inferior (espogada) */}
+    <path d="M12 22c-3-5-3-15 0-20" /> {/* Curva vertical direita (espelhada) */}
+  </svg>
+);
+// --------------------------------------------------
 
 interface FloatingTopBarProps {
   time: number;
@@ -146,7 +172,8 @@ const TeamInfoSmart = memo<{
                         transition={{ type: "spring", stiffness: 300, damping: 20 }}
                         className={`absolute inset-0 flex items-center justify-center ${theme.text}`}
                     >
-                        <Volleyball size={18} className="drop-shadow-sm" fill="currentColor" fillOpacity={0.1} />
+                        {/* USANDO O NOVO ÍCONE V2 AQUI */}
+                        <VolleyballIcon size={18} className="drop-shadow-sm" fill="currentColor" fillOpacity={0.1} />
                         <motion.div 
                             className={`absolute inset-0 rounded-full border-2 ${theme.border} opacity-50`}
                             animate={{ scale: [1, 1.4], opacity: [0.5, 0] }}

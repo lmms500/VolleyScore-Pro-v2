@@ -3,6 +3,7 @@ import { toPng } from 'html-to-image';
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
+import { Camera } from '@capacitor/camera';
 
 export const useSocialShare = () => {
   const [isSharing, setIsSharing] = useState(false);
@@ -16,26 +17,35 @@ export const useSocialShare = () => {
         throw new Error('Card element not found');
       }
 
+      if (Capacitor.isNativePlatform()) {
+        const permissions = await Camera.checkPermissions();
+        if (permissions.photos !== 'granted') {
+          const permissionResult = await Camera.requestPermissions();
+          if (permissionResult.photos !== 'granted') {
+            alert('A permissão para acessar a galeria é necessária para salvar o resultado.');
+            return;
+          }
+        }
+      }
+
       const dataUrl = await toPng(element, { cacheBust: true, pixelRatio: 2 });
 
       if (Capacitor.isNativePlatform()) {
         // --- MOBILE (ANDROID/IOS) ---
         const fileName = `volleyscore-result-${Date.now()}.png`;
-        
-        // FIX: Remove the data URL prefix before saving to the filesystem
         const base64Data = dataUrl.split(',')[1];
 
         const savedFile = await Filesystem.writeFile({
           path: fileName,
-          data: base64Data, // Use the corrected base64 data
-          directory: Directory.Cache,
+          data: base64Data,
+          directory: Directory.Documents, // Save to gallery
           recursive: true
         });
 
         await Share.share({
           title: 'Resultado da Partida',
           text: 'Confira o resultado no VolleyScore Pro!',
-          files: [savedFile.uri], // Share the native file URI
+          files: [savedFile.uri],
         });
 
       } else {

@@ -1,6 +1,5 @@
-
 import React, { memo } from 'react';
-import { RotateCcw, ArrowLeftRight, Settings, Users, Undo2, Maximize2, History } from 'lucide-react';
+import { RotateCcw, ArrowLeftRight, Settings, Users, Undo2, Maximize2, History, Mic } from 'lucide-react';
 import { useTranslation } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
 
@@ -13,6 +12,9 @@ interface ControlsProps {
   onHistory: () => void;
   onReset: () => void;
   onToggleFullscreen: () => void;
+  onToggleVoice: () => void;
+  isVoiceListening: boolean;
+  hasVoicePermission: boolean;
 }
 
 const ControlButton = ({ onClick, disabled, icon: Icon, active, className }: any) => (
@@ -38,7 +40,19 @@ const Divider = () => (
     <div className="w-px h-5 bg-black/5 dark:bg-white/10 mx-1"></div>
 );
 
-export const Controls: React.FC<ControlsProps> = memo(({ onUndo, canUndo, onSwap, onSettings, onRoster, onHistory, onReset, onToggleFullscreen }) => {
+export const Controls: React.FC<ControlsProps> = memo(({ 
+    onUndo, 
+    canUndo, 
+    onSwap, 
+    onSettings, 
+    onRoster, 
+    onHistory, 
+    onReset, 
+    onToggleFullscreen, 
+    onToggleVoice, 
+    isVoiceListening, 
+    hasVoicePermission
+}) => {
   const { t } = useTranslation();
 
   return (
@@ -57,9 +71,16 @@ export const Controls: React.FC<ControlsProps> = memo(({ onUndo, canUndo, onSwap
 
         <Divider />
 
-        {/* MANAGEMENT */}
+        {/* MANAGEMENT & TOOLS */}
         <ControlButton onClick={onRoster} icon={Users} className="text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10" />
         <ControlButton onClick={onHistory} icon={History} className="text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10" />
+        <ControlButton 
+            onClick={onToggleVoice} 
+            icon={Mic} 
+            active={isVoiceListening}
+            disabled={!hasVoicePermission}
+            className={!isVoiceListening ? "text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10" : ''} 
+        />
 
         <Divider />
 

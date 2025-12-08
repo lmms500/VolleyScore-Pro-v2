@@ -1,7 +1,6 @@
-
 import React, { memo, useState, useCallback } from 'react';
 import { Team, TeamId, SkillType, GameConfig, TeamColor } from '../types';
-import { Volleyball, Zap, Timer, Skull, TrendingUp, Trophy } from 'lucide-react';
+import { Zap, Timer, Skull, TrendingUp, Trophy } from 'lucide-react'; // Volleyball removido
 import { useScoreGestures } from '../hooks/useScoreGestures';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useGameAudio } from '../hooks/useGameAudio';
@@ -13,6 +12,33 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { layoutTransition, stampVariants, springPremium, pulseHeartbeat } from '../utils/animations';
 import { ScoutModal } from './modals/ScoutModal';
 import { resolveTheme } from '../utils/colors';
+
+// --- NOVO ÍCONE DE VÔLEI V2 (Padrão de Ondas/Painéis Curvos) ---
+const VolleyballIcon = ({ size = 24, strokeWidth = 2, className, ...props }: any) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    {...props}
+  >
+    {/* Círculo Externo */}
+    <circle cx="12" cy="12" r="10" />
+    
+    {/* Padrão de linhas curvas internas características do vôlei */}
+    <path d="M2 12c5-3 15-3 20 0" /> {/* Curva horizontal superior */}
+    <path d="M12 2c3 5 3 15 0 20" /> {/* Curva vertical esquerda */}
+    <path d="M22 12c-5 3-15 3-20 0" /> {/* Curva horizontal inferior (espogada) */}
+    <path d="M12 22c-3-5-3-15 0-20" /> {/* Curva vertical direita (espelhada) */}
+  </svg>
+);
+// --------------------------------------------------
 
 interface ScoreCardNormalProps {
   teamId: TeamId;
@@ -179,7 +205,8 @@ export const ScoreCardNormal: React.FC<ScoreCardNormalProps> = memo(({
                       transition={springPremium}
                       className="flex-shrink-0"
                     >
-                        <Volleyball size={14} className={`${theme.text} ${theme.textDark}`} strokeWidth={2.5} />
+                        {/* USANDO O NOVO ÍCONE V2 AQUI */}
+                        <VolleyballIcon size={14} className={`${theme.text} ${theme.textDark}`} strokeWidth={2.5} />
                     </motion.div>
                   )}
                 </AnimatePresence>

@@ -7,6 +7,7 @@ import { useVolleyGame } from './hooks/useVolleyGame';
 import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
 import { useTutorial } from './hooks/useTutorial';
 import { useHaptics } from './hooks/useHaptics';
+import { useVoiceControl } from './hooks/useVoiceControl';
 
 // EAGER IMPORTS
 import { ScoreCardNormal } from './components/ScoreCardNormal';
@@ -103,47 +104,34 @@ function App() {
 
   const savedMatchIdRef = useRef<string | null>(null);
   const audio = useGameAudio(state.config);
-  // NOVO: Inicializa o useHaptics controlando-o com a configuração de som
   const haptics = useHaptics(state.config.enableSound);
   const prevSetsRef = useRef({ a: 0, b: 0 });
 
-  // Track Status to detect transition into Critical States (Set/Match Point/Sudden Death)
   const prevStatusRef = useRef({
       setPointA: false, matchPointA: false,
       setPointB: false, matchPointB: false,
       inSuddenDeath: false
   });
 
-  // Bloqueio de orientação condicional
   useScreenOrientationLock(isFullscreen);
 
-  // useEffect de Inicialização OTIMIZADO
   useEffect(() => {
     const initializeApp = async () => {
       if (Capacitor.isNativePlatform()) {
         try {
-          // 1. Força retrato IMEDIATAMENTE para evitar a "dança" da tela
           await ScreenOrientation.lock({ orientation: 'portrait' });
-
-          // 2. Configura StatusBar
           await StatusBar.setOverlaysWebView({ overlay: true });
           await StatusBar.setStyle({ style: Style.Dark });
-
-          // 3. Garante que a status bar está visível antes de esconder a splash
           await StatusBar.show();
-
-          // 4. Pequeno delay para garantir que o layout renderizou antes de sumir com a splash
           setTimeout(async () => {
               await SplashScreen.hide({ fadeOutDuration: 300 });
           }, 150);
-
         } catch (error) {
           console.error("Erro na inicialização nativa:", error);
           await SplashScreen.hide();
         }
       }
     };
-
     initializeApp();
   }, []);
 
@@ -184,7 +172,6 @@ function App() {
     }
   }, [state.isMatchOver, state.matchWinner, state.setsA, state.setsB, historyStore, audio, state.matchDurationSeconds, state.teamAName, state.teamBName, state.teamARoster, state.teamBRoster, state.history, state.matchLog, state.config, haptics]);
 
-  // Wrapper for Undo
   const handleUndo = useCallback(() => {
     if (state.isMatchOver && savedMatchIdRef.current) {
         historyStore.deleteMatch(savedMatchIdRef.current);
@@ -195,7 +182,15 @@ function App() {
     haptics.trigger(30);
   }, [state.isMatchOver, undo, historyStore, audio, haptics]);
 
-  // Handle Beach Switch Alert
+  const { isListening, toggleListening, hasPermission } = useVoiceControl({
+    config: state.config,
+    onAddPoint: (team) => {
+        if (navigator.vibrate) navigator.vibrate(50);
+        addPoint(team);
+    },
+    onUndo: handleUndo
+  });
+
   useEffect(() => {
       if (state.pendingSideSwitch) {
           audio.playWhistle();
@@ -203,7 +198,6 @@ function App() {
       }
   }, [state.pendingSideSwitch, audio, haptics]);
 
-  // Handle Critical Moments (Audio Transition)
   useEffect(() => {
       const current = {
           setPointA: game.isSetPointA,
@@ -233,7 +227,6 @@ function App() {
       prevStatusRef.current = current;
   }, [game.isMatchPointA, game.isMatchPointB, game.isSetPointA, game.isSetPointB, state.inSuddenDeath, audio, haptics]);
 
-  // Fullscreen Logic
   const visualLeftScoreEl = state.swappedSides ? scoreElB : scoreElA;
   const visualRightScoreEl = state.swappedSides ? scoreElA : scoreElB;
 
@@ -263,20 +256,16 @@ function App() {
     game.setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
   }, [game.setState, audio, haptics]);
 
-  // Interaction Handlers
   const handleInteractionStartA = useCallback(() => setInteractingTeam('A'), []);
   const handleInteractionStartB = useCallback(() => setInteractingTeam('B'), []);
   const handleInteractionEnd = useCallback(() => setInteractingTeam(null), []);
 
-  // --- HANDLERS ---
   const handleAddA = useCallback((teamId: TeamId, playerId?: string, skill?: any) => {
     const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
-
     if (!playerId && !state.config.enablePlayerStats) {
          audio.playScore();
          haptics.trigger(15);
     }
-
     addPoint('A', metadata);
   }, [addPoint, state.config.enablePlayerStats, audio, haptics]);
 
@@ -307,7 +296,6 @@ function App() {
   const handleTimeoutA = useCallback(() => { audio.playWhistle(); haptics.trigger(50); useTimeout('A'); }, [useTimeout, audio, haptics]);
   const handleTimeoutB = useCallback(() => { audio.playWhistle(); haptics.trigger(50); useTimeout('B'); }, [useTimeout, audio, haptics]);
 
-  // Modal Open Wrappers with Sound & Haptic
   const openSettings = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowSettings(true); }, [audio, haptics]);
   const openManager = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowManager(true); }, [audio, haptics]);
   const openHistory = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowHistory(true); }, [audio, haptics]);
@@ -338,7 +326,6 @@ function App() {
   return (
     <ErrorBoundary>
       <LayoutProvider>
-        {/* MUDANÇA 1: Removido pt-[env(...)] e pb-[env(...)] daqui, mantendo apenas pr/pl. */}
         <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-100 overflow-hidden relative transition-colors duration-700 ease-in-out pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
 
           <BackgroundGlow
@@ -382,7 +369,6 @@ function App() {
              )}
           </AnimatePresence>
 
-          {/* MUDANÇA 2: Adicionado pt-[calc(env(...)+0.5rem)] para garantir que a barra comece abaixo do notch/barra de notificação. */}
           <div className={`
               z-30 transition-all duration-500 flex-none
               ${isFullscreen
@@ -437,9 +423,7 @@ function App() {
               </>
           )}
 
-          {/* O padding p-4 (16px) garante uma margem de segurança essencial para evitar que o conteúdo seja obstruído por notches, ilhas dinâmicas ou barras de navegação. */}
           <main className="relative flex-1 z-10 flex flex-col justify-center items-center min-h-0 p-4 overflow-hidden">
-              {/* SAFETY NOTE: O 'p-4' (16px) deve ser mantido para garantir margens de segurança para os ScoreCards dentro da área de conteúdo principal. */}
               <div className={`
                   w-full h-full overflow-hidden
                   ${isFullscreen
@@ -565,7 +549,6 @@ function App() {
               </div>
           </main>
 
-          {/* MUDANÇA 3: Adicionado pb-[calc(env(...)+0.5rem)] para garantir que a barra Controls fique acima da barra de navegação. */}
           <div
             className={`
                 flex-none w-full z-50 flex justify-center pt-2
@@ -585,6 +568,9 @@ function App() {
                   onHistory={openHistory}
                   onReset={openReset}
                   onToggleFullscreen={toggleFullscreen}
+                  onToggleVoice={toggleListening}
+                  isVoiceListening={isListening}
+                  hasVoicePermission={hasPermission}
               />
           </div>
 

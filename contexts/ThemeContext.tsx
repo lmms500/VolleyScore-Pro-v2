@@ -1,4 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import { getPreferencesService } from '../services/PreferencesService';
 
 type Theme = 'light' | 'dark';
@@ -53,6 +55,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const metaThemeColor = document.querySelector("meta[name=theme-color]");
     if (metaThemeColor) {
       metaThemeColor.setAttribute("content", isDark ? "#020617" : "#f1f5f9");
+    }
+
+    // Fase 4: Sync Status Bar with theme (native only)
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: isDark ? '#020617' : '#f1f5f9' }).catch(() => {});
     }
   }, []);
 

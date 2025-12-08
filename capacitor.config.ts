@@ -9,13 +9,20 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      backgroundColor: "#020617",
-      launchShowDuration: 2000,
-      launchAutoHide: false,
+      backgroundColor: "#020617", // slate-950 (dark theme)
+      launchShowDuration: 1500, // Reduced from 2000ms for faster UX
+      launchAutoHide: false, // Manual hide for smooth transition
       showSpinner: false,
       androidScaleType: "CENTER_CROP",
       splashFullScreen: true,
-      splashImmersive: false, // <--- CHANGED: Must be false to prevent orientation jump
+      splashImmersive: false, // Must be false to prevent orientation jump
+      iosSpinnerStyle: "small", // iOS loading indicator
+      spinnerColor: "#6366f1", // indigo-500 (brand color)
+    },
+    StatusBar: {
+      style: 'DARK', // Light text for dark background
+      backgroundColor: '#020617', // slate-950 (matches app background)
+      overlaysWebView: false, // StatusBar has fixed height
     }
   }
 };

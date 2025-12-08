@@ -24,16 +24,21 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = memo(({ isOpen, sta
   const { t } = useTranslation();
   const [showLogs, setShowLogs] = useState(false);
   const [renderShareCard, setRenderShareCard] = useState(false);
-  const [isInteractive, setIsInteractive] = useState(false); // Safety delay: Ghost touch prevention
   const { isSharing, shareMatch } = useSocialShare();
+  
+  // Ghost Touch Fix: Safety delay to prevent accidental clicks
+  const [isInteractive, setIsInteractive] = useState(false);
 
-  // Safety Delay: Disable interactions for 1000ms after modal appears
-  // Prevents accidental button clicks from touch events that registered on previous screen
+  // Reset interactivity when modal opens/closes
   useEffect(() => {
     if (isOpen) {
       setIsInteractive(false);
-      const timer = setTimeout(() => setIsInteractive(true), 1000);
+      const timer = setTimeout(() => {
+        setIsInteractive(true);
+      }, 1000); // 1 second safety delay
       return () => clearTimeout(timer);
+    } else {
+      setIsInteractive(false);
     }
   }, [isOpen]);
 
@@ -250,24 +255,41 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = memo(({ isOpen, sta
                       onClick={handleShare} 
                       disabled={isSharing || !isInteractive}
                       variant="secondary"
-                      className={`flex-shrink-0 bg-white/50 dark:bg-indigo-500/10 hover:bg-white dark:hover:bg-indigo-500/20 text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 border-indigo-500/20 shadow-sm transition-all duration-300 ${!isInteractive ? 'pointer-events-none opacity-50' : ''}`}
+                      className={`flex-shrink-0 bg-white/50 dark:bg-indigo-500/10 hover:bg-white dark:hover:bg-indigo-500/20 text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 border-indigo-500/20 shadow-sm transition-opacity ${!isInteractive ? 'opacity-50 pointer-events-none' : ''}`}
                       title={t('matchOver.share')}
                   >
                       {isSharing || renderShareCard ? <Loader2 size={20} className="animate-spin" /> : <Share2 size={20} />}
                   </Button>
                   
-                  <Button onClick={onRotate} size="lg" className={`w-full shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-500 border-t border-white/20 text-white font-black tracking-wide transition-all duration-300 ${!isInteractive ? 'pointer-events-none opacity-50' : ''}`}>
+                  <Button 
+                      onClick={onRotate} 
+                      disabled={!isInteractive}
+                      size="lg" 
+                      className={`w-full shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-500 border-t border-white/20 text-white font-black tracking-wide transition-opacity ${!isInteractive ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
                       <RefreshCw size={18} />
                       {t('matchOver.nextGameButton')}
                   </Button>
               </div>
               
               <div className="grid grid-cols-2 gap-3">
-                  <Button onClick={onUndo} size="md" variant="secondary" disabled={!isInteractive} className={`w-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-all duration-300 ${!isInteractive ? 'pointer-events-none opacity-50' : ''}`}>
+                  <Button 
+                      onClick={onUndo} 
+                      disabled={!isInteractive}
+                      size="md" 
+                      variant="secondary" 
+                      className={`w-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-opacity ${!isInteractive ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
                       <Undo2 size={16} />
                       {t('controls.undo')}
                   </Button>
-                  <Button onClick={onReset} size="md" variant="secondary" disabled={!isInteractive} className={`w-full text-rose-500 hover:text-rose-600 border-rose-500/20 hover:bg-rose-500/10 transition-all duration-300 ${!isInteractive ? 'pointer-events-none opacity-50' : ''}`}>
+                  <Button 
+                      onClick={onReset} 
+                      disabled={!isInteractive}
+                      size="md" 
+                      variant="secondary" 
+                      className={`w-full text-rose-500 hover:text-rose-600 border-rose-500/20 hover:bg-rose-500/10 transition-opacity ${!isInteractive ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
                       <RotateCcw size={16} />
                       {t('controls.reset')}
                   </Button>

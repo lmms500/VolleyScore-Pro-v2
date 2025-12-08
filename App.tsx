@@ -113,20 +113,26 @@ function App() {
 
   useScreenOrientationLock(isFullscreen);
 
+  // Fase 4: Native initialization - Splash Screen + Status Bar optimization
   useEffect(() => {
     const initializeApp = async () => {
       if (Capacitor.isNativePlatform()) {
         try {
+          // Lock orientation to portrait
           await ScreenOrientation.lock({ orientation: 'portrait' });
-          await StatusBar.setOverlaysWebView({ overlay: true });
+          
+          // Configure Status Bar (dark theme by default)
           await StatusBar.setStyle({ style: Style.Dark });
-          await StatusBar.show();
+          await StatusBar.setBackgroundColor({ color: '#020617' }); // slate-950
+          await StatusBar.setOverlaysWebView({ overlay: false }); // Fixed height
+          
+          // Smooth fade-out after app is ready
           setTimeout(async () => {
-              await SplashScreen.hide({ fadeOutDuration: 300 });
-          }, 150);
+            await SplashScreen.hide({ fadeOutDuration: 400 }); // Smooth 400ms fade
+          }, 200); // Wait 200ms for DOM ready
         } catch (error) {
-          console.error("Erro na inicialização nativa:", error);
-          await SplashScreen.hide();
+          console.error("Native initialization error:", error);
+          await SplashScreen.hide(); // Fallback: hide immediately
         }
       }
     };

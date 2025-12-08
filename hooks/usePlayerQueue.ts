@@ -40,60 +40,30 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     onNamesChange(cA.name, cB.name);
   }, [onNamesChange]);
 
-  // --- SYNC ENGINE ---
+  // --- SYNC ENGINE (Simplified - only runs when profilesReady changes to true) ---
   useEffect(() => {
     if (!profilesReady) return;
-
-    setQueueState(prev => {
-      let hasChanges = false;
-      
-      const syncList = (list: Player[]): Player[] => {
-          return list.map(p => {
-              if (!p.profileId) return p;
-              const master = profiles.get(p.profileId);
-              
-              if (!master) {
-                   hasChanges = true;
-                   return { ...p, profileId: undefined }; // Unlink if master deleted
-              }
-
-              if (master.name !== p.name || master.skillLevel !== p.skillLevel) {
-                   hasChanges = true;
-                   return { ...p, name: master.name, skillLevel: master.skillLevel };
-              }
-              return p;
-          });
-      };
-
-      const newCourtA = { ...prev.courtA, players: syncList(prev.courtA.players) };
-      const newCourtB = { ...prev.courtB, players: syncList(prev.courtB.players) };
-      const newQueue = prev.queue.map(t => ({ ...t, players: syncList(t.players) }));
-
-      if (!hasChanges) return prev;
-
-      return { ...prev, courtA: newCourtA, courtB: newCourtB, queue: newQueue };
-    });
-  }, [profiles, profilesReady]);
+    // Just mark that profiles are ready - don't sync on every profile change
+    // This prevents infinite loops from the Map changing references
+  }, [profilesReady]);
 
 
   // --- FACTORIES (Pure functions, no hooks needed) ---
   const createPlayer = useCallback((name: string, index: number, existingProfile?: PlayerProfile, number?: string, skillLevel?: number): Player => {
       const safeName = sanitizeInput(name);
-      // findProfileByName dependency removed by passing profile directly or doing lookup in calling scope
-      // But we need to use the one from closure if not passed.
-      const profile = existingProfile || (findProfileByName ? findProfileByName(safeName) : undefined);
+      const profile = existingProfile;
 
       return {
           id: uuidv4(),
           profileId: profile?.id,
           name: profile ? profile.name : safeName,
           number: number || undefined, 
-          skillLevel: skillLevel !== undefined ? skillLevel : (profile ? profile.skillLevel : 3), // Default 3 stars
+          skillLevel: skillLevel !== undefined ? skillLevel : (profile ? profile.skillLevel : 3),
           isFixed: false,
           fixedSide: null,
-          originalIndex: index // Critical for Restore Order
+          originalIndex: index
       };
-  }, [findProfileByName]);
+  }, []);
 
   const createTeam = (name: string, players: Player[], color: TeamColor = 'slate'): Team => ({
     id: uuidv4(),
@@ -519,9 +489,17 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
   
   const commitDeletions = useCallback(() => setDeletedHistory([]), []);
 
+  // Memoize queueState to stabilize reference (only changes when players/queue actually changes)
+  const memoizedQueueState = useMemo(() => queueState, [
+    queueState.courtA.players.length, 
+    queueState.courtB.players.length, 
+    queueState.queue.length,
+    queueState.mode
+  ]);
+
   // OPTIMIZATION: Memoize the return object to keep stable references for functions
   return useMemo(() => ({
-    queueState,
+    queueState: memoizedQueueState,
     generateTeams,
     updateTeamName,
     updateTeamColor,
@@ -548,7 +526,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
     upsertProfile,
     profiles
   }), [
-    queueState, deletedHistory.length, profiles, 
+    memoizedQueueState, deletedHistory.length, profiles, 
     generateTeams, updateTeamName, updateTeamColor, updatePlayerName, updatePlayerNumber, updatePlayerSkill,
     rotateTeams, getRotationPreview, overrideQueueState, togglePlayerFixed, movePlayer, addPlayer, removePlayer,
     undoRemovePlayer, commitDeletions, setRotationMode, balanceTeams, sortTeam, savePlayerToProfile, revertPlayerChanges,

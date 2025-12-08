@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { PlayerProfile } from '../types';
 import { SecureStorage } from '../services/SecureStorage';
@@ -6,47 +5,60 @@ import { v4 as uuidv4 } from 'uuid';
 
 const PROFILES_STORAGE_KEY = 'player_profiles_master';
 
+/**
+ * usePlayerProfiles Hook
+ * Manages master player profile database with async loading
+ * Always sets isReady = true (even on failure) to prevent blocking the app
+ */
 export const usePlayerProfiles = () => {
   const [profiles, setProfiles] = useState<Map<string, PlayerProfile>>(new Map());
   const [isReady, setIsReady] = useState(false);
 
-  // Load profiles on mount
+  // Load profiles ONCE on component mount
   useEffect(() => {
-    const load = async () => {
-      const storedData = await SecureStorage.load<PlayerProfile[]>(PROFILES_STORAGE_KEY);
-      if (storedData && Array.isArray(storedData)) {
-        const map = new Map();
-        storedData.forEach(p => map.set(p.id, p));
-        setProfiles(map);
+    let isMounted = true;
+
+    (async () => {
+      try {
+        const storedData = await SecureStorage.load<PlayerProfile[]>(PROFILES_STORAGE_KEY);
+        if (isMounted && storedData && Array.isArray(storedData)) {
+          const map = new Map<string, PlayerProfile>();
+          storedData.forEach(p => map.set(p.id, p));
+          setProfiles(map);
+        }
+      } catch (err) {
+        console.error('[usePlayerProfiles] Load failed:', err);
+        // Continue anyway - profiles will be empty but app won't block
       }
-      setIsReady(true);
-    };
-    load();
+      
+      // Mark as ready regardless of load success
+      if (isMounted) {
+        setIsReady(true);
+      }
+    })();
+
+    return () => { isMounted = false; };
   }, []);
 
-  // Save profiles whenever they change
+  // Auto-save profiles when they change
   useEffect(() => {
     if (!isReady) return;
-    const array = Array.from(profiles.values());
-    SecureStorage.save(PROFILES_STORAGE_KEY, array);
+    const data = Array.from(profiles.values());
+    SecureStorage.save(PROFILES_STORAGE_KEY, data).catch(err => {
+      console.error('[usePlayerProfiles] Save failed:', err);
+    });
   }, [profiles, isReady]);
 
   const upsertProfile = useCallback((name: string, skillLevel: number, id?: string): PlayerProfile => {
     const cleanName = name.trim();
-    const now = Date.now();
-    
-    // Check if updating existing or creating new
-    let existing: PlayerProfile | undefined;
-    if (id) {
-        existing = profiles.get(id);
-    }
+    const existing = id ? profiles.get(id) : undefined;
     
     const newProfile: PlayerProfile = {
       id: existing?.id || uuidv4(),
       name: cleanName,
       skillLevel: Math.min(5, Math.max(1, skillLevel)),
-      createdAt: existing?.createdAt || now,
-      lastUpdated: now
+      createdAt: existing?.createdAt || Date.now(),
+      lastUpdated: Date.now()
     };
 
     setProfiles(prev => {
@@ -69,7 +81,7 @@ export const usePlayerProfiles = () => {
   const findProfileByName = useCallback((name: string): PlayerProfile | undefined => {
     const search = name.trim().toLowerCase();
     for (const profile of profiles.values()) {
-        if (profile.name.toLowerCase() === search) return profile;
+      if (profile.name.toLowerCase() === search) return profile;
     }
     return undefined;
   }, [profiles]);
@@ -77,7 +89,7 @@ export const usePlayerProfiles = () => {
   const getProfile = useCallback((id: string) => profiles.get(id), [profiles]);
 
   return {
-    profiles, // Exposed for sync checking
+    profiles,
     upsertProfile,
     deleteProfile,
     findProfileByName,

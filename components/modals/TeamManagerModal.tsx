@@ -1045,7 +1045,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
 
        <div 
          className={`
-            fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] 
+            fixed bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] left-1/2 -translate-x-1/2 z-[70] 
             transition-all duration-300 cubic-bezier(0.175, 0.885, 0.32, 1.275)
             ${undoVisible && props.canUndoRemove ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-90 pointer-events-none'}
          `}

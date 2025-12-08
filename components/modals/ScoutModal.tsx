@@ -87,7 +87,7 @@ export const ScoutModal: React.FC<ScoutModalProps> = ({
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[9999] flex flex-col justify-end sm:justify-center items-center isolate">
+                <div className="fixed inset-0 z-[9999] flex flex-col justify-end sm:justify-center items-center isolate pt-[calc(env(safe-area-inset-top)+1rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)]">
                     <motion.div 
                         className="absolute inset-0 bg-black/40 dark:bg-black/70 backdrop-blur-sm z-0"
                         initial={{ opacity: 0 }}

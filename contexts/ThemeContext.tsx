@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
+import { getPreferencesService } from '../services/PreferencesService';
 
 type Theme = 'light' | 'dark';
 
@@ -10,21 +11,30 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize state lazily, checking what is ALREADY in the DOM (from head script) or localStorage
+  // Initialize state lazily, checking what is ALREADY in the DOM (from head script) or Preferences
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
-       // Check class list first (set by index.html script)
-       if (document.documentElement.classList.contains('dark')) return 'dark';
-       
-       // Fallback checks
-       const saved = localStorage.getItem('appTheme') as Theme;
-       if (saved === 'dark') return 'dark';
-       if (saved === 'light') return 'light';
-       
-       if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+      // Check class list first (set by index.html script)
+      if (document.documentElement.classList.contains('dark')) return 'dark';
+      
+      // If no class set, prefer system preference
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
     }
     return 'light'; // Default
   });
+
+  // Initialize from Preferences on mount
+  useEffect(() => {
+    const initializeTheme = async () => {
+      const prefs = getPreferencesService();
+      const saved = await prefs.get<Theme>('appTheme');
+      if (saved === 'dark' || saved === 'light') {
+        setThemeState(saved);
+      }
+    };
+    
+    initializeTheme();
+  }, []);
 
   const applyThemeToDOM = useCallback((newTheme: Theme) => {
     const root = window.document.documentElement;
@@ -46,10 +56,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Sync state changes to DOM & Storage
+  // Sync state changes to DOM & Preferences
   useEffect(() => {
     applyThemeToDOM(theme);
-    localStorage.setItem('appTheme', theme);
+    const prefs = getPreferencesService();
+    prefs.set('appTheme', theme); // Fire and forget
   }, [theme, applyThemeToDOM]);
 
   const setTheme = useCallback((newTheme: Theme) => {

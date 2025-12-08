@@ -1,5 +1,6 @@
 
-import React, { useEffect, useRef, useState, memo } from 'react';
+
+import React, { useEffect, useRef, useState, memo, useMemo } from 'react';
 import { motion, AnimatePresence, Transition, Variants } from 'framer-motion';
 
 interface ScoreTickerProps {
@@ -20,6 +21,12 @@ const tickerTransition: Transition = {
  * Implements a vertical slide animation based on value direction.
  * Prev < Curr: Slide Up (New comes from bottom).
  * Prev > Curr: Slide Down (New comes from top).
+ * 
+ * NATIVE OPTIMIZATION:
+ * - Uses transform (translate) + opacity only (GPU-accelerated)
+ * - Memoized to prevent unnecessary re-renders
+ * - Will-change applied for consistent 60fps animation
+ * - Optimized for mid-range Android devices
  */
 export const ScoreTicker: React.FC<ScoreTickerProps> = memo(({ value, className, style }) => {
   const prevValue = useRef(value);
@@ -34,19 +41,18 @@ export const ScoreTicker: React.FC<ScoreTickerProps> = memo(({ value, className,
     prevValue.current = value;
   }, [value]);
 
-  const variants: Variants = {
+  // Memoize variants to prevent recreation on every render
+  const variants: Variants = useMemo(() => ({
     enter: (dir: number) => ({
       y: dir > 0 ? "70%" : "-70%",
       opacity: 0,
       scale: 0.8,
-      filter: "blur(8px)",
       zIndex: 1
     }),
     center: {
       y: 0,
       opacity: 1,
       scale: 1,
-      filter: "blur(0px)",
       zIndex: 2,
       transition: tickerTransition
     },
@@ -54,11 +60,10 @@ export const ScoreTicker: React.FC<ScoreTickerProps> = memo(({ value, className,
       y: dir > 0 ? "-70%" : "70%",
       opacity: 0,
       scale: 0.8,
-      filter: "blur(8px)",
       zIndex: 0,
       transition: { duration: 0.2, ease: "easeIn" }
     })
-  };
+  }), []);
 
   return (
     // Removed overflow: hidden to prevent large font clipping (border cutting off numbers)
@@ -72,8 +77,8 @@ export const ScoreTicker: React.FC<ScoreTickerProps> = memo(({ value, className,
           animate="center"
           exit="exit"
           className="block w-full text-center leading-none"
-          // Force hardware acceleration for smoother text rendering during transform
-          style={{ willChange: "transform, opacity, filter" }} 
+          // Force hardware acceleration for consistent 60fps on native
+          style={{ willChange: "transform, opacity, scale" }} 
         >
           {value}
         </motion.span>
@@ -81,3 +86,7 @@ export const ScoreTicker: React.FC<ScoreTickerProps> = memo(({ value, className,
     </div>
   );
 });
+
+ScoreTicker.displayName = 'ScoreTicker';
+
+export default ScoreTicker;

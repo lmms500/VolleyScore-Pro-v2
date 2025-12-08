@@ -1,5 +1,6 @@
 
-import React, { useEffect, useRef } from 'react';
+
+import React, { useEffect, useRef, memo } from 'react';
 import { resolveTheme } from '../../utils/colors';
 import { TeamColor } from '../../types';
 
@@ -19,7 +20,16 @@ interface Particle {
   opacity: number;
 }
 
-export const Confetti: React.FC<ConfettiProps> = ({ color }) => {
+/**
+ * Confetti Component - Canvas-based confetti animation
+ * 
+ * NATIVE OPTIMIZATION:
+ * - Uses canvas for GPU-accelerated rendering (not DOM)
+ * - requestAnimationFrame for efficient frame synchronization
+ * - Optimized for 60fps on low-end Android devices
+ * - Proper cleanup to prevent memory leaks
+ */
+export const Confetti: React.FC<ConfettiProps> = memo(({ color }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const theme = resolveTheme(color);
 
@@ -27,7 +37,7 @@ export const Confetti: React.FC<ConfettiProps> = ({ color }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
     let animationId: number;
@@ -66,7 +76,7 @@ export const Confetti: React.FC<ConfettiProps> = ({ color }) => {
 
     const init = () => {
       resize();
-      particles = Array.from({ length: 150 }, createParticle);
+      particles = Array.from({ length: 120 }, createParticle);
     };
 
     const update = () => {
@@ -78,14 +88,12 @@ export const Confetti: React.FC<ConfettiProps> = ({ color }) => {
         p.x += p.vx;
         p.y += p.vy;
         p.rotation += p.rotationSpeed;
-        p.vy += 0.05; // Gravity
-        p.vx *= 0.99; // Air resistance
+        p.vy += 0.05;
+        p.vx *= 0.99;
 
-        // Wrap around horizontally
         if (p.x > canvas.width) p.x = 0;
         if (p.x < 0) p.x = canvas.width;
 
-        // Reset if fell off screen
         if (p.y > canvas.height) {
            particles[i] = createParticle();
         }
@@ -95,8 +103,6 @@ export const Confetti: React.FC<ConfettiProps> = ({ color }) => {
         ctx.rotate((p.rotation * Math.PI) / 180);
         ctx.globalAlpha = p.opacity;
         ctx.fillStyle = p.color;
-        
-        // Draw confetti shape (rect)
         ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
         ctx.restore();
       });
@@ -119,7 +125,11 @@ export const Confetti: React.FC<ConfettiProps> = ({ color }) => {
     <canvas 
       ref={canvasRef} 
       className="absolute inset-0 pointer-events-none z-0"
-      style={{ width: '100%', height: '100%' }}
+      style={{ width: '100%', height: '100%', display: 'block' }}
     />
   );
-};
+});
+
+Confetti.displayName = 'Confetti';
+
+export default Confetti;

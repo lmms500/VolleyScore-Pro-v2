@@ -3,18 +3,15 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useTranslation } from '../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
 import { 
-  Trophy, Hand, RefreshCw, Share, Download, 
-  ChevronRight, Check, PlusSquare, Smartphone 
+  Trophy, Hand, RefreshCw, Share, 
+  ChevronRight, Check, PlusSquare 
 } from 'lucide-react';
 
 interface TutorialModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onInstall: () => void;
-  canInstall: boolean;
-  isIOS: boolean;
-  isStandalone: boolean;
 }
 
 const Slide = ({ title, desc, icon: Icon, color, children }: any) => (
@@ -31,10 +28,11 @@ const Slide = ({ title, desc, icon: Icon, color, children }: any) => (
 );
 
 export const TutorialModal: React.FC<TutorialModalProps> = memo(({ 
-  isOpen, onClose, onInstall, canInstall, isIOS, isStandalone 
+  isOpen, onClose
 }) => {
   const { t } = useTranslation();
   const [step, setStep] = useState(0);
+  const isNativePlatform = Capacitor.isNativePlatform();
 
   const slides = [
     // 1. Welcome
@@ -89,33 +87,16 @@ export const TutorialModal: React.FC<TutorialModalProps> = memo(({
         />
       )
     },
-    // 4. Install
+    // 4. Share & Native Features
     {
-      id: 'install',
+      id: 'native',
       component: (
         <Slide 
-          title={t('tutorial.install.title')} 
-          desc={isStandalone ? t('tutorial.install.installed') : (isIOS ? t('tutorial.install.descIOS') : t('tutorial.install.descAndroid'))} 
-          icon={isStandalone ? Check : Download} 
+          title={t('tutorial.features.title')} 
+          desc={isNativePlatform ? 'Aproveite todos os recursos nativos: haptics, orientação, compartilhamento e muito mais!' : 'Acesse através do navegador ou instale como app nativo para melhor experiência.'} 
+          icon={Check} 
           color="bg-sky-500"
-        >
-           {!isStandalone && isIOS && (
-              <div className="bg-slate-100 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5 text-left w-full max-w-xs space-y-3">
-                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-200">
-                      <span className="flex items-center justify-center w-6 h-6 rounded bg-sky-500 text-white font-bold text-xs">1</span>
-                      <span>{t('install.ios.tap')} <Share size={14} className="inline mx-1 text-sky-500" /></span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-200">
-                      <span className="flex items-center justify-center w-6 h-6 rounded bg-sky-500 text-white font-bold text-xs">2</span>
-                      <span>{t('install.ios.then')} <span className="font-bold">{t('install.ios.addToHome')}</span></span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-200">
-                      <span className="flex items-center justify-center w-6 h-6 rounded bg-sky-500 text-white font-bold text-xs">3</span>
-                      <span>{t('common.done')} <PlusSquare size={14} className="inline mx-1" /></span>
-                  </div>
-              </div>
-           )}
-        </Slide>
+        />
       )
     }
   ];
@@ -127,8 +108,6 @@ export const TutorialModal: React.FC<TutorialModalProps> = memo(({
       onClose();
     }
   };
-
-  const isInstallStep = step === slides.length - 1;
 
   return (
     <Modal 
@@ -159,13 +138,6 @@ export const TutorialModal: React.FC<TutorialModalProps> = memo(({
         {/* Footer Actions */}
         <div className="pt-6 border-t border-black/5 dark:border-white/5 flex flex-col gap-3">
              
-             {/* Dynamic Primary Action for Install Step */}
-             {isInstallStep && !isStandalone && canInstall && (
-                 <Button onClick={onInstall} size="lg" className="w-full bg-sky-500 hover:bg-sky-400 shadow-sky-500/20">
-                     <Download size={18} /> {t('install.installNow')}
-                 </Button>
-             )}
-
              <div className="flex items-center justify-between">
                 {/* Dots Indicator */}
                 <div className="flex gap-1.5">
@@ -184,7 +156,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = memo(({
                             {t('tutorial.next')} <ChevronRight size={16} />
                         </Button>
                     ) : (
-                        <Button onClick={onClose} variant={canInstall && !isStandalone ? "ghost" : "primary"} size="md" className="px-6">
+                        <Button onClick={onClose} variant="primary" size="md" className="px-6">
                             {t('common.done')} <Check size={16} />
                         </Button>
                     )}

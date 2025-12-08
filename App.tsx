@@ -4,7 +4,6 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { useVolleyGame } from './hooks/useVolleyGame';
-import { usePWAInstallPrompt } from './hooks/usePWAInstallPrompt';
 import { useTutorial } from './hooks/useTutorial';
 import { useHaptics } from './hooks/useHaptics';
 import { useVoiceControl } from './hooks/useVoiceControl';
@@ -22,8 +21,6 @@ import { LayoutProvider } from './contexts/LayoutContext';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SuddenDeathOverlay } from './components/ui/CriticalPointAnimation';
 import { BackgroundGlow } from './components/ui/BackgroundGlow';
-import { ReloadPrompt } from './components/ui/ReloadPrompt';
-import { InstallReminder } from './components/ui/InstallReminder';
 import { useTranslation } from './contexts/LanguageContext';
 import { useHudMeasure } from './hooks/useHudMeasure';
 import { useHistoryStore } from './stores/historyStore';
@@ -34,13 +31,15 @@ import { motion, LayoutGroup, AnimatePresence } from 'framer-motion';
 import { v4 as uuidv4 } from 'uuid';
 import { useScreenOrientationLock } from './hooks/useScreenOrientationLock';
 
-// MODAL IMPORTS (EAGER)
-import { SettingsModal } from './components/modals/SettingsModal';
-import { TeamManagerModal } from './components/modals/TeamManagerModal';
-import { MatchOverModal } from './components/modals/MatchOverModal';
-import { ConfirmationModal } from './components/modals/ConfirmationModal';
-import { HistoryModal } from './components/modals/HistoryModal';
-import { TutorialModal } from './components/modals/TutorialModal';
+// MODAL IMPORTS - Lazy-loaded for code-splitting (Fase 3.1)
+import { 
+  LazySettingsModal, 
+  LazyTeamManagerModal, 
+  LazyMatchOverModal, 
+  LazyConfirmationModal, 
+  LazyHistoryModal, 
+  LazyTutorialModal 
+} from './components/modals/LazyModals';
 
 // Simple SuspenseLoader component
 const SuspenseLoader: React.FC = () => (
@@ -87,8 +86,7 @@ function App() {
   const { t } = useTranslation();
   const historyStore = useHistoryStore();
 
-  const pwa = usePWAInstallPrompt();
-  const tutorial = useTutorial(pwa.isStandalone);
+  const tutorial = useTutorial(Capacitor.isNativePlatform());
 
   const [showSettings, setShowSettings] = useState(false);
   const [showManager, setShowManager] = useState(false);
@@ -104,7 +102,7 @@ function App() {
 
   const savedMatchIdRef = useRef<string | null>(null);
   const audio = useGameAudio(state.config);
-  const haptics = useHaptics(state.config.enableSound);
+  const haptics = useHaptics(true); // Haptics always enabled (independent from audio)
   const prevSetsRef = useRef({ a: 0, b: 0 });
 
   const prevStatusRef = useRef({
@@ -139,13 +137,13 @@ function App() {
     const setsChanged = state.setsA > prevSetsRef.current.a || state.setsB > prevSetsRef.current.b;
     if (setsChanged && !state.isMatchOver) {
         audio.playSetWin();
-        haptics.trigger([100, 50, 100]);
+        haptics.gamePatterns.setWin();
     }
     prevSetsRef.current = { a: state.setsA, b: state.setsB };
 
     if (state.isMatchOver && !savedMatchIdRef.current && state.matchWinner) {
       audio.playMatchWin();
-      haptics.trigger([200, 100, 200, 100, 400]);
+      haptics.gamePatterns.matchWin();
 
       const newId = uuidv4();
       historyStore.addMatch({
@@ -179,7 +177,7 @@ function App() {
     }
     undo();
     audio.playUndo();
-    haptics.trigger(30);
+    haptics.gamePatterns.timeout();
   }, [state.isMatchOver, undo, historyStore, audio, haptics]);
 
   const { isListening, toggleListening, hasPermission } = useVoiceControl({
@@ -194,7 +192,7 @@ function App() {
   useEffect(() => {
       if (state.pendingSideSwitch) {
           audio.playWhistle();
-          haptics.trigger([300, 100, 300]);
+          haptics.gamePatterns.sideSwitch();
       }
   }, [state.pendingSideSwitch, audio, haptics]);
 
@@ -215,13 +213,13 @@ function App() {
 
       if (enteredSuddenDeath) {
           audio.playSuddenDeath();
-          haptics.trigger([50, 100, 50, 100, 50, 100]);
+          haptics.gamePatterns.suddenDeath();
       } else if (enteredMatchPoint) {
           audio.playMatchPointAlert();
-          haptics.trigger([50, 50, 50, 50]);
+          haptics.gamePatterns.matchPoint();
       } else if (enteredSetPoint) {
           audio.playSetPointAlert();
-          haptics.trigger([50, 100]);
+          haptics.gamePatterns.setPoint();
       }
 
       prevStatusRef.current = current;
@@ -246,13 +244,13 @@ function App() {
 
   const toggleFullscreen = useCallback(() => {
     audio.playTap();
-    haptics.trigger(10);
+    haptics.gamePatterns.scored();
     setIsFullscreen(prev => !prev);
   }, [audio, haptics]);
 
   const toggleTimer = useCallback(() => {
     audio.playTap();
-    haptics.trigger(10);
+    haptics.gamePatterns.scored();
     game.setState(prev => ({ ...prev, isTimerRunning: !prev.isTimerRunning }));
   }, [game.setState, audio, haptics]);
 
@@ -264,14 +262,14 @@ function App() {
     const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
     if (!playerId && !state.config.enablePlayerStats) {
          audio.playScore();
-         haptics.trigger(15);
+         haptics.gamePatterns.scored();
     }
     addPoint('A', metadata);
   }, [addPoint, state.config.enablePlayerStats, audio, haptics]);
 
   const handleSubA = useCallback(() => {
     audio.playUndo();
-    haptics.trigger(30);
+    haptics.gamePatterns.timeout();
     subtractPoint('A');
   }, [subtractPoint, audio, haptics]);
 
@@ -279,34 +277,34 @@ function App() {
     const metadata = playerId ? { playerId, skill: skill as SkillType } : undefined;
     if (!playerId && !state.config.enablePlayerStats) {
          audio.playScore();
-         haptics.trigger(15);
+         haptics.gamePatterns.scored();
     }
     addPoint('B', metadata);
   }, [addPoint, state.config.enablePlayerStats, audio, haptics]);
 
   const handleSubB = useCallback(() => {
     audio.playUndo();
-    haptics.trigger(30);
+    haptics.gamePatterns.timeout();
     subtractPoint('B');
   }, [subtractPoint, audio, haptics]);
 
-  const handleSetServerA = useCallback(() => { audio.playTap(); haptics.trigger(10); setServer('A'); }, [setServer, audio, haptics]);
-  const handleSetServerB = useCallback(() => { audio.playTap(); haptics.trigger(10); setServer('B'); }, [setServer, audio, haptics]);
+  const handleSetServerA = useCallback(() => { audio.playTap(); haptics.gamePatterns.scored(); setServer('A'); }, [setServer, audio, haptics]);
+  const handleSetServerB = useCallback(() => { audio.playTap(); haptics.gamePatterns.scored(); setServer('B'); }, [setServer, audio, haptics]);
 
-  const handleTimeoutA = useCallback(() => { audio.playWhistle(); haptics.trigger(50); useTimeout('A'); }, [useTimeout, audio, haptics]);
-  const handleTimeoutB = useCallback(() => { audio.playWhistle(); haptics.trigger(50); useTimeout('B'); }, [useTimeout, audio, haptics]);
+  const handleTimeoutA = useCallback(() => { audio.playWhistle(); haptics.gamePatterns.timeout(); useTimeout('A'); }, [useTimeout, audio, haptics]);
+  const handleTimeoutB = useCallback(() => { audio.playWhistle(); haptics.gamePatterns.timeout(); useTimeout('B'); }, [useTimeout, audio, haptics]);
 
-  const openSettings = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowSettings(true); }, [audio, haptics]);
-  const openManager = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowManager(true); }, [audio, haptics]);
-  const openHistory = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowHistory(true); }, [audio, haptics]);
-  const openReset = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowResetConfirm(true); }, [audio, haptics]);
-  const toggleSwap = useCallback(() => { audio.playTap(); haptics.trigger(20); toggleSides(); }, [audio, toggleSides, haptics]);
+  const openSettings = useCallback(() => { audio.playTap(); haptics.gamePatterns.scored(); setShowSettings(true); }, [audio, haptics]);
+  const openManager = useCallback(() => { audio.playTap(); haptics.gamePatterns.scored(); setShowManager(true); }, [audio, haptics]);
+  const openHistory = useCallback(() => { audio.playTap(); haptics.gamePatterns.scored(); setShowHistory(true); }, [audio, haptics]);
+  const openReset = useCallback(() => { audio.playTap(); haptics.gamePatterns.scored(); setShowResetConfirm(true); }, [audio, haptics]);
+  const toggleSwap = useCallback(() => { audio.playTap(); haptics.impact('medium'); toggleSides(); }, [audio, toggleSides, haptics]);
   const closeSettings = useCallback(() => setShowSettings(false), []);
   const closeManager = useCallback(() => setShowManager(false), []);
   const closeHistory = useCallback(() => setShowHistory(false), []);
   const closeReset = useCallback(() => setShowResetConfirm(false), []);
   const closeMenu = useCallback(() => setShowFullscreenMenu(false), []);
-  const openMenu = useCallback(() => { audio.playTap(); haptics.trigger(10); setShowFullscreenMenu(true); }, [audio, haptics]);
+  const openMenu = useCallback(() => { audio.playTap(); haptics.gamePatterns.scored(); setShowFullscreenMenu(true); }, [audio, haptics]);
 
   if (!isLoaded) return <SuspenseLoader />;
 
@@ -336,15 +334,6 @@ function App() {
           />
 
           <SuddenDeathOverlay active={state.inSuddenDeath} />
-          <ReloadPrompt />
-
-          <InstallReminder
-             isVisible={tutorial.showReminder}
-             onInstall={pwa.promptInstall}
-             onDismiss={tutorial.dismissReminder}
-             canInstall={pwa.isInstallable}
-             isIOS={pwa.isIOS}
-          />
 
           <AnimatePresence>
              {state.pendingSideSwitch && (
@@ -595,32 +584,24 @@ function App() {
 
           <Suspense fallback={<SuspenseLoader />}>
             {tutorial.showTutorial && (
-              <TutorialModal
+              <LazyTutorialModal
                 isOpen={tutorial.showTutorial}
                 onClose={tutorial.completeTutorial}
-                onInstall={pwa.promptInstall}
-                canInstall={pwa.isInstallable}
-                isIOS={pwa.isIOS}
-                isStandalone={pwa.isStandalone}
               />
             )}
 
             {showSettings && (
-              <SettingsModal
+              <LazySettingsModal
                 isOpen={showSettings}
                 onClose={closeSettings}
                 config={state.config}
                 onSave={applySettings}
-                onInstall={pwa.promptInstall}
-                canInstall={pwa.isInstallable}
-                isIOS={pwa.isIOS}
-                isStandalone={pwa.isStandalone}
                 isMatchActive={game.isMatchActive}
               />
             )}
 
             {showManager && (
-              <TeamManagerModal
+              <LazyTeamManagerModal
                 isOpen={showManager}
                 onClose={closeManager}
                 courtA={state.teamARoster}
@@ -653,14 +634,14 @@ function App() {
             )}
 
             {showHistory && (
-              <HistoryModal
+              <LazyHistoryModal
                 isOpen={showHistory}
                 onClose={closeHistory}
               />
             )}
 
             {state.isMatchOver && (
-              <MatchOverModal
+              <LazyMatchOverModal
                 isOpen={state.isMatchOver}
                 state={state}
                 onRotate={rotateTeams}
@@ -670,7 +651,7 @@ function App() {
             )}
 
             {showResetConfirm && (
-              <ConfirmationModal
+              <LazyConfirmationModal
                 isOpen={showResetConfirm}
                 onClose={closeReset}
                 onConfirm={resetMatch}

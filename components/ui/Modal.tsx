@@ -41,7 +41,7 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           {/* Backdrop with Blur */}
           <motion.div 
             className="absolute inset-0 bg-black/40 dark:bg-[#000000]/60 backdrop-blur-md"

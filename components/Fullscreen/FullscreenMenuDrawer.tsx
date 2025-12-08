@@ -128,6 +128,9 @@ export const FullscreenMenuDrawer: React.FC<FullscreenMenuDrawerProps> = ({
               bg-[#f8fafc]/95 dark:bg-[#0f172a]/95
               backdrop-blur-2xl
               border-l border-white/20 dark:border-white/10
+              pt-[calc(env(safe-area-inset-top)+1rem)]
+              pr-[calc(env(safe-area-inset-right)+1rem)]
+              pb-[calc(env(safe-area-inset-bottom)+1rem)]
               shadow-2xl shadow-black/20 dark:shadow-black/80
               flex flex-col
             `}

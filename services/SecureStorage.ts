@@ -1,10 +1,15 @@
 
 /**
  * SecureStorage Service
- * Wraps localStorage with integrity checks to prevent tampering.
+ * Wraps Capacitor Preferences / localStorage with integrity checks to prevent tampering.
+ * 
+ * MIGRATION NOTE (Fase 2.2):
+ * Now uses PreferencesService instead of direct localStorage.
+ * Automatically uses native encrypted storage on Android/iOS.
  */
 
-const APP_PREFIX = 'vs_pro_v2_';
+import { getPreferencesService } from './PreferencesService';
+
 const INTEGRITY_SALT = 'VolleyScore_Sec_Salt_992834'; // Client-side anti-tamper salt
 
 interface StorageEnvelope<T> {
@@ -50,7 +55,7 @@ const generateHash = async (content: string): Promise<string> => {
 
 export const SecureStorage = {
   /**
-   * Saves data with an integrity hash.
+   * Saves data with an integrity hash using PreferencesService.
    */
   async save<T>(key: string, data: T): Promise<void> {
     try {
@@ -64,7 +69,8 @@ export const SecureStorage = {
         version: '2.0.0'
       };
 
-      localStorage.setItem(APP_PREFIX + key, JSON.stringify(envelope));
+      const prefs = getPreferencesService();
+      await prefs.set(key, envelope);
     } catch (error) {
       console.error('SecureStorage Save Error:', error);
       // Fail safe: don't crash app, data just won't persist properly
@@ -72,25 +78,17 @@ export const SecureStorage = {
   },
 
   /**
-   * Loads data and verifies integrity hash.
+   * Loads data and verifies integrity hash using PreferencesService.
    * If hash mismatch (tampering detected) or invalid JSON, returns null.
    * Prevents app crashes on corrupted storage.
    */
   async load<T>(key: string): Promise<T | null> {
     try {
-      const raw = localStorage.getItem(APP_PREFIX + key);
-      if (!raw) return null;
-
-      let envelope: StorageEnvelope<T>;
-      try {
-          envelope = JSON.parse(raw);
-      } catch (e) {
-          console.warn(`SecureStorage: Malformed JSON in storage for key ${key}. Clearing corrupted data.`);
-          // Optionally clear the corrupted key to allow fresh state next time
-          localStorage.removeItem(APP_PREFIX + key);
-          return null;
-      }
+      const prefs = getPreferencesService();
+      const envelope = await prefs.get<StorageEnvelope<T>>(key);
       
+      if (!envelope) return null;
+
       // 1. Verify Structure - Weak Check
       if (!envelope || typeof envelope !== 'object' || !envelope.data) {
         // Handle legacy data or corrupted structure
@@ -126,9 +124,14 @@ export const SecureStorage = {
   },
 
   /**
-   * Clear specific key
+   * Clear specific key using PreferencesService
    */
-  remove(key: string) {
-    localStorage.removeItem(APP_PREFIX + key);
+  async remove(key: string) {
+    try {
+      const prefs = getPreferencesService();
+      await prefs.remove(key);
+    } catch (error) {
+      console.error('SecureStorage Remove Error:', error);
+    }
   }
 };

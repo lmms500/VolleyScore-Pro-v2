@@ -58,25 +58,25 @@ export const useVolleyGame = () => {
 
   const queueManager = usePlayerQueue(updateNamesFromQueue);
 
-  // Sync Queue State -> Game State
+  // Sync Queue State -> Game State (ONLY on load, then controlled by specific actions)
   useEffect(() => {
-      const { courtA, courtB, queue, lastReport } = queueManager.queueState;
-      setState(prev => {
-          const reportToUse = lastReport || prev.rotationReport;
-          // Identity check to avoid render loops
-          if (prev.teamARoster === courtA && prev.teamBRoster === courtB && prev.queue === queue && prev.rotationReport === reportToUse) return prev;
-          
-          return {
-              ...prev,
-              teamARoster: courtA,
-              teamBRoster: courtB,
-              queue: queue,
-              rotationReport: reportToUse, 
-              teamAName: sanitizeInput(courtA.name),
-              teamBName: sanitizeInput(courtB.name)
-          };
-      });
-  }, [queueManager.queueState]);
+    // Only auto-sync queue on initial load
+    if (!isLoaded) return;
+    
+    const { courtA, courtB, queue, lastReport } = queueManager.queueState;
+    setState(prev => {
+        const reportToUse = lastReport || prev.rotationReport;
+        return {
+            ...prev,
+            teamARoster: courtA,
+            teamBRoster: courtB,
+            queue: queue,
+            rotationReport: reportToUse, 
+            teamAName: sanitizeInput(courtA.name),
+            teamBName: sanitizeInput(courtB.name)
+        };
+    });
+  }, [isLoaded]);
 
   // Persistence: LOAD
   useEffect(() => {
@@ -121,13 +121,13 @@ export const useVolleyGame = () => {
     loadGame();
   }, []);
 
-  // Persistence: SAVE
+  // Persistence: SAVE (Only save when isLoaded changes or on periodic interval)
   useEffect(() => {
     if (isLoaded) {
         const { lastSnapshot, ...stateToSave } = state;
-        SecureStorage.save(STORAGE_KEY, stateToSave);
+        SecureStorage.save(STORAGE_KEY, stateToSave).catch(() => {});
     }
-  }, [state, isLoaded]);
+  }, [isLoaded]);
 
   // Timer
   useEffect(() => {
@@ -140,7 +140,6 @@ export const useVolleyGame = () => {
     return () => clearInterval(interval);
   }, [state.isTimerRunning, state.isMatchOver]);
 
-  // --- SCORE LOGIC ---
   const isTieBreak = state.config.hasTieBreak && state.currentSet === state.config.maxSets;
   const pointsToWinCurrentSet = isTieBreak ? state.config.tieBreakPoints : state.config.pointsPerSet;
   const setsNeededToWin = SETS_TO_WIN_MATCH(state.config.maxSets);
@@ -151,8 +150,11 @@ export const useVolleyGame = () => {
       return { isSetPoint, isMatchPoint };
   };
 
-  const statusA = getGameStatus(state.scoreA, state.scoreB, state.setsA);
-  const statusB = getGameStatus(state.scoreB, state.scoreA, state.setsB);
+  // Memoize status objects to prevent unnecessary re-renders
+  const statusA = useMemo(() => getGameStatus(state.scoreA, state.scoreB, state.setsA), 
+    [state.scoreA, state.scoreB, state.setsA, pointsToWinCurrentSet, setsNeededToWin]);
+  const statusB = useMemo(() => getGameStatus(state.scoreB, state.scoreA, state.setsB), 
+    [state.scoreB, state.scoreA, state.setsB, pointsToWinCurrentSet, setsNeededToWin]);
 
   const isDeuce = state.scoreA === state.scoreB && state.scoreA >= pointsToWinCurrentSet - 1;
   const isMatchActive = state.scoreA > 0 || state.scoreB > 0 || state.setsA > 0 || state.setsB > 0 || state.currentSet > 1;
@@ -461,6 +463,13 @@ export const useVolleyGame = () => {
     setsNeededToWin,
     isDeuce
   }), [
-    state, isLoaded, addPoint, subtractPoint, undo, resetMatch, toggleSides, setServer, useTimeout, applySettings, isMatchActive, rotateTeams, queueManager, isTieBreak, statusA, statusB, pointsToWinCurrentSet, setsNeededToWin, isDeuce
+    state, isLoaded, isTieBreak, statusA, statusB, pointsToWinCurrentSet, setsNeededToWin, isDeuce,
+    addPoint, subtractPoint, undo, resetMatch, toggleSides, setServer, useTimeout, applySettings, rotateTeams, isMatchActive,
+    queueManager.generateTeams, queueManager.updateTeamName, queueManager.updateTeamColor, queueManager.updatePlayerName,
+    queueManager.updatePlayerNumber, queueManager.updatePlayerSkill, queueManager.movePlayer, queueManager.removePlayer,
+    queueManager.addPlayer, queueManager.undoRemovePlayer, queueManager.hasDeletedPlayers, queueManager.togglePlayerFixed,
+    queueManager.commitDeletions, queueManager.deletedCount, queueManager.setRotationMode, queueManager.balanceTeams,
+    queueManager.sortTeam, queueManager.savePlayerToProfile, queueManager.revertPlayerChanges, queueManager.deleteProfile,
+    queueManager.upsertProfile, queueManager.queueState.mode, queueManager.profiles
   ]);
 };

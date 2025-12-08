@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getPreferencesService } from '../services/PreferencesService';
 
 const TUTORIAL_KEY = 'vs_pro_tutorial_seen_v2';
 const REMINDER_INTERVAL = 5 * 60 * 1000; // 5 Minutes
@@ -9,20 +10,27 @@ export const useTutorial = (isStandalone: boolean) => {
 
   useEffect(() => {
     // Check if tutorial has been seen
-    const seen = localStorage.getItem(TUTORIAL_KEY);
-    if (!seen) {
-      // Small delay to ensure app is loaded visually
-      setTimeout(() => setShowTutorial(true), 1000);
-    }
+    const initializeTutorial = async () => {
+      const prefs = getPreferencesService();
+      const seen = await prefs.get<boolean>(TUTORIAL_KEY);
+      if (!seen) {
+        // Small delay to ensure app is loaded visually
+        setTimeout(() => setShowTutorial(true), 1000);
+      }
+    };
+    
+    initializeTutorial();
   }, []);
 
   useEffect(() => {
     // Periodic Reminder Logic
     if (isStandalone) return; // Don't remind if already installed
 
-    const interval = setInterval(() => {
-      // Only show if tutorial is not currently open
-      if (!localStorage.getItem(TUTORIAL_KEY)) return; // Don't show reminder if tutorial hasn't finished (though logic implies it runs after)
+    const interval = setInterval(async () => {
+      const prefs = getPreferencesService();
+      const seen = await prefs.get<boolean>(TUTORIAL_KEY);
+      // Only show if tutorial has been seen
+      if (!seen) return;
       
       setShowReminder(prev => {
         if (!prev) return true; // Show if not showing
@@ -33,8 +41,9 @@ export const useTutorial = (isStandalone: boolean) => {
     return () => clearInterval(interval);
   }, [isStandalone]);
 
-  const completeTutorial = useCallback(() => {
-    localStorage.setItem(TUTORIAL_KEY, 'true');
+  const completeTutorial = useCallback(async () => {
+    const prefs = getPreferencesService();
+    await prefs.set(TUTORIAL_KEY, true);
     setShowTutorial(false);
   }, []);
 

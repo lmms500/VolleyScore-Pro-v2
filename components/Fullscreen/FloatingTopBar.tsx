@@ -278,7 +278,7 @@ export const FloatingTopBar: React.FC<FloatingTopBarProps> = memo((props) => {
   const glassContainer = "bg-white/80 dark:bg-[#020617]/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.1)] ring-1 ring-black/5 dark:ring-white/5";
 
   return (
-    <div className="fixed top-4 left-0 w-full z-[55] flex justify-center pointer-events-none px-4">
+    <div className="fixed top-[calc(env(safe-area-inset-top)+1rem)] left-0 w-full z-[55] flex justify-center pointer-events-none px-4">
         <LayoutGroup>
             <motion.div 
                 layout

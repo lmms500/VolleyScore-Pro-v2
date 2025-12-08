@@ -6,7 +6,6 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { useVolleyGame } from './hooks/useVolleyGame';
 import { useTutorial } from './hooks/useTutorial';
 import { useHaptics } from './hooks/useHaptics';
-import { useVoiceControl } from './hooks/useVoiceControl';
 
 // EAGER IMPORTS
 import { ScoreCardNormal } from './components/ScoreCardNormal';
@@ -185,15 +184,6 @@ function App() {
     audio.playUndo();
     haptics.gamePatterns.timeout();
   }, [state.isMatchOver, undo, historyStore, audio, haptics]);
-
-  const { isListening, toggleListening, hasPermission } = useVoiceControl({
-    config: state.config,
-    onAddPoint: (team) => {
-        if (navigator.vibrate) navigator.vibrate(50);
-        addPoint(team);
-    },
-    onUndo: handleUndo
-  });
 
   useEffect(() => {
       if (state.pendingSideSwitch) {
@@ -563,9 +553,6 @@ function App() {
                   onHistory={openHistory}
                   onReset={openReset}
                   onToggleFullscreen={toggleFullscreen}
-                  onToggleVoice={toggleListening}
-                  isVoiceListening={isListening}
-                  hasVoicePermission={hasPermission}
               />
           </div>
 

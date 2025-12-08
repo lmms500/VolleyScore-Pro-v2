@@ -1,7 +1,8 @@
-import React, { memo } from 'react';
-import { RotateCcw, ArrowLeftRight, Settings, Users, Undo2, Maximize2, History, Mic } from 'lucide-react';
+import React, { memo, useCallback } from 'react';
+import { RotateCcw, ArrowLeftRight, Settings, Users, Undo2, Maximize2, History } from 'lucide-react';
 import { useTranslation } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
+import { useHaptics } from '../hooks/useHaptics';
 
 interface ControlsProps {
   onUndo: () => void;
@@ -12,9 +13,6 @@ interface ControlsProps {
   onHistory: () => void;
   onReset: () => void;
   onToggleFullscreen: () => void;
-  onToggleVoice: () => void;
-  isVoiceListening: boolean;
-  hasVoicePermission: boolean;
 }
 
 const ControlButton = ({ onClick, disabled, icon: Icon, active, className }: any) => (
@@ -24,7 +22,8 @@ const ControlButton = ({ onClick, disabled, icon: Icon, active, className }: any
         onClick={onClick} 
         disabled={disabled}
         className={`
-            relative group p-3 rounded-2xl flex items-center justify-center transition-all duration-300
+      relative group px-3 py-3 rounded-2xl flex items-center justify-center transition-all duration-300
+      min-w-[44px] min-h-[44px]
             ${disabled ? 'opacity-30 cursor-not-allowed grayscale' : 'cursor-pointer'}
             ${active 
                 ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' 
@@ -41,19 +40,22 @@ const Divider = () => (
 );
 
 export const Controls: React.FC<ControlsProps> = memo(({ 
-    onUndo, 
-    canUndo, 
-    onSwap, 
-    onSettings, 
-    onRoster, 
-    onHistory, 
-    onReset, 
-    onToggleFullscreen, 
-    onToggleVoice, 
-    isVoiceListening, 
-    hasVoicePermission
+  onUndo, 
+  canUndo, 
+  onSwap, 
+  onSettings, 
+  onRoster, 
+  onHistory, 
+  onReset, 
+  onToggleFullscreen
 }) => {
   const { t } = useTranslation();
+  const haptics = useHaptics(true);
+
+  const press = useCallback((fn: () => void) => {
+    haptics.gamePatterns.scored();
+    fn();
+  }, [haptics]);
 
   return (
     <div className="w-auto max-w-[95vw] animate-in fade-in slide-in-from-bottom-4 duration-500 pb-safe">
@@ -66,28 +68,18 @@ export const Controls: React.FC<ControlsProps> = memo(({
       ">
         
         {/* GAME ACTIONS */}
-        <ControlButton onClick={onUndo} disabled={!canUndo} icon={Undo2} />
-        <ControlButton onClick={onSwap} icon={ArrowLeftRight} />
+        <ControlButton onClick={() => press(onUndo)} disabled={!canUndo} icon={Undo2} />
+        <ControlButton onClick={() => press(onSwap)} icon={ArrowLeftRight} />
 
         <Divider />
 
         {/* MANAGEMENT & TOOLS */}
-        <ControlButton onClick={onRoster} icon={Users} className="text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10" />
-        <ControlButton onClick={onHistory} icon={History} className="text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10" />
-        <ControlButton 
-            onClick={onToggleVoice} 
-            icon={Mic} 
-            active={isVoiceListening}
-            disabled={!hasVoicePermission}
-            className={!isVoiceListening ? "text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10" : ''} 
-        />
-
-        <Divider />
-
+        <ControlButton onClick={() => press(onRoster)} icon={Users} className="text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10" />
+        <ControlButton onClick={() => press(onHistory)} icon={History} className="text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10" />
         {/* SYSTEM */}
-        <ControlButton onClick={onSettings} icon={Settings} />
-        <ControlButton onClick={onToggleFullscreen} icon={Maximize2} />
-        <ControlButton onClick={onReset} icon={RotateCcw} className="text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10" />
+        <ControlButton onClick={() => press(onSettings)} icon={Settings} />
+        <ControlButton onClick={() => press(onToggleFullscreen)} icon={Maximize2} />
+        <ControlButton onClick={() => press(onReset)} icon={RotateCcw} className="text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10" />
 
       </div>
     </div>

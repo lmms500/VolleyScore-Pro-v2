@@ -116,7 +116,16 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
 
   const generateTeams = useCallback((namesList: string[]) => {
     const validNames = namesList.filter(n => n.trim().length > 0);
-    const allNewPlayers = validNames.map((name, idx) => createPlayer(name, idx));
+    
+    // CRITICAL: Ensure all names have persistent profiles before creating players
+    const profilesForNames = validNames.map((name, idx) => {
+        const existing = findProfileByName(name);
+        return existing || upsertProfile(name, 3);
+    });
+    
+    const allNewPlayers = validNames.map((name, idx) => 
+        createPlayer(name, idx, profilesForNames[idx])
+    );
 
     setQueueState(prev => {
         const cleanA = { ...prev.courtA, players: [] };
@@ -125,6 +134,8 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
         const result = distributeStandard(allNewPlayers, cleanA, cleanB, []);
         
         _updateNames(result.courtA, result.courtB);
+
+        console.log('[Queue] Generated teams from', validNames.length, 'names');
 
         return {
             ...prev,
@@ -135,7 +146,7 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
         };
     });
     setDeletedHistory([]);
-  }, [createPlayer, _updateNames]); 
+  }, [createPlayer, _updateNames, findProfileByName, upsertProfile]); 
 
   // --- PERSISTENCE & SYNC ---
   const savePlayerToProfile = useCallback((playerId: string) => {
@@ -275,24 +286,39 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
   }, [getRotationPreview, _updateNames]);
 
   const addPlayer = useCallback((name: string, target: 'A' | 'B' | 'Queue', number?: string, skill?: number) => {
+      const safeName = sanitizeInput(name);
+      const skillLevel = skill !== undefined ? Math.min(5, Math.max(1, skill)) : 3;
+
+      // CRITICAL: Create or link persistent profile SYNCHRONOUSLY
+      // First check if profile exists
+      const existingProfile = findProfileByName(safeName);
+      let linkedProfile = existingProfile;
+      
+      // If no profile exists, create one immediately (upsertProfile is sync)
+      if (!linkedProfile) {
+          linkedProfile = upsertProfile(safeName, skillLevel);
+      }
+
+      // Now update queue state with the player
       setQueueState(prev => {
           const getMaxIndex = (s: QueueState) => {
               const all = [...s.courtA.players, ...s.courtB.players, ...s.queue.flatMap(t => t.players)];
               return all.reduce((max, p) => Math.max(max, p.originalIndex), -1);
           };
 
-          const safeName = sanitizeInput(name);
-          const profile = findProfileByName(safeName);
-          
-          const newPlayer = createPlayer(safeName, getMaxIndex(prev) + 1, profile, number, skill);
+          // Create player with linked profile
+          const newPlayer = createPlayer(safeName, getMaxIndex(prev) + 1, linkedProfile, number, skillLevel);
           
           if (target === 'A' && prev.courtA.players.length < PLAYER_LIMIT_ON_COURT) {
+              console.log('[Queue] Adding player to Team A:', safeName, newPlayer);
               return { ...prev, courtA: { ...prev.courtA, players: [...prev.courtA.players, newPlayer] } };
           }
           if (target === 'B' && prev.courtB.players.length < PLAYER_LIMIT_ON_COURT) {
+              console.log('[Queue] Adding player to Team B:', safeName, newPlayer);
               return { ...prev, courtB: { ...prev.courtB, players: [...prev.courtB.players, newPlayer] } };
           }
           if (target === 'Queue') {
+              console.log('[Queue] Adding player to Queue:', safeName, newPlayer);
               const newQueue = [...prev.queue];
               if (newQueue.length > 0 && newQueue[newQueue.length - 1].players.length < PLAYERS_PER_TEAM) {
                   const last = newQueue[newQueue.length - 1];
@@ -302,9 +328,10 @@ export const usePlayerQueue = (onNamesChange: (nameA: string, nameB: string) => 
               }
               return { ...prev, queue: newQueue };
           }
+          console.warn('[Queue] Invalid target or team full:', target);
           return prev;
       });
-  }, [findProfileByName, createPlayer]);
+  }, [findProfileByName, upsertProfile, createPlayer]);
 
   const removePlayer = useCallback((id: string) => {
     setQueueState(prev => {

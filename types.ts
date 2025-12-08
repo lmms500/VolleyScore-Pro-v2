@@ -36,7 +36,6 @@ export interface GameConfig {
   rotationMode: RotationMode;
   enablePlayerStats: boolean; // Toggle Scout Mode
   enableSound: boolean; // Global Audio Toggle
-  enableVoiceControl: boolean;
 }
 
 // 2. A INSTÂNCIA DE JOGO (Volátil / Em Quadra)

@@ -160,11 +160,13 @@
     "batchInputPrompt": "Paste names below (one per line).",
     "batchInputPlaceholder": "John Doe\nJane Smith\n...",
     "generateTeams": "Generate Teams",
+    "importPlayers": "Import Players",
     "queue": "Waiting Queue",
     "queueEmpty": "Queue empty",
     "dragPlayersHere": "Drag players here",
     "addPlayer": "Add Player",
     "addPlayerPlaceholder": "New player name...",
+    "addPlayerTarget": "Add to",
     "searchProfiles": "Search profiles...",
     "rosterFull": "Roster Full",
     "lockPlayer": "Lock Player",
@@ -177,6 +179,12 @@
       "profiles": "Profiles",
       "batch": "Batch"
     },
+    "mode": {
+      "generate": "Generate",
+      "import": "Import"
+    },
+    "generateInfo": "Distribute names evenly between teams. Clears current roster.",
+    "importInfo": "Add names to",
     "modes": {
       "standard": "Standard",
       "standardTooltip": "Rotation: Winner Stays, Loser to End. Gaps filled from next teams.",

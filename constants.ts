@@ -11,8 +11,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   deuceType: 'standard',
   rotationMode: 'standard',
   enablePlayerStats: false,
-  enableSound: true,
-  enableVoiceControl: false
+  enableSound: true
 };
 
 export const MIN_LEAD_TO_WIN = 2;

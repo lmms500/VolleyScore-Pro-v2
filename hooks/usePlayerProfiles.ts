@@ -68,6 +68,53 @@ export const usePlayerProfiles = () => {
     });
 
     return newProfile;
+  }, []);
+
+  /**
+   * addPlayer: Create a new persistent player profile with immutable state
+   * @param name - Player name (auto-trimmed)
+   * @param skillLevel - 1-5 skill rating
+   * @returns New PlayerProfile with generated UUID
+   */
+  const addPlayer = useCallback((name: string, skillLevel: number = 3): PlayerProfile => {
+    return upsertProfile(name, skillLevel);
+  }, [upsertProfile]);
+
+  /**
+   * addMultiplePlayers: Batch-add multiple profiles with deduplication
+   * @param names - Array of player names
+   * @param skillLevel - Default skill level for all (1-5)
+   * @returns Array of newly created PlayerProfiles
+   */
+  const addMultiplePlayers = useCallback((names: string[], skillLevel: number = 3): PlayerProfile[] => {
+    const cleanedNames = names
+      .map(n => n.trim())
+      .filter(n => n.length > 0);
+
+    const uniqueNames = Array.from(new Set(cleanedNames));
+    
+    const newProfiles: PlayerProfile[] = [];
+    const nextMap = new Map(profiles);
+
+    uniqueNames.forEach(name => {
+      // Avoid adding duplicates
+      const exists = Array.from(nextMap.values()).some(p => p.name.toLowerCase() === name.toLowerCase());
+      if (!exists) {
+        const newProfile: PlayerProfile = {
+          id: uuidv4(),
+          name: name.trim(),
+          skillLevel: Math.min(5, Math.max(1, skillLevel)),
+          createdAt: Date.now(),
+          lastUpdated: Date.now()
+        };
+        nextMap.set(newProfile.id, newProfile);
+        newProfiles.push(newProfile);
+      }
+    });
+
+    // Update state once with all new profiles
+    setProfiles(nextMap);
+    return newProfiles;
   }, [profiles]);
 
   const deleteProfile = useCallback((id: string) => {
@@ -90,6 +137,8 @@ export const usePlayerProfiles = () => {
 
   return {
     profiles,
+    addPlayer,
+    addMultiplePlayers,
     upsertProfile,
     deleteProfile,
     findProfileByName,

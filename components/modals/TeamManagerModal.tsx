@@ -116,7 +116,7 @@ const ColorPicker = memo(({
                                     ? 'ring-2 ring-offset-2 ring-offset-slate-100 dark:ring-offset-slate-900 ring-slate-400 dark:ring-slate-500 shadow-md scale-110 opacity-100' 
                                     : isTaken
                                         ? 'opacity-20 grayscale cursor-not-allowed scale-90 border border-black/10'
-                                        : 'hover:scale-110 opacity-60 hover:opacity-100 cursor-pointer'
+                                        : 'hover:scale-110 opacity-100 cursor-pointer shadow-sm hover:shadow-md'
                                 }
                             `}
                             title={isTaken ? 'Color taken' : color.charAt(0).toUpperCase() + color.slice(1)}
@@ -263,7 +263,7 @@ const EditableNumber = memo(({ number, onSave }: { number?: string; onSave: (val
 
 // --- PROFILE CARD COMPONENT ---
 
-const ProfileCard = memo((({
+const ProfileCard = memo(({
     profile,
     onUpdate,
     onDelete,
@@ -344,7 +344,7 @@ const ProfileCard = memo((({
              </div>
         </div>
     );
-}));
+});
 
 // React.memo to prevent re-renders of PlayerCard unless props change
 const PlayerCard = memo(({ 
@@ -384,7 +384,7 @@ const PlayerCard = memo(({
   const style = { 
       transform: CSS.Transform.toString(transform), 
       transition, 
-      opacity: isDragging ? 0 : 1, // Hide original when dragging (overlay is used)
+      opacity: isDragging ? 0 : 1,
       zIndex: isDragging ? 50 : 'auto',
   };
   
@@ -401,9 +401,6 @@ const PlayerCard = memo(({
   const handleToggleFixed = useCallback(() => onToggleFixed(player.id), [onToggleFixed, player.id]);
   const handleRemove = useCallback(() => onRemove(player.id), [onRemove, player.id]);
 
-  // Performance Optimization for Dragging:
-  // Using opaque colors (bg-slate-100) instead of blurs (backdrop-blur) for the drag overlay
-  // reduces GPU load significantly, eliminating lag.
   const containerClass = forceDragStyle
     ? `bg-slate-100 dark:bg-slate-800 border-2 border-indigo-500 shadow-2xl scale-105 z-50`
     : `bg-white/40 dark:bg-white/[0.03] hover:bg-white/60 dark:hover:bg-white/[0.06] border-transparent hover:border-black/5 dark:hover:border-white/10 transition-all duration-300`;
@@ -419,27 +416,22 @@ const PlayerCard = memo(({
         ${forceDragStyle ? containerClass : (isFixed ? fixedClass : containerClass)}
     `}>
       
-      {/* Left Section: Grip + Number + Name/Stars (Responsive flex-1) */}
       <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
-        {/* Grip Handle - Retains touch-none to claim pointer events for drag */}
         <div {...attributes} {...listeners} className={`cursor-grab active:cursor-grabbing p-1 -ml-0.5 touch-none flex-shrink-0 ${isFixed ? 'cursor-not-allowed opacity-30' : 'text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400'}`}>
           <GripVertical size={14} />
         </div>
         
-        {/* Editable Number */}
         {!isCompact && <EditableNumber number={player.number} onSave={handleSaveNumber} />}
         {isCompact && player.number && <span className="text-[10px] font-bold text-slate-400">#{player.number}</span>}
 
         <div className="flex flex-col min-w-0 flex-1 pr-0.5 relative justify-center">
           <EditableTitle name={player.name} onSave={handleSaveName} isPlayer={true} className={`font-bold ${isCompact ? 'text-xs' : 'text-sm'} text-slate-800 dark:text-slate-200`} />
-          {/* Always show skill selector, but adjust size if compact */}
           <div className="relative z-20 -mt-0.5">
             <SkillSelector level={player.skillLevel} onChange={handleUpdateSkill} size={isCompact ? 9 : 10} />
           </div>
         </div>
       </div>
       
-      {/* Right Section: Actions (Fixed width, does not shrink) */}
       <div className="flex items-center gap-0.5 flex-shrink-0 ml-0.5 pl-1 relative z-30">
         <SyncIndicator 
             player={player}
@@ -497,14 +489,12 @@ const AddPlayerInput = memo(({ onAdd, disabled }: { onAdd: (name: string, number
     if (isOpen && !disabled) {
         return (
             <div className="flex flex-col mt-2 animate-in fade-in slide-in-from-top-1 bg-white/60 dark:bg-white/[0.04] p-2 rounded-xl border border-black/5 dark:border-white/5 shadow-sm ring-1 ring-black/5">
-                {/* Row 1: Name */}
                 <input ref={inputRef}
                     className="w-full bg-transparent border-b border-black/10 dark:border-white/10 px-1 py-1.5 text-sm text-slate-800 dark:text-white focus:outline-none font-medium placeholder:text-slate-400 mb-2"
                     placeholder={t('teamManager.addPlayerPlaceholder')} value={name} onChange={e => setName(e.target.value)}
                     onKeyDown={e => { if(e.key === 'Enter') submit(); if(e.key === 'Escape') setIsOpen(false); }}
                 />
                 
-                {/* Row 2: Details */}
                 <div className="flex items-center gap-2">
                     <input 
                         className="w-12 text-center bg-white/50 dark:bg-black/20 rounded-lg border border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-black/40 px-1 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none"
@@ -574,7 +564,6 @@ const TeamColumn = memo(({
   
   const teamStrength = useMemo(() => calculateTeamStrength(team.players), [team.players]);
 
-  // Use Dynamic Resolver
   const colorConfig = resolveTheme(team.color);
 
   const handleUpdateName = useCallback((n: string) => onUpdateTeamName(id, n), [onUpdateTeamName, id]);
@@ -593,7 +582,6 @@ const TeamColumn = memo(({
     >
       <div className="flex flex-col mb-4">
         <div className="flex items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-3 mb-2">
-            {/* Indicator Pill */}
             <div className={`w-1.5 self-stretch rounded-full ${colorConfig.halo} shadow-[0_0_10px_currentColor] opacity-90`} />
             
             <div className="flex-1 min-w-0">
@@ -601,9 +589,7 @@ const TeamColumn = memo(({
                 <EditableTitle name={team.name} onSave={handleUpdateName} className={`text-lg font-black uppercase tracking-tight ${colorConfig.text} ${colorConfig.textDark}`} />
             </div>
             
-            {/* Sort & Strength Group */}
             <div className="flex items-center gap-2">
-                {/* Sort Button */}
                 <div className="relative">
                     <button 
                         onClick={() => setShowSortMenu(!showSortMenu)}
@@ -633,7 +619,6 @@ const TeamColumn = memo(({
                     </AnimatePresence>
                 </div>
 
-                {/* Player Count Badge */}
                 <div className={`
                     px-2 py-1 rounded-lg text-[10px] font-bold border flex items-center gap-1 shadow-sm
                     ${colorConfig.bg} ${colorConfig.border} ${colorConfig.text}
@@ -641,7 +626,6 @@ const TeamColumn = memo(({
                     <Users size={10} strokeWidth={2.5} /> {team.players.length}
                 </div>
 
-                {/* Strength Badge */}
                 <div className={`
                     px-2 py-1 rounded-lg text-[10px] font-bold border flex items-center gap-1 shadow-sm
                     ${colorConfig.bg} ${colorConfig.border} ${colorConfig.text}
@@ -651,7 +635,6 @@ const TeamColumn = memo(({
             </div>
         </div>
         
-        {/* Color Picker with Unique Checks */}
         <ColorPicker 
             selected={team.color || 'slate'} 
             onChange={handleUpdateColor} 
@@ -681,7 +664,6 @@ const TeamColumn = memo(({
         </SortableContextFixed>
       </div>
       {!isQueue && <AddPlayerInput onAdd={onAddPlayer} disabled={isFull} />}
-      {/* For queue teams, allow adding as long as not full, it effectively adds to the end of the queue list logic-wise */}
       {isQueue && <AddPlayerInput onAdd={onAddPlayer} disabled={isFull} />}
     </div>
   );
@@ -719,7 +701,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   const [undoVisible, setUndoVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // OPTIMIZATION: Memoize sensors to avoid re-creating on every render
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -727,7 +708,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
       },
     }),
     useSensor(KeyboardSensor),
-    useSensor(TouchSensor) // Add TouchSensor for better mobile support
+    useSensor(TouchSensor)
   );
   
   useEffect(() => {
@@ -744,7 +725,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
     return () => clearTimeout(timer);
   }, [props.deletedCount, props.onCommitDeletions]);
 
-  // Drag Logic Helpers - wrapped in useCallback for stability if passed down (though here used internally)
   const findContainer = useCallback((id: string) => {
     if (id === 'A' || props.courtA.players.some(p => p.id === id)) return 'A';
     if (id === 'B' || props.courtB.players.some(p => p.id === id)) return 'B';
@@ -764,7 +744,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
     return map;
   }, [props.courtA, props.courtB, props.queue]);
 
-  // Determine Used Colors - Memoized
   const usedColors = useMemo(() => {
       const set = new Set<string>();
       if (props.courtA.color) set.add(props.courtA.color);
@@ -773,14 +752,11 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
       return set;
   }, [props.courtA.color, props.courtB.color, props.queue]);
 
-  // OPTIMIZATION: Memoize filtering logic
   const filteredProfiles = useMemo(() => {
       return Array.from(props.profiles.values())
-          .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .filter((p: PlayerProfile) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+          .sort((a: PlayerProfile, b: PlayerProfile) => a.name.localeCompare(b.name));
   }, [props.profiles, searchTerm]);
-
-  // --- DND HANDLERS ---
 
   const handleDragStart = (event: DragStartEvent) => {
     const player = playersById.get(event.active.id as string);
@@ -799,7 +775,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
 
     if (!activeContainer || !overContainer) return;
 
-    // Handle Moving BETWEEN Containers during Drag (Visual Feedback)
     if (activeContainer !== overContainer) {
         const overTeam = getTeamById(overContainer);
         if (!overTeam) return;
@@ -830,11 +805,9 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
         const activeIndex = active.data.current?.sortable.index;
         const overIndex = over.data.current?.sortable.index;
 
-        // If containers are same, check if reorder is needed
         if (activeContainer === overContainer && activeIndex !== overIndex) {
              props.onMove(activeId, activeContainer, overContainer, overIndex);
         }
-        // If containers different, handleDragOver likely handled it, but ensure final position
         else if (activeContainer !== overContainer) {
              props.onMove(activeId, activeContainer, overContainer, overIndex ?? overTeam.players.length);
         }
@@ -855,12 +828,10 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
       return null;
   };
 
-  // Stabilize handlers for TeamColumn
   const handleAddA = useCallback((n: string, num?: string, s?: number) => props.onAddPlayer(n, 'A', num, s), [props.onAddPlayer]);
   const handleAddB = useCallback((n: string, num?: string, s?: number) => props.onAddPlayer(n, 'B', num, s), [props.onAddPlayer]);
   const handleAddQueue = useCallback((n: string, num?: string, s?: number) => props.onAddPlayer(n, 'Queue', num, s), [props.onAddPlayer]);
 
-  // Tab Button Helper
   const TabButton = ({ id, label, icon: Icon }: any) => (
       <button 
         onClick={() => setActiveTab(id)} 
@@ -879,22 +850,18 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
   return (
     <Modal isOpen={props.isOpen} onClose={props.onClose} title={t('teamManager.title')} maxWidth="max-w-[95vw] md:max-w-7xl">
       
-      {/* --- HEADER CONTROL DECK --- */}
       <div className="sticky top-0 z-[100] mb-6 -mx-1 px-1">
           <div className="bg-slate-100/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl p-2 shadow-lg shadow-black/5 dark:shadow-black/20 flex flex-col md:flex-row gap-3">
               
-              {/* TABS (Segmented Control) */}
               <div className="flex bg-slate-200/50 dark:bg-black/20 p-1 rounded-2xl gap-1 flex-1">
                   <TabButton id="roster" label={t('teamManager.tabs.roster')} icon={List} />
                   <TabButton id="profiles" label={t('teamManager.tabs.profiles')} icon={Users} />
                   <TabButton id="input" label={t('teamManager.tabs.batch')} icon={Upload} />
               </div>
 
-              {/* ACTIONS (Right Side) */}
               {activeTab === 'roster' && (
                   <div className="flex items-center gap-4 p-1 rounded-2xl overflow-x-auto no-scrollbar">
                       
-                      {/* Rotation Mode Switch (Distinct Group) */}
                       <div className="flex items-center bg-slate-200/50 dark:bg-black/20 p-1 rounded-xl">
                           <button 
                              onClick={() => props.onSetRotationMode('standard')}
@@ -920,7 +887,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                           </button>
                       </div>
 
-                      {/* Main Action Button (Standalone) */}
                       <button 
                         onClick={props.onBalanceTeams}
                         className={`
@@ -933,7 +899,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                   </div>
               )}
 
-              {/* SEARCH (Profiles Tab) */}
               {activeTab === 'profiles' && (
                   <div className="flex-1 w-full md:w-auto md:max-w-xs">
                       <div className="relative group">
@@ -1018,7 +983,6 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
                 usedColors={usedColors}
             />
             
-            {/* Queue Teams - Displayed Individually */}
             {props.queue.map((team) => (
                 <TeamColumn 
                     key={team.id}
@@ -1045,7 +1009,7 @@ export const TeamManagerModal: React.FC<TeamManagerModalProps> = (props) => {
 
        <div 
          className={`
-            fixed bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] left-1/2 -translate-x-1/2 z-[70] 
+            fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] 
             transition-all duration-300 cubic-bezier(0.175, 0.885, 0.32, 1.275)
             ${undoVisible && props.canUndoRemove ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-90 pointer-events-none'}
          `}

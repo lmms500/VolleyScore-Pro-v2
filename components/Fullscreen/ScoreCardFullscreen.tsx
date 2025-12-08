@@ -30,6 +30,18 @@ interface ScoreCardFullscreenProps {
   config: GameConfig; 
 }
 
+interface ScoreNumberDisplayProps {
+    score: number;
+    theme: ReturnType<typeof resolveTheme>;
+    textEffectClass: string;
+    isPressed: boolean;
+    scoreRefCallback?: (node: HTMLElement | null) => void;
+    numberRef: React.RefObject<HTMLDivElement>;
+    isCritical: boolean;
+    isMatchPoint: boolean;
+    isServing?: boolean;
+}
+
 const ScoreNumberDisplay = memo(({ 
     score, 
     theme, 
@@ -40,10 +52,13 @@ const ScoreNumberDisplay = memo(({
     isCritical,
     isMatchPoint,
     isServing
-}: any) => {
+}: ScoreNumberDisplayProps) => {
 
     // FIX: Use a stronger amber color for Match Point visibility
-    const haloColorClass = isMatchPoint ? 'bg-amber-500 saturate-150' : theme.halo;
+    const haloColorClass = useMemo(
+        () => (isMatchPoint ? 'bg-amber-500 saturate-150' : theme.halo),
+        [isMatchPoint, theme.halo]
+    );
 
     return (
         <div 
@@ -109,7 +124,7 @@ const ScoreNumberDisplay = memo(({
     );
 });
 
-export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
+const ScoreCardFullscreenComponent: React.FC<ScoreCardFullscreenProps> = ({
   teamId, team, score, onAdd, onSubtract,
   isMatchPoint, isSetPoint, isDeuce, inSuddenDeath, 
   isLocked = false, onInteractionStart, onInteractionEnd, reverseLayout,
@@ -167,25 +182,29 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
     onInteractionEnd: handleEnd
   });
 
-  const resolvedColor = colorTheme || team.color || 'slate';
-  const theme = resolveTheme(resolvedColor);
+    const resolvedColor = useMemo(() => colorTheme || team.color || 'slate', [colorTheme, team.color]);
+    const theme = useMemo(() => resolveTheme(resolvedColor), [resolvedColor]);
 
-  const isCritical = isMatchPoint || isSetPoint;
+    const isCritical = isMatchPoint || isSetPoint;
   
   const textEffectClass = useMemo(() => {
     if (isMatchPoint) return 'drop-shadow-2xl'; 
     return ''; 
   }, [isMatchPoint]);
 
-  const isFirstPosition = reverseLayout ? teamId === 'B' : teamId === 'A';
+    const isFirstPosition = reverseLayout ? teamId === 'B' : teamId === 'A';
 
-  const positionClasses = isFirstPosition
-    ? 'landscape:left-0 landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-0 left-0 w-[100vw] h-[50dvh]' 
-    : 'landscape:left-[50vw] landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-[50dvh] left-0 w-[100vw] h-[50dvh]';
+    const positionClasses = useMemo(() => (
+        isFirstPosition
+            ? 'landscape:left-0 landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-0 left-0 w-[100vw] h-[50dvh]' 
+            : 'landscape:left-[50vw] landscape:top-0 landscape:w-[50vw] landscape:h-[100dvh] top-[50dvh] left-0 w-[100vw] h-[50dvh]'
+    ), [isFirstPosition]);
 
-  const offsetClass = alignment === 'left' 
-      ? 'landscape:-translate-x-[6vw]' 
-      : 'landscape:translate-x-[6vw]';
+    const offsetClass = useMemo(() => (
+        alignment === 'left' 
+            ? 'landscape:-translate-x-[6vw]' 
+            : 'landscape:translate-x-[6vw]'
+    ), [alignment]);
 
   return (
     <>
@@ -240,5 +259,29 @@ export const ScoreCardFullscreen: React.FC<ScoreCardFullscreenProps> = memo(({
             </div>
         </motion.div>
     </>
-  );
-});
+    );
+};
+
+const areEqualFullscreen = (prev: ScoreCardFullscreenProps, next: ScoreCardFullscreenProps) => {
+    return (
+        prev.score === next.score &&
+        prev.isMatchPoint === next.isMatchPoint &&
+        prev.isSetPoint === next.isSetPoint &&
+        prev.isDeuce === next.isDeuce &&
+        prev.inSuddenDeath === next.inSuddenDeath &&
+        prev.isLocked === next.isLocked &&
+        prev.reverseLayout === next.reverseLayout &&
+        prev.isServing === next.isServing &&
+        prev.alignment === next.alignment &&
+        prev.teamId === next.teamId &&
+        prev.team === next.team &&
+        prev.colorTheme === next.colorTheme &&
+        prev.config === next.config &&
+        prev.onAdd === next.onAdd &&
+        prev.onSubtract === next.onSubtract &&
+        prev.onInteractionStart === next.onInteractionStart &&
+        prev.onInteractionEnd === next.onInteractionEnd
+    );
+};
+
+export const ScoreCardFullscreen = memo(ScoreCardFullscreenComponent, areEqualFullscreen);

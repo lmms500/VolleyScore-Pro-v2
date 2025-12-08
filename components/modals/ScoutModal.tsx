@@ -51,6 +51,7 @@ export const ScoutModal: React.FC<ScoutModalProps> = ({
                 setIsReadyToClose(false);
             };
         }
+        return undefined;
     }, [isOpen]);
 
     const handleBackdropClick = () => {

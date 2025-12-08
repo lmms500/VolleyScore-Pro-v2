@@ -117,9 +117,9 @@ export const MatchOverModal: React.FC<MatchOverModalProps> = memo(({ isOpen, sta
       <Modal 
         isOpen={isOpen} 
         onClose={() => {}} 
+        onBackdropClick={() => {}} // Correção: Impede o fechamento pelo backdrop
         title={t('matchOver.title')}
         showCloseButton={false}
-        persistent={true}
       >
         {/* Confetti Overlay - Use will-change to hint compositor */}
         <div className="absolute inset-0 overflow-hidden rounded-[2rem] pointer-events-none z-0 opacity-50" style={{ willChange: 'transform, opacity' }}>

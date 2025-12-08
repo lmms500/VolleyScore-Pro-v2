@@ -213,35 +213,45 @@ export const useVolleyGame = () => {
 // ...
       
       if (setWinner) {
-          const newSetsA = setWinner === 'A' ? prev.setsA + 1 : prev.setsA;
-          const newSetsB = setWinner === 'B' ? prev.setsB + 1 : prev.setsB;
-          const historyEntry: SetHistory = { setNumber: prev.currentSet, scoreA: newScoreA, scoreB: newScoreB, winner: setWinner };
-          const setsNeeded = SETS_TO_WIN_MATCH(prev.config.maxSets);
-          const matchWinner = newSetsA === setsNeeded ? 'A' : (newSetsB === setsNeeded ? 'B' : null);
-          
-          // Use current QueueManager reference to get report
-          let previewReport = null;
-          if (matchWinner) {
-              previewReport = queueManager.getRotationPreview(matchWinner);
-          }
+        const newSetsA = prev.setsA + (setWinner === 'A' ? 1 : 0);
+        const newSetsB = prev.setsB + (setWinner === 'B' ? 1 : 0);
 
-          const snapshotState = { ...prev };
+        const historyEntry: SetHistory = { setNumber: prev.currentSet, scoreA: newScoreA, scoreB: newScoreB, winner: setWinner };
+        const setsNeeded = SETS_TO_WIN_MATCH(prev.config.maxSets);
+        
+        let matchWinner: TeamId | null = null;
+        if (newSetsA >= setsNeeded) {
+            matchWinner = 'A';
+        } else if (newSetsB >= setsNeeded) {
+            matchWinner = 'B';
+        }
+        
+        // Use current QueueManager reference to get report
+        let previewReport = null;
+        if (matchWinner) {
+            previewReport = queueManager.getRotationPreview(matchWinner);
+        }
 
-          return {
-              ...prev, 
-              scoreA: matchWinner ? newScoreA : 0, scoreB: matchWinner ? newScoreB : 0, setsA: newSetsA, setsB: newSetsB,
-              history: [...prev.history, historyEntry], currentSet: matchWinner ? prev.currentSet : prev.currentSet + 1, 
-              matchWinner: matchWinner, 
-              isMatchOver: !!matchWinner, 
-              rotationReport: previewReport, 
-              servingTeam: null, isTimerRunning: matchWinner ? false : true, timeoutsA: 0, timeoutsB: 0, 
-              inSuddenDeath: false,
-              pendingSideSwitch: false, 
-              actionLog: [], 
-              matchLog: [...prev.matchLog, newAction], 
-              lastSnapshot: snapshotState
-          };
-      }
+        const snapshotState = { ...prev };
+
+        return {
+            ...prev, 
+            scoreA: matchWinner ? newScoreA : 0, scoreB: matchWinner ? newScoreB : 0, 
+            setsA: newSetsA, 
+            setsB: newSetsB,
+            history: [...prev.history, historyEntry], 
+            currentSet: matchWinner ? prev.currentSet : prev.currentSet + 1, 
+            matchWinner: matchWinner, 
+            isMatchOver: !!matchWinner, 
+            rotationReport: previewReport, 
+            servingTeam: null, isTimerRunning: matchWinner ? false : true, timeoutsA: 0, timeoutsB: 0, 
+            inSuddenDeath: false,
+            pendingSideSwitch: false, 
+            actionLog: [], 
+            matchLog: [...prev.matchLog, newAction], 
+            lastSnapshot: snapshotState
+        };
+    }
       
       return { 
           ...prev, 

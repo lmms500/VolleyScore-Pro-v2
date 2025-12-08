@@ -12,6 +12,7 @@ interface ModalProps {
   maxWidth?: string;
   showCloseButton?: boolean;
   persistent?: boolean;
+  onBackdropClick?: () => void; // Propriedade adicionada
 }
 
 export const Modal: React.FC<ModalProps> = ({ 
@@ -21,10 +22,17 @@ export const Modal: React.FC<ModalProps> = ({
   children, 
   maxWidth = 'max-w-md',
   showCloseButton = true,
-  persistent = false
+  persistent = false,
+  onBackdropClick // Propriedade consumida
 }) => {
   
   const handleBackdropClick = () => {
+    // Prioriza o novo manipulador se ele existir
+    if (onBackdropClick) {
+        onBackdropClick();
+        return;
+    }
+    // Mantém o comportamento legado
     if (!persistent) {
       onClose();
     }
